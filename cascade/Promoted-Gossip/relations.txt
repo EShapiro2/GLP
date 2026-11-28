@@ -1,0 +1,4 @@
+Promoted Gossip extends Gossip and Community Bank: holds
+Promoted Gossip extends it (Gossip and Community Bank): holds
+Promoted Gossip restricts it (Gossip and Community Bank): holds
+Promoted Gossip strengthens it (Gossip and Community Bank): holds

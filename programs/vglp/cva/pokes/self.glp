@@ -1,0 +1,96 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract pokes
+%% (../contracts.glp, contract_named(pokes, C): befriend, begin and an unguarded count, a counter, always open to an agent whose person has begun counting, and arm and an unguarded poke and unpoke of two participants, one always open to their opener once armed and befriended), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
+%%
+%% play_pokes: alice begins counting, and bob arms; bob asks to befriend alice, she answers yes, and it commits.  Then alice's agent always has count(alice) to take, an own transaction of one participant, and bob's agent always has poke(bob, alice) or unpoke(bob, alice) to propose, adding and deleting poked_by(bob) at alice in turn, a local state being a set (Audit #128), an own transaction of two participants, on whose start alice's agent votes.  "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"; the audit's Finding 1; Udi, 2026-11-16): so neither class starves the other, and alice's counting and bob's pokes commit again and again, interleaved.  The run does not suspend: it is stopped at the REPL's :limit, its logs' tails unbound.
+%% ---------------------------------------------------------------------------
+
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_pokes(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_pokes(LA?, LB?, N?) :-
+    pair(plain, [own([A1], propose(begin(A1?))), wait(holds(tick(1))),
+          approval(befriend(bob, alice), yes),
+          wait(holds(friend(bob)))],
+         [own([B1], propose(arm(B1?))), wait(holds(armed)),
+          own([B2], propose(befriend(B2?, alice))),
+          wait(holds(friend(alice)))],
+         LA, LB, N).
+
+%% play_pokes_paired: play_pokes on the audit's schedule (the audit's Finding 1, Grassroots-Audit 17cde7e, papers/vGLP.pdf.md): the network holds each outcome to alice until its next message to her, bob's start of his next poke, and delivers the two at once, so that the start is on alice's input before she has dispatched the outcome.  Alice is free between the two, and her count holds there and at no other configuration of the suffix, her agent being locked on bob's poke from its vote on the start to the next outcome.  An agent that took its own transactions only on an own trigger, read in its turn among the triggers arrived, would read the start before the own trigger written after the outcome, and count no more; "at every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"), so alice counts between every two of bob's pokes.
+exported procedure play_pokes_paired(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_pokes_paired(LA?, LB?, N?) :-
+    pair(paired, [own([A1], propose(begin(A1?))), wait(holds(tick(1))),
+          approval(befriend(bob, alice), yes),
+          wait(holds(friend(bob)))],
+         [own([B1], propose(arm(B1?))), wait(holds(armed)),
+          own([B2], propose(befriend(B2?, alice))),
+          wait(holds(friend(alice)))],
+         LA, LB, N).
+
+Pacing ::= plain ; paired.
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% merged and routed, the cargoes logged.
+procedure pair(Pacing?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(Pc, SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    network(Pc?, Net?, InA, InB, N).
+
+%% The network: route/6 (../self.glp), or, paired, each outcome to alice held until the next message to her and delivered with it.
+procedure network(Pacing?, Stream(Net)?, Stream(Net), Stream(Net), Stream(Sent(Cargo))).
+network(plain, Net, InA?, InB?, N?) :- route(Net?, alice, InA, bob, InB, N).
+network(paired, Net, InA?, InB?, N?) :- paired(Net?, InA, InB, N).
+
+procedure paired(Stream(Net)?, Stream(Net), Stream(Net), Stream(Sent(Cargo))).
+paired([msg(alice, C)|Ms], InA?, InB?, N?) :-
+    ground(C?) |
+    outcome_content(C?, O),
+    to_alice(O?, C?, Ms?, InA, InB, N).
+paired([msg(bob, C)|Ms], InA?, [msg(bob, C?)|InB?], N?) :-
+    ground(C?) |
+    note(C?, bob, N, N1?),
+    paired(Ms?, InA, InB, N1).
+paired([], [], [], []).
+
+procedure outcome_content(Content?, YesNo).
+outcome_content(cargo(_, outcome(_, _)), yes).
+outcome_content(_, no) :- otherwise | true.
+
+procedure to_alice(YesNo?, Content?, Stream(Net)?, Stream(Net), Stream(Net), Stream(Sent(Cargo))).
+to_alice(yes, C, Ms, InA?, InB?, N?) :-
+    held(C?, Ms?, InA, InB, N).
+to_alice(no, C, Ms, [msg(alice, C?)|InA?], InB?, N?) :-
+    ground(C?) |
+    note(C?, alice, N, N1?),
+    paired(Ms?, InA, InB, N1).
+
+procedure held(Content?, Stream(Net)?, Stream(Net), Stream(Net), Stream(Sent(Cargo))).
+held(C, [msg(alice, C2)|Ms], [msg(alice, C?), msg(alice, C2?)|InA?], InB?, N?) :-
+    ground(C?), ground(C2?) |
+    note(C?, alice, N, N1?),
+    note(C2?, alice, N1, N2?),
+    paired(Ms?, InA, InB, N2).
+held(C, [msg(bob, C2)|Ms], InA?, [msg(bob, C2?)|InB?], N?) :-
+    ground(C?), ground(C2?) |
+    note(C2?, bob, N, N1?),
+    held(C?, Ms?, InA, InB, N1).
+held(C, [], [msg(alice, C?)], [], N?) :-
+    ground(C?) |
+    note(C?, alice, N, []).

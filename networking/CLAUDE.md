@@ -1,6 +1,6 @@
 # Grassroots Networking --- instructions for Claude
 
-Read `/Grassroots/docs/claude.md` and `/Grassroots/GLP/CLAUDE.md` first; every rule there applies.  GNA owns this directory (Coordination Appendix B), and GNA's paper is its specification: `/Users/udi/Grassroots/GNA`, `main.tex` and `sections/`.
+Read `/Grassroots/docs/claude.md` and `/Grassroots/GLP/CLAUDE.md` first; every rule there applies.  GNA owns this directory (`servers/peoplesweb/tools/directories.py`, the record of who answers for each directory), and GNA's paper is its specification: `/Users/udi/Grassroots/GNA`, `main.tex` and `sections/`.
 
 ## The paper's appendix holds the rules of the code
 

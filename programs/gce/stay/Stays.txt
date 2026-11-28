@@ -1,0 +1,36 @@
+% STAY: Grassroots Stays --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds).  Through it it extends GKK; it cites their clauses whole and restates none.
+% Defines: place; stay, stay(x, a, d) at the guest; guest, guest(b, x, d, k) at the host, k the price; review; a night is a day of GB's calendar.
+% Schemas: STAY.glp beside this file, written by tools/contracts.py.
+Stays
+Stays inherits from Coins.
+Alice and Bob are persons.
+1. ◆ List place: Alice, who can host guests at a place, may list it under a new name of hers.
+2. ■ Book: Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.
+3. ■ Cancel: Before the night, Alice may cancel a stay, paying Bob back its price in Alice-coins.
+4. ■ Review: After the night has come, Bob may review his stay, once; Alice keeps the review.
+Logic pragmas
+Stays extends Coins.
+Alice and Bob are persons, Place a place and Night a night, Today a date, Sum a number.
+1. ◆ List place: Alice may list Place under a new name of hers, provided Alice can host guests.
+2. ■ Book: Bob may book a stay at Alice's Place on Night for Sum Alice-coins, with the consent of Alice, provided Bob knows Alice, Alice lists Place, the current date is Today and Night is more than Today.
+3. ■ Cancel: Alice may cancel Bob's stay at Place on Night for Sum Alice-coins, provided the current date is Today and Night is more than Today.
+4. ■ Review: Bob may review his stay at Alice's Place on Night, provided Bob has a stay at Alice's Place on Night for Sum Alice-coins, the current date is Today and Night is at most Today.
+Logic pragmas.
+Vocabulary: x can host guests = hosts(x); x lists p = listed(x,p); the current date is e, for x = today(x,e); y has a stay at x's p on e for n x-coins = stay(y,x,p,e,n); x has p booked on e = booked(x,p,e); x keeps y's review of p on e = review(x,y,p,e).
+After x lists p under a new name of x's, which requires x does not list p: x lists p.
+After y books a stay at x's p on e for n x-coins, which requires x does not have p booked on e: y has a stay at x's p on e for n x-coins, x has p booked on e, no longer y holds n x-coins and x holds n x-coins.
+After x cancels y's stay at p on e for n x-coins: no longer y has a stay at x's p on e for n x-coins, no longer x has p booked on e, no longer x holds n x-coins and y holds n x-coins.
+After y reviews y's stay at x's p on e, which requires x does not keep y's review of p on e: x keeps y's review of p on e.
+Environment: x can host guests.
+Interface pragmas
+Places: the places Alice hosts.
+Stays: the stays Alice has.
+Guests: the guests Alice hosts.
+Reviews: the reviews Alice received.
+List place: Alice [List place] <place>
+Book: Bob [Book] <place> <night> <sum>
+  Alice: Bob asks to stay at your place.
+Cancel: Alice [Cancel] <bob>
+Review: Bob [Review]

@@ -1,0 +1,4 @@
+Short Feeds
+Short Feeds inherits from Feeds.
+Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+1. ■ Shorten: Alice, who knows Carol and has a Dave-pointer to Bob and none to Carol, while Bob has a Dave-pointer to Carol and Carol knows Alice, replaces it by a Dave-pointer to Carol.

@@ -1,0 +1,3 @@
+Free Matching
+Free Matching inherits from Anonymous Matching.
+The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.

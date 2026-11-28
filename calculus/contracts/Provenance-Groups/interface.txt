@@ -1,0 +1,88 @@
+Provenance Groups
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Person unfriend.  Alice may end her friendship with Bob.
+6. ■ Message.  Alice may send a message to her friend Bob.
+7. ■ Create.  Alice may create a group, of which she is the leader and first member.
+8. ■ Close.  Alice may close the group by leaving it.
+9. ■ Join.  Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob.
+10. ■ Remove.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+11. ■ Leave.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+12. ■ Post.  A member of a group may send a message to the group.
+13. ■ Post own.  A member of a group may send a message to the group.
+14. ■ Deliver.  Its leader delivers it to every current member.
+15. ■ Deliver leader.  Its leader delivers it to every current member.
+16. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Alf must consent.
+17. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
+18. ■ Resign.  Bob may end his guardianship of Wendy.
+19. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
+20. ■ Guardian unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
+21. ■ AI agent acquaint.  Alf and Bob may jointly come to know each other, provided Alf is an AI agent, Alf has Alice as a guardian, Bob is a person and Alf holds the attestation Proof, and then Bob holds a record of Alf's attestation Proof.
+22. ■ AI agent befriend.  Alf and Bob may jointly become friends, with the consent of Alice, provided Alf is an AI agent, Alf is not retired, Alf has Alice as a guardian, Bob is a person, Alf and Bob know each other, Alice and Bob are friends and Alf holds the attestation Proof.
+23. ■ AI agent end.  Alf may end its friendship with Bob, provided Alf does not have Bob as a guardian and Alf holds the attestation Proof.
+24. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+25. ■ AI agent unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+26. ■ AI agents acquaint.  Alf and Will may jointly come to know each other, provided Alf is an AI agent, Alf has Alice as a guardian, Will is an AI agent, Will has Bob as a guardian, Alf holds the attestation Proof and Will holds the attestation Seal, and then Alf holds a record of Will's attestation Seal and Will holds a record of Alf's attestation Proof.
+27. ■ AI agents befriend.  Alf and Will may jointly become friends, with the consent of Alice and Bob, provided Alf is an AI agent, Alf is not retired, Alf has Alice as a guardian, Will is an AI agent, Will is not retired, Will has Bob as a guardian, Alf and Will know each other, Alice knows Will, Alice and Bob are friends, Alf holds the attestation Proof and Will holds the attestation Seal.
+28. ■ AI agents of one guardian befriend.  Alf and Will may jointly become friends, with the consent of Alice, provided Alf is an AI agent, Alf is not retired, Alf has Alice as a guardian, Will is an AI agent, Will is not retired, Will has Alice as a guardian, Alf and Will know each other, Alf holds the attestation Proof and Will holds the attestation Seal.
+29. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+30. ■ Sign.  Alice may create an item by signing it.
+31. ■ Forward.  Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
+32. ■ Agent sign.  The principal of Alf attests at its creation (Guardians:1), signed over Alf's public key, that Alf runs code signed by its developer.
+33. ■ Agent forward.  The principal of Alf attests at its creation (Guardians:1), signed over Alf's public key, that Alf runs code signed by its developer.
+34. ■ Agent message.  An AI agent may send a message to a friend (Groups:1).
+35. ■ Deliver own.  An AI agent may send a message to a friend (Groups:1).
+36. ■ Post forward.  A member of a group, not its leader, may forward an item they hold to the group, adding their signature.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Message: Alice [Message]
+Create: Alice [Create] <grupo>
+Close: Alice [Close]
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Remove: Alice [Remove]
+Leave: Bob [Leave]
+Post: Bob [Post]
+Post own: Alice [Post own]
+Enter: Alice [Enter] <alf>
+Make guardian: Bob [Make guardian] <alf> <proof>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+AI agent acquaint: Alf [AI agent acquaint] <bob>
+  Bob: Alf asks for your consent to ai agent acquaint.
+AI agent befriend: Alf [AI agent befriend]
+  Bob: Alf asks for your consent to ai agent befriend.
+  Alice: Alf asks for your consent to ai agent befriend.
+AI agent end: Alf [AI agent end]
+Unfriend: Bob [Unfriend]
+AI agent unfriend: Alice [AI agent unfriend] <alf> <bob>
+AI agents acquaint: Alf [AI agents acquaint] <will>
+  Will: Alf asks for your consent to ai agents acquaint.
+AI agents befriend: Alf [AI agents befriend] <bob>
+  Will: Alf asks for your consent to ai agents befriend.
+  Alice: Alf asks for your consent to ai agents befriend.
+  Bob: Alf asks for your consent to ai agents befriend.
+AI agents of one guardian befriend: Alf [AI agents of one guardian befriend]
+  Will: Alf asks for your consent to ai agents of one guardian befriend.
+  Alice: Alf asks for your consent to ai agents of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Sign: Alice [Sign] <item>
+Forward: Alice [Forward]
+Agent sign: Alf [Agent sign] <item>
+Agent forward: Alf [Agent forward]
+Agent message: Alf [Agent message]
+Post forward: Bob [Post forward]

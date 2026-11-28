@@ -2,9 +2,10 @@
 %%
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each bare, of the request type Request?, taking one request (vGLP 12f629d, Section 5.4, "The compilation"); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(Id, S, K, A, Ts), its own key Id, the machine state S, the persons K it knows, the approvals A its person made that are pending and the tabs Ts, when it starts and whenever any changes (vGLP 12f629d, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the last view drawn shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the view, as the request form does (vGLP 12f629d, Section 5.4, "The compilation"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"); look reports menu(K, Ks), K the agent's own key and Ks the persons it knows, as the last view drawn shows them, once a request question is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
 %%
-%% The roles, by which the super-app's plays choose a script, each with the keys its person knows (alice: bob; bob: alice), the person's own key the first argument; the group is named friends by alice, its leader, and each content is a speech act of its author:
+%% The roles, by which the super-app's plays choose a script, each with the keys its person knows (alice: bob; bob: alice), the person's own key the first argument; the group is friends, a constant, of alice, its leader, and each content is a speech act of its author:
 %%   alice  establishes her identity (GKK:1); asks to know bob; once her agent knows him, asks to come to know him (GKK:2); once she knows him, offers him friendship (GSG:1); once they are friends, creates the group; once she sees herself its member, adds bob to it; once she sees him listed, sends him the message 'Hi Bob', her last request, since nothing on her screen shows a message committed, and her agent drops a request made while the message is open.
 %%   bob    establishes his identity; asks to know alice; once his agent knows her, answers yes to her asking to come to know him, and then to her offer of friendship; answers yes to her adding him to the group; once he sees her message, sent after he joined, sends the group the message 'Hi all'; once he sees it delivered to him, leaves the group.
+%% Each class names its persons in the order of its schema in programs/gsc/Groups.glp: join(Bob, Alice, g) and leave(Bob, Alice, g), the member first and the leader second; message(Bob, Alice, t), the receiver first and the sender second; post(Alice, Bob, t, g), the leader first and the author second.  The atoms the scripts wait for are the contract's: member(g, Alice), a member of the group g of the leader Alice; listed(Bob, g), the leader having Bob as a member of g; message(Alice, t), the message t from Alice; group_message(Bob, t, g, Alice), the message t of Bob in g delivered by Alice.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
@@ -30,19 +31,19 @@ procedure script(Constant?, Key?, List(Key)?, Steps).
 script(alice, Me, [Bob], [own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
                           own([A2], propose(befriend(A2?, Bob?))),
                           wait(holds(friend(Bob?))),
-                          own([A3, A4], propose(create(A3?, speech(utterance(friends), A4?)))),
-                          wait(holds(member(dot(community(Me?), speech(utterance(friends), Me?))))),
-                          own([A5, A6], propose(join(A5?, Bob?, speech(utterance(friends), A6?)))),
-                          wait(holds(listed(Bob?, speech(utterance(friends), Me?)))),
-                          own([A7, A8], propose(message(A7?, Bob?, speech(utterance('Hi Bob'), A8?))))]) :-
+                          own([A3], propose(create(A3?, friends))),
+                          wait(holds(member(friends, Me?))),
+                          own([A5], propose(join(Bob?, A5?, friends))),
+                          wait(holds(listed(Bob?, friends))),
+                          own([A7, A8], propose(message(Bob?, A7?, speech(utterance('Hi Bob'), A8?))))]) :-
     ground(Me?), ground(Bob?) | true.
 script(bob, Me, [Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(Alice?, Me?), yes),
                           approval(befriend(Alice?, Me?), yes),
-                          approval(join(Alice?, Me?, speech(utterance(friends), Alice?)), yes),
-                          wait(holds(received(speech(utterance('Hi Bob'), Alice?), Alice?))),
-                          own([B2, B3], propose(post(B2?, Alice?, speech(utterance('Hi all'), B3?), speech(utterance(friends), Alice?)))),
-                          wait(holds(received_in(speech(utterance('Hi all'), Me?), Alice?, speech(utterance(friends), Alice?)))),
-                          own([B4], propose(leave(Alice?, B4?, speech(utterance(friends), Alice?))))]) :-
+                          approval(join(Me?, Alice?, friends), yes),
+                          wait(holds(message(Alice?, speech(utterance('Hi Bob'), Alice?)))),
+                          own([B2, B3], propose(post(Alice?, B2?, speech(utterance('Hi all'), B3?), friends))),
+                          wait(holds(group_message(Me?, speech(utterance('Hi all'), Me?), friends, Alice?))),
+                          own([B4], propose(leave(B4?, Alice?, friends)))]) :-
     ground(Me?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 

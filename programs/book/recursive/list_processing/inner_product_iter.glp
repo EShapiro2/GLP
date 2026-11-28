@@ -12,9 +12,3 @@ procedure inner_product(NumList?, NumList?, Number?, Number).
 inner_product([X|Xs], [Y|Ys], Temp, IP?) :-
     Temp1 := X? * Y? + Temp?, inner_product(Xs?, Ys?, Temp1?, IP).
 inner_product([], [], IP, IP?).
-
-%% reduce clauses for metainterpreter
-procedure reduce(_?, _).
-reduce(inner_product(Xs, Ys, IP?), inner_product(Xs?, Ys?, 0, IP)).
-reduce(inner_product([X|Xs], [Y|Ys], Temp, IP?), (Temp1 := X? * Y? + Temp?, inner_product(Xs?, Ys?, Temp1?, IP))).
-reduce(inner_product([], [], IP, IP?), true).

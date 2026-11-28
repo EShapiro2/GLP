@@ -1,0 +1,6 @@
+Overlay
+Overlay inherits from Friendship.
+Alice, Bob and Carol are persons.
+1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob.
+2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.
+3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.

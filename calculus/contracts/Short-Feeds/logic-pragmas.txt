@@ -1,0 +1,7 @@
+Short Feeds
+Short Feeds extends Feeds.
+Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+1. ■ Shorten: Alice replaces a Dave-pointer to Bob by a Dave-pointer to Carol, provided Alice and Carol know each other and Bob has a Dave-pointer to Carol.
+Logic pragmas.
+Vocabulary: y has been pointed to by x with a w-pointer = pointed(y,x,w); y has been dropped by x from a w-pointer = unpointed(y,x,w).
+After x replaces a w-pointer to y by a w-pointer to z, which requires x does not have a w-pointer to z, z has not been pointed to by x with a w-pointer and y has not been dropped by x from a w-pointer: no longer x has a w-pointer to y, x has a w-pointer to z, z has been pointed to by x with a w-pointer and y has been dropped by x from a w-pointer.

@@ -1,0 +1,2 @@
+Warnings extends Organisation: holds
+Warnings restricts it (Organisation): holds

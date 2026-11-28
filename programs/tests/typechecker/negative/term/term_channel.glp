@@ -1,0 +1,9 @@
+%% A term with a mode inversion below it is not a Term: every position below
+%% Term has the mode of Term (TGLP typed-glp.tex, "Type Declarations").
+%% Refused: a channel, whose output stream its holder consumes, at Term?.
+
+procedure look(Term?, Integer).
+look(_, 1).
+
+procedure pass(Channel(Integer, Integer)?, Integer).
+pass(Ch, N?) :- look(Ch?, N).

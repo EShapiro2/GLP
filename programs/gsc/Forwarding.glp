@@ -1,0 +1,11 @@
+%% Forwarding.glp --- printed by adopt.py from Forwarding.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Forwarding.txt and run adopt.py Forwarding.
+% contract_named(forwarding, C): the contract, Forwarding.
+procedure contract_named(Constant?, SDeclared).
+contract_named(forwarding, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+ sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob']),
+ sas(introduce, ['Bob', 'Alice', 'Carol'], [], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(identity, ['Carol']), atom(person, ['Alice']), atom(person, ['Bob']), atom(person, ['Carol']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
+ sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(person, ['Alice']), atom(person, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob']),
+ sas(unfriend, ['Alice', 'Bob'], [], [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(person, ['Alice']), atom(person, ['Bob']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+ sas(sign, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item']))], true, ['Alice']),
+ sas(forward, ['Bob', 'Alice'], ['Item'], [atom(item, ['Bob', sgn('Item', 'Alice')])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(item, ['Alice', 'Item']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice'])])).

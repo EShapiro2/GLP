@@ -1,0 +1,2 @@
+Groups extends Friendship: holds
+Groups strengthens it (Friendship): holds

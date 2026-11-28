@@ -33,9 +33,9 @@ CASES = {
     # an app: the contract compiled by vGLP's compiler to its platform on load, then the whole program
     "load_app_gsn":   repl(f"{P}/apps/gsn"),
     # the checker on a contract
-    "check_gsn":      repl(f"{P}/gsc", LIMIT.strip(), "contract_named(gsn, C), check(C?, V)."),
+    "check_gsn":      repl(f"{P}/gsc", LIMIT.strip(), "contract_named(groups, C), check(C?, V)."),
     # ten goals posted after one load: what a session that keeps asking pays per goal
-    "check_gsn_x10":  repl(f"{P}/gsc", LIMIT.strip(), *(["contract_named(gsn, C), check(C?, V)."] * 10)),
+    "check_gsn_x10":  repl(f"{P}/gsc", LIMIT.strip(), *(["contract_named(groups, C), check(C?, V)."] * 10)),
     "fib_20_x10":     repl(f"{P}/book/recursive/arithmetic_trees/fibonacci.glp", LIMIT.strip(), *(["fib(20, F)."] * 10)),
     # sGLP's simulations: the social graph with 100 agents, a day (the population's setup) and 90 days (the run)
     "sglp_sg_100_1d":  repl(f"{P}/sglp", ":limit 1000000000000000", "social_graph(100, 1, day, 20260927)."),
@@ -69,11 +69,11 @@ CASES.update({
     "play_gai":   plays("apps/gai"),
     "play_cssn":  plays("cssn"),
     # the cascade whole, checked against its record: checker, VMAT, vGLP compiler, the platform and its run
-    "cascade_gkk":  sh(f"cd {GROOT} && bash cascade.sh gkk --check"),
-    "cascade_gsg":  sh(f"cd {GROOT} && bash cascade.sh gsg --check"),
-    "cascade_gsn":  sh(f"cd {GROOT} && bash cascade.sh gsn --check"),
-    "cascade_gai":  sh(f"cd {GROOT} && bash cascade.sh gai --check"),
-    "cascade_cssn": sh(f"cd {GROOT} && bash cascade.sh cssn --check"),
+    "cascade_gkk":  sh(f"cd {GROOT} && bash cascade.sh knowledge --check"),
+    "cascade_gsg":  sh(f"cd {GROOT} && bash cascade.sh friendship --check"),
+    "cascade_gsn":  sh(f"cd {GROOT} && bash cascade.sh groups --check"),
+    "cascade_gai":  sh(f"cd {GROOT} && bash cascade.sh agents --check"),
+    "cascade_cssn": sh(f"cd {GROOT} && bash cascade.sh children --check"),
 })
 
 def run_once(case):

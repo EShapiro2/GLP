@@ -1,0 +1,89 @@
+AppStore
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Person unfriend.  Alice may end her friendship with Bob.
+6. ■ Sign.  Alice may create an item by signing it.
+7. ■ Forward.  Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
+8. ◆ Publish.  Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+9. ■ Trust.  Alice may declare trust in Carol, whom she knows, as a developer.
+10. ■ Untrust.  Alice may withdraw the declaration.
+11. ■ Offer.  Carol may offer a program she holds to her friend Alice by forwarding it to her.
+12. ■ Install own.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+13. ■ Install.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+14. ■ Invite.  Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+15. ■ Leave.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
+16. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Wendy must consent.
+17. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
+18. ■ Resign.  Bob may end his guardianship of Wendy.
+19. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
+20. ■ Guardian unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
+21. ■ Ward acquaint.  Wendy, a ward of Alice, and Bob may jointly come to know each other.
+22. ■ Ward befriend.  Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends.
+23. ■ Ward end.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+24. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+25. ■ Ward unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+26. ■ Wards acquaint.  Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other.
+27. ■ Wards befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+28. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+29. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+30. ■ Open store.  Carol may make her service Dave a store.
+31. ○ List.  Carol may list in Dave a program developed by Bob, after adding her signature to its signatures, provided she trusts Bob as a developer.
+32. ○ Delist.  Carol may delist it.
+33. ■ Trust store.  Alice may declare trust in Dave, Carol being known to her.
+34. ■ Untrust store.  Alice may withdraw the declaration.
+35. ■ Install from store.  Alice may install a program listed in a store she trusts.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Sign: Alice [Sign] <item>
+Forward: Alice [Forward]
+Publish: Carol [Publish] <prog>
+Trust: Alice [Trust]
+Untrust: Alice [Untrust]
+Offer: Carol [Offer]
+Install own: Alice [Install own]
+Install: Alice [Install]
+Invite: Alice [Invite]
+  Bob: Alice asks for your consent to invite.
+Leave: Alice [Leave]
+Enter: Alice [Enter] <wendy>
+Make guardian: Bob [Make guardian] <wendy>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Wendy [Ward acquaint] <bob>
+  Bob: Wendy asks for your consent to ward acquaint.
+Ward befriend: Wendy [Ward befriend]
+  Bob: Wendy asks for your consent to ward befriend.
+  Alice: Wendy asks for your consent to ward befriend.
+Ward end: Wendy [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <wendy> <bob>
+Wards acquaint: Wendy [Wards acquaint] <will>
+  Will: Wendy asks for your consent to wards acquaint.
+Wards befriend: Wendy [Wards befriend] <bob>
+  Will: Wendy asks for your consent to wards befriend.
+  Alice: Wendy asks for your consent to wards befriend.
+  Bob: Wendy asks for your consent to wards befriend.
+Wards of one guardian befriend: Wendy [Wards of one guardian befriend]
+  Will: Wendy asks for your consent to wards of one guardian befriend.
+  Alice: Wendy asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Open store: Carol [Open store]
+List: Carol [List]
+Delist: Carol [Delist]
+Trust store: Alice [Trust store]
+Untrust store: Alice [Untrust store]
+Install from store: Alice [Install from store] <prog> <bob>

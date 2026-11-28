@@ -1,0 +1,30 @@
+K          commute yes; return yes; recover equivalent
+R          commute yes; return yes; recover same
+U          commute yes; return yes; recover same
+T          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+4 contracts, 0 with a fault
+--- sasx/K.txt
+K: Base (expanded schemas)
+K:0 - | Alice and Bob are persons.
+K:1 ■ Give: token(Bob) <- guarded by Alice, Bob.
+K:1 ■ Take: token(Alice) <- guarded by Alice.
+--- sasx/R.txt
+R: One act, renamed, a consent repeated (expanded schemas)
+R:0 - | Alice, Bob and Carol are persons.
+K:1+R:1 ■ Grant: token(Bob) <- trusted(Bob,Carol) guarded by Alice, Bob, Carol.
+K:1 ■ Take: token(Alice) <- guarded by Alice.
+--- sasx/T.txt
+T: Two paths (expanded schemas)
+T:0 - | Alice, Bob and Carol are persons.
+K:1+R:1 ■ Grant: token(Bob) <- trusted(Bob,Carol) guarded by Alice, Bob, Carol.
+K:1 ■ Take: token(Alice) <- guarded by Alice.
+U:1 ○ | Care.
+U:1 ○ | Alice will take care.
+--- sasx/U.txt
+U: Undertaking alone (expanded schemas)
+U:0 - | Alice and Bob are persons.
+K:1 ■ Give: token(Bob) <- guarded by Alice, Bob.
+K:1 ■ Take: token(Alice) <- guarded by Alice.
+U:1 ○ | Care.
+U:1 ○ | Alice will take care.

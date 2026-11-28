@@ -1,0 +1,7 @@
+MSG: Messages
+MSG extends Friendship.
+Alice and Bob are persons, Text a message.
+1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
+Logic pragmas.
+Vocabulary: y has the message t from x = message(y,x,t).
+After x sends t to y: y has the message t from x.

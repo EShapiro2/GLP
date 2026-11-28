@@ -1,0 +1,12 @@
+C          commute yes; return yes; recover same
+D          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+2 contracts, 0 with a fault
+--- sasx/C.txt
+C: Required role consent (expanded schemas)
+C:0 - | Alice is a person.
+C:1 ■ Act: ready(Alice) <- guarded by Alice, deciders(Alice) must deciders(Alice).
+--- sasx/D.txt
+D: Instantiate the role (expanded schemas)
+D:0 - | Alice is a person.
+C:1 ■ Act: ready(Alice) <- guarded by Alice, overseers(Alice) must overseers(Alice).

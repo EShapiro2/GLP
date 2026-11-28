@@ -1,0 +1,3 @@
+Interface pragmas
+Sign: Alice [Sign] <item>
+Forward: Alice [Forward]

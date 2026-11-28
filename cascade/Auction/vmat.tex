@@ -1,0 +1,2000 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+point_friend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+points_to
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+may_point_friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+points_to
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+point_transitive
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+points_to
+}}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+Carol
+)
+,
+\mathit{\detokenize{
+points_to
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+closer
+}}
+(
+Carol
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+points_to
+}}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+points_to
+}}
+(
+Carol
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+unpoint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+points_to
+}}
+(
+Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+bound
+}}
+(
+D
+)
+,
+\mathit{\detokenize{
+furthest
+}}
+(
+Bob
+)
+,
+\mathit{\detokenize{
+points_to
+}}
+(
+Bob
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{\detokenize{
+points_to
+}}
+(
+\Alice
+,
+X1
+)
+)
+>
+D
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+call
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+rider
+}}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+open_call
+}}
+(
+\ast
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+send_call
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+sent_call
+}}
+(
+\Bob
+,
+Trip
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+call
+}}
+(
+\Alice
+,
+Trip
+)
+,
+\mathit{\detokenize{
+direct_call
+}}
+(
+\Alice
+,
+Trip
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+,
+\mathit{\detokenize{
+points_to
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+sent_call
+}}
+(
+\Bob
+,
+Trip
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+call
+}}
+(
+\Alice
+,
+Trip
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+forward_call
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+forwarded
+}}
+(
+Alice
+,
+\Bob
+,
+Trip
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+call
+}}
+(
+Alice
+,
+Trip
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+direct_call
+}}
+(
+Alice
+,
+Trip
+)
+,
+\mathit{\detokenize{
+points_to
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+forwarded
+}}
+(
+Alice
+,
+\Bob
+,
+Trip
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+call
+}}
+(
+Alice
+,
+Trip
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+bid
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+bid
+}}
+(
+\Bob
+,
+Trip
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+driver
+}}
+,
+\mathit{\detokenize{
+call
+}}
+(
+\Bob
+,
+Trip
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+period_ended
+}}
+(
+Trip
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+award
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+\}
+) \cup 
+\{
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+fare_locked
+}}
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+deposit_locked
+}}
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+period_ended
+}}
+(
+Trip
+)
+,
+\mathit{\detokenize{
+selects
+}}
+(
+\Bob
+,
+Trip
+)
+,
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+bid
+}}
+(
+\Alice
+,
+Trip
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+ride
+}}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+close
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+selects_none
+}}
+(
+Trip
+)
+,
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+pickup
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+pickup
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+pickup
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+at_pickup
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+at_pickup
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+arrive
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+driver_arrive
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+cancel
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+no_pickup
+}}
+,
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+withdraw
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+open_call
+}}
+(
+Trip
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+period_ended
+}}
+(
+Trip
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}

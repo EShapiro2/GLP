@@ -5,28 +5,30 @@
 %% The roles, by which the plays choose a script, each with the keys of those its person has a conversation with, in the order the plays give them (alice: bob; bob: alice; market_alice: bob, charlie, eve, frank; market_bob: alice, diana; market_charlie: alice, eve; market_diana: bob, frank; market_eve: alice, charlie, frank; market_frank: diana, eve, alice), its own key the first argument:
 %%   alice  looks at her request question; establishes her identity (GKK:1);
 %%          asks to come to know bob (GKK:2), her request's hello asking
-%%          him; once she knows him, mints two Alice-coins (GC:1); once she
+%%          him; once she knows him, issues two Alice-coins, a1 and a2 (GC:1); once she
 %%          holds them, asks bob to swap them for three Bob-coins,
-%%          swap(alice, bob, alice, 2, bob, 3) (GC:2); once she holds the
-%%          Bob-coins, pays two of them to bob, pay(alice, bob, 2) (GC:3);
+%%          swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, 3) (GC:2), bob's machine picking the three Bob-coins it gives; once she holds the
+%%          Bob-coins, pays two of them to bob, pay_issuer(alice, bob, coin, [b1, b2], 2) (Coins:1);
 %%          looks again.
-%%   bob    establishes his identity; mints three Bob-coins; once he holds
+%%   bob    establishes his identity; issues three Bob-coins, b1, b2 and b3; once he holds
 %%          them, answers yes to alice asking that they come to know each other, the
 %%          question her hello asks, and yes to her asking to swap her
-%%          Alice-coins for his Bob-coins.  He mints before he answers the
+%%          Alice-coins for his Bob-coins.  He issues before he answers the
 %%          acquaintance, so that he holds the Bob-coins when alice's swap reaches
 %%          him: alice cannot see his holdings, and the swap's start would
-%%          otherwise race his mint.
+%%          otherwise race his issue.
 %%   market_alice to market_frank  the six villagers of the village market
 %%          of GC's paper (play_village, plays.glp), their scripts below.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
-Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
+Step  ::= req(Request) ; own(Holes, Request) ; own(Holes, Request, Elems) ; look ; wait(Cond) ; approval(Asked, YesNo)
         ; approval(Fills, Class, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; lacks(Atom, Integer) ; has(Atom, Integer)
         ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
 Last  ::= last(Key, List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
+ElemsAt ::= at(Integer, List(Drawn)).
+Elems ::= [] ; [ElemsAt | Elems].
 Holes ::= [] ; [Key? | Holes].
 Sess  ::= nosess ; sess(Integer, Path).
 Shown ::= shown(Integer, Path, Asking).
@@ -45,75 +47,117 @@ miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
 
 %% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there; the issuer of a coin whom the person does not know is a hole of an approval step, filled by matching the approval question (approval(Fs, K, A), below).
 procedure script(Constant?, Key?, List(Key)?, Steps).
-script(alice, Me, [Bob], [look, own([A1], propose(establish(A1?))), wait(holds(identity)),
-                          own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
-                          own([A2], propose(mint(A2?, 2))), wait(has(coin(Me?), 2)),
-                          own([A3, A4], propose(swap(A3?, Bob?, A4?, 2, Bob?, 3))), wait(has(coin(Bob?), 3)),
-                          own([A5], propose(pay(A5?, Bob?, 2))), wait(lacks(coin(Me?))), look]) :-
+script(alice, Me, [Bob], [look,
+         own([A1], propose(establish(A1?))), wait(holds(identity)),
+         own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
+         own([A2], propose(issue(A2?, coin, [a1, a2], 2)), [at(3, [a1, a2, [end]])]),
+         wait(holds(note(Me?, coin, a2))),
+         own([A3, A4], propose(swap(A3?, Bob?, A4?, coin, [a1, a2], 2, Bob?, coin, 3)), [at(5, [a1, a2, [end]])]),
+         wait(holds(note(Bob?, coin, b3))),
+         own([A5], propose(pay_issuer(A5?, Bob?, coin, [b1, b2], 2)), [at(4, [b1, b2, [end]])]),
+         wait(lacks(note(Bob?, coin, b2))),
+         look]) :-
     ground(Me?), ground(Bob?) | true.
 script(bob, Me, [Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)),
-                          own([B2], propose(mint(B2?, 3))), wait(has(coin(Me?), 3)),
-                          approval(acquaint(Alice?, Me?), yes),
-                          approval(swap(Alice?, Me?, Alice?, 2, Me?, 3), yes)]) :-
+         own([B2], propose(issue(B2?, coin, [b1, b2, b3], 3)), [at(3, [b1, b2, b3, [end]])]),
+         wait(holds(note(Me?, coin, b3))),
+         approval(acquaint(Alice?, Me?), yes),
+         approval(swap(Alice?, Me?, Alice?, coin, [a1, a2], 2, Me?, coin, 3), yes)]) :-
     ground(Me?), ground(Alice?) | true.
-%% The village market of GC's paper, Appendix "Village Market Demonstration", on the compiled app (play_village, plays.glp): six villagers, each script its villager's acts of the six operations, after each has minted its coins and come to know those it transacts with (GKK:2), each acquaintance willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party minting before it answers an acquaintance.  The coins each mints are the coins of its issue the operations need: 30 alice-coins, 39 bob-coins, 25 charlie-coins, 35 diana-coins, 20 eve-coins and 28 frank-coins.
+%% The village market of GC's paper, Appendix "Village Market Demonstration", on the compiled app (play_village, plays.glp): six villagers, each script its villager's acts of the six operations, after each has issued its coins and come to know those it transacts with (GKK:2), each acquaintance willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party issuing before it answers an acquaintance.  The coins each issues are the coins the operations need: 30 alice-coins, 39 bob-coins, 25 charlie-coins, 35 diana-coins, 20 eve-coins and 28 frank-coins, each a note with its identifier, alice's a1 to a30, bob's b1 to b39, charlie's c1 to c25, diana's d1 to d35, eve's e1 to e20 and frank's f1 to f28; each request names the notes it moves, and each script waits on a note it is to hold or to have given (the set terms: GSC's Notes, a note's unique identifier; Calculus 08f4b51, a single note a set of one).
 script(market_alice, Me, [Bob, Charlie, Eve, Frank], [own([A1], propose(establish(A1?))), wait(holds(identity)),
-         own([A2], propose(mint(A2?, 30))), wait(has(coin(Me?), 30)),
+         own([A2], propose(issue(A2?, coin, [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30], 30)), [at(3, [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, [end]])]),
+         wait(holds(note(Me?, coin, a30))),
          own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
          own([M2], propose(acquaint(M2?, Charlie?))), wait(holds(knows(Charlie?))),
          own([M3], propose(acquaint(M3?, Eve?))), wait(holds(knows(Eve?))),
          own([M4], propose(acquaint(M4?, Frank?))), wait(holds(knows(Frank?))),
-         own([A3, A4], propose(swap(A3?, Bob?, A4?, 15, Bob?, 15))), wait(has(coin(Bob?), 15)),
-         own([A5, A6], propose(swap(A5?, Charlie?, A6?, 15, Charlie?, 15))), wait(has(coin(Charlie?), 15)),
-         wait(has(coin(Me?), 8)),
-         own([A7], propose(swap(A7?, Eve?, Bob?, 10, Frank?, 4))), wait(has(coin(Frank?), 4)), look]) :-
+         own([A3, A4], propose(swap(A3?, Bob?, A4?, coin, [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15], 15, Bob?, coin, 15)), [at(5, [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, [end]])]),
+         wait(holds(note(Bob?, coin, b15))),
+         own([A5, A6], propose(swap(A5?, Charlie?, A6?, coin, [a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30], 15, Charlie?, coin, 15)), [at(5, [a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, [end]])]),
+         wait(holds(note(Charlie?, coin, c15))),
+         wait(holds(note(Me?, coin, a5))),
+         wait(holds(note(Me?, coin, a18))),
+         own([A7], propose(swap(A7?, Eve?, Bob?, coin, [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10], 10, Frank?, coin, 4)), [at(5, [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, [end]])]),
+         wait(holds(note(Frank?, coin, f27))),
+         look]) :-
     ground(Me?), ground(Bob?), ground(Charlie?), ground(Eve?), ground(Frank?) | true.
 script(market_bob, Me, [Alice, Diana], [own([B1], propose(establish(B1?))), wait(holds(identity)),
-         own([B2], propose(mint(B2?, 39))), wait(has(coin(Me?), 39)),
-         approval(acquaint(Alice?, Me?), yes), approval(acquaint(Diana?, Me?), yes),
-         approval(swap(Alice?, Me?, Alice?, 15, Me?, 15), yes),
-         approval(swap(Diana?, Me?, Diana?, 20, Me?, 24), yes),
-         wait(has(coin(Alice?), 15)),
-         own([B3], propose(pay(B3?, Alice?, 5))), wait(lacks(coin(Alice?), 11)), look]) :-
+         own([B2], propose(issue(B2?, coin, [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39], 39)), [at(3, [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, [end]])]),
+         wait(holds(note(Me?, coin, b39))),
+         approval(acquaint(Alice?, Me?), yes),
+         approval(acquaint(Diana?, Me?), yes),
+         approval(swap(Alice?, Me?, Alice?, coin, [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15], 15, Me?, coin, 15), yes),
+         approval(swap(Diana?, Me?, Diana?, coin, [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20], 20, Me?, coin, 24), yes),
+         wait(holds(note(Alice?, coin, a15))),
+         own([B3], propose(pay_issuer(B3?, Alice?, coin, [a1, a2, a3, a4, a5], 5)), [at(4, [a1, a2, a3, a4, a5, [end]])]),
+         wait(lacks(note(Alice?, coin, a5))),
+         look]) :-
     ground(Me?), ground(Alice?), ground(Diana?) | true.
 script(market_charlie, Me, [Alice, Eve], [own([C1], propose(establish(C1?))), wait(holds(identity)),
-         own([C2], propose(mint(C2?, 25))), wait(has(coin(Me?), 25)),
+         own([C2], propose(issue(C2?, coin, [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23, c24, c25], 25)), [at(3, [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23, c24, c25, [end]])]),
+         wait(holds(note(Me?, coin, c25))),
          approval(acquaint(Alice?, Me?), yes),
          own([M1], propose(acquaint(M1?, Eve?))), wait(holds(knows(Eve?))),
-         approval(swap(Alice?, Me?, Alice?, 15, Me?, 15), yes),
-         own([C3, C4], propose(swap(C3?, Eve?, C4?, 10, Eve?, 10))), wait(has(coin(Eve?), 10)),
-         approval([[F1, F2]], swap(Eve?, Me?, F1?, 5, Alice?, 5), yes), wait(has(coin(F2?), 5)), look]) :-
+         approval(swap(Alice?, Me?, Alice?, coin, [a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30], 15, Me?, coin, 15), yes),
+         own([C3, C4], propose(swap(C3?, Eve?, C4?, coin, [c16, c17, c18, c19, c20, c21, c22, c23, c24, c25], 10, Eve?, coin, 10)), [at(5, [c16, c17, c18, c19, c20, c21, c22, c23, c24, c25, [end]])]),
+         wait(holds(note(Eve?, coin, e10))),
+         approval([[F1, F2]], swap(Eve?, Me?, F1?, coin, [f19, f20, f21, f22, f23], 5, Alice?, coin, 5), yes),
+         wait(holds(note(F2?, coin, f23))),
+         look]) :-
     ground(Me?), ground(Alice?), ground(Eve?) | true.
 script(market_diana, Me, [Bob, Frank], [own([D1], propose(establish(D1?))), wait(holds(identity)),
-         own([D2], propose(mint(D2?, 35))), wait(has(coin(Me?), 35)),
+         own([D2], propose(issue(D2?, coin, [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, d32, d33, d34, d35], 35)), [at(3, [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, d32, d33, d34, d35, [end]])]),
+         wait(holds(note(Me?, coin, d35))),
          own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
          own([M2], propose(acquaint(M2?, Frank?))), wait(holds(knows(Frank?))),
-         own([D3, D4], propose(swap(D3?, Bob?, D4?, 20, Bob?, 24))), wait(has(coin(Bob?), 24)),
-         own([D5, D6], propose(swap(D5?, Frank?, D6?, 15, Frank?, 18))), wait(has(coin(Frank?), 18)), look]) :-
+         own([D3, D4], propose(swap(D3?, Bob?, D4?, coin, [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20], 20, Bob?, coin, 24)), [at(5, [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, [end]])]),
+         wait(holds(note(Bob?, coin, b39))),
+         own([D5, D6], propose(swap(D5?, Frank?, D6?, coin, [d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, d32, d33, d34, d35], 15, Frank?, coin, 18)), [at(5, [d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, d32, d33, d34, d35, [end]])]),
+         wait(holds(note(Frank?, coin, f18))),
+         look]) :-
     ground(Me?), ground(Bob?), ground(Frank?) | true.
 script(market_eve, Me, [Alice, Charlie, Frank], [own([E1], propose(establish(E1?))), wait(holds(identity)),
-         own([E2], propose(mint(E2?, 20))), wait(has(coin(Me?), 20)),
-         approval(acquaint(Alice?, Me?), yes), approval(acquaint(Charlie?, Me?), yes),
+         own([E2], propose(issue(E2?, coin, [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15, e16, e17, e18, e19, e20], 20)), [at(3, [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, [end]])]),
+         wait(holds(note(Me?, coin, e20))),
+         approval(acquaint(Alice?, Me?), yes),
+         approval(acquaint(Charlie?, Me?), yes),
          own([M1], propose(acquaint(M1?, Frank?))), wait(holds(knows(Frank?))),
-         approval(swap(Charlie?, Me?, Charlie?, 10, Me?, 10), yes),
-         own([E3, E4], propose(swap(E3?, Frank?, E4?, 10, Frank?, 10))), wait(has(coin(Frank?), 10)),
-         own([E5], propose(pay(E5?, Charlie?, 6))), wait(lacks(coin(Charlie?), 5)),
-         own([E6], propose(swap(E6?, Charlie?, Frank?, 5, Alice?, 5))), wait(has(coin(Alice?), 5)),
-         own([E7], propose(pay(E7?, Alice?, 3))), wait(lacks(coin(Alice?), 3)),
-         approval([[B1, B2]], swap(Alice?, Me?, B1?, 10, Frank?, 4), yes), wait(has(coin(B2?), 10)), look]) :-
+         approval(swap(Charlie?, Me?, Charlie?, coin, [c16, c17, c18, c19, c20, c21, c22, c23, c24, c25], 10, Me?, coin, 10), yes),
+         own([E3, E4], propose(swap(E3?, Frank?, E4?, coin, [e11, e12, e13, e14, e15, e16, e17, e18, e19, e20], 10, Frank?, coin, 10)), [at(5, [e11, e12, e13, e14, e15, e16, e17, e18, e19, e20, [end]])]),
+         wait(holds(note(Frank?, coin, f28))),
+         own([E5], propose(pay_issuer(E5?, Charlie?, coin, [c16, c17, c18, c19, c20, c21], 6)), [at(4, [c16, c17, c18, c19, c20, c21, [end]])]),
+         wait(lacks(note(Charlie?, coin, c21))),
+         own([E6], propose(swap(E6?, Charlie?, Frank?, coin, [f19, f20, f21, f22, f23], 5, Alice?, coin, 5)), [at(5, [f19, f20, f21, f22, f23, [end]])]),
+         wait(holds(note(Alice?, coin, a20))),
+         own([E7], propose(pay_issuer(E7?, Alice?, coin, [a16, a17, a18], 3)), [at(4, [a16, a17, a18, [end]])]),
+         wait(lacks(note(Alice?, coin, a18))),
+         approval([[B1, B2]], swap(Alice?, Me?, B1?, coin, [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10], 10, Frank?, coin, 4), yes),
+         wait(holds(note(B2?, coin, b10))),
+         look]) :-
     ground(Me?), ground(Alice?), ground(Charlie?), ground(Frank?) | true.
 script(market_frank, Me, [Diana, Eve, Alice], [own([F1], propose(establish(F1?))), wait(holds(identity)),
-         own([F2], propose(mint(F2?, 28))), wait(has(coin(Me?), 28)),
-         approval(acquaint(Diana?, Me?), yes), approval(acquaint(Eve?, Me?), yes), approval(acquaint(Alice?, Me?), yes),
-         approval(swap(Diana?, Me?, Diana?, 15, Me?, 18), yes),
-         approval(swap(Eve?, Me?, Eve?, 10, Me?, 10), yes),
-         wait(has(coin(Diana?), 15)),
-         own([F3], propose(pay(F3?, Diana?, 3))), wait(lacks(coin(Diana?), 13)),
-         own([F4, F5], propose(redeem(F4?, Diana?, F5?))), wait(lacks(coin(Diana?), 12)),
-         own([F6, F7], propose(redeem(F6?, Diana?, F7?))), wait(lacks(coin(Diana?), 11)),
-         own([F8, F9], propose(redeem(F8?, Diana?, F9?))), wait(lacks(coin(Diana?), 10)),
-         own([F10, F11], propose(redeem(F10?, Diana?, F11?))), wait(lacks(coin(Diana?), 9)),
-         own([F12, F13], propose(redeem(F12?, Diana?, F13?))), wait(lacks(coin(Diana?), 8)), look]) :-
+         own([F2], propose(issue(F2?, coin, [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24, f25, f26, f27, f28], 28)), [at(3, [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24, f25, f26, f27, f28, [end]])]),
+         wait(holds(note(Me?, coin, f28))),
+         approval(acquaint(Diana?, Me?), yes),
+         approval(acquaint(Eve?, Me?), yes),
+         approval(acquaint(Alice?, Me?), yes),
+         approval(swap(Diana?, Me?, Diana?, coin, [d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, d32, d33, d34, d35], 15, Me?, coin, 18), yes),
+         approval(swap(Eve?, Me?, Eve?, coin, [e11, e12, e13, e14, e15, e16, e17, e18, e19, e20], 10, Me?, coin, 10), yes),
+         wait(holds(note(Diana?, coin, d35))),
+         own([F3], propose(pay_issuer(F3?, Diana?, coin, [d21, d22, d23], 3)), [at(4, [d21, d22, d23, [end]])]),
+         wait(lacks(note(Diana?, coin, d23))),
+         own([F4, F5], propose(redeem(F4?, Diana?, [d24], F5?)), [at(3, [d24, [end]])]),
+         wait(lacks(note(Diana?, coin, d24))),
+         own([F6, F7], propose(redeem(F6?, Diana?, [d25], F7?)), [at(3, [d25, [end]])]),
+         wait(lacks(note(Diana?, coin, d25))),
+         own([F8, F9], propose(redeem(F8?, Diana?, [d26], F9?)), [at(3, [d26, [end]])]),
+         wait(lacks(note(Diana?, coin, d26))),
+         own([F10, F11], propose(redeem(F10?, Diana?, [d27], F11?)), [at(3, [d27, [end]])]),
+         wait(lacks(note(Diana?, coin, d27))),
+         own([F12, F13], propose(redeem(F12?, Diana?, [d28], F13?)), [at(3, [d28, [end]])]),
+         wait(lacks(note(Diana?, coin, d28))),
+         look]) :-
     ground(Me?), ground(Diana?), ground(Eve?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 
@@ -151,6 +195,11 @@ advance(ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :
     last_of(T?, L),
     owned(L?, ps(sess(Id?, P?), T?, Cs?, [own(Ks?, R?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [own(Ks, R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P), T, Cs, [own(Ks, R, Es) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    owned(L?, ps(sess(Id?, P?), T?, Cs?, [own(Ks?, R?, Es?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [own(Ks, R, Es) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?, Es?) | Ss?]), Log1?, Log1).
 advance(ps(sess(Id, P), T, Cs, [look | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?), ground(T?) |
     last_of(T?, L),
@@ -178,7 +227,28 @@ owned(last(Me, _, _), ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?,
     fill(Me?, Ks?),
     grant(Id?, P?, R?, Gs, Gs2?),
     advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+owned(last(Me, _, _), ps(sess(Id, P), T, Cs, [own(Ks, R, Es) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Me?), ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    grant_elems(Id?, P?, Es?, Gs2, Gs3?),
+    advance(ps(nosess, T?, Cs?, Ss?), Gs3, Gs1?, St1, Log, Log1?).
 owned(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% grant_elems(Id, P, Es, Gs, Gs1): for each at(K, Xs) of Es, each X of Xs granted on the question Id at the path of the K-th argument of the proposal the request at P names, P followed by 1 and K, the elements of a set the request names, each a constant, and [end] (vGLP, Section 6.3: an open request asks a list one element at a time, end ending it), as vGLP's scripted person grants them (programs/vglp/cva/self.glp).
+procedure grant_elems(Integer?, Path?, Elems?, PersonIn(Drawn), PersonIn(Drawn)?).
+grant_elems(_, _, [], Gs1?, Gs1).
+grant_elems(Id, P, [at(K, Xs) | Es], Gs?, Gs1) :- ground(Id?), ground(P?), integer(K?) |
+    path_app(P?, [1, K?], Q),
+    grant_each(Id?, Q?, Xs?, Gs, Gs2?),
+    grant_elems(Id?, P?, Es?, Gs2, Gs1?).
+procedure grant_each(Integer?, Path?, List(Drawn)?, PersonIn(Drawn), PersonIn(Drawn)?).
+grant_each(_, _, [], Gs1?, Gs1).
+grant_each(Id, Q, [X | Xs], [input(Id?, Q?, X?) | Gs?], Gs1) :- ground(Id?), ground(Q?), ground(X?) |
+    grant_each(Id?, Q?, Xs?, Gs, Gs1?).
+procedure path_app(Path?, Path?, Path).
+path_app([], Q, Q?).
+path_app([I | P], Q, [I? | R?]) :- path_app(P?, Q?, R).
 
 %% looked(L, St, ...): the step look, which reports menu(K, Ks), the agent's own key and the persons it knows as the last view drawn, L, shows them; with no view drawn yet, the step waits.
 procedure looked(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
@@ -240,24 +310,39 @@ match_class(introduce(K1, K2, K3), introduce(XK1, XK2, XK3), Vs, F?, introduce(B
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
     match_key(K3?, XK3?, R2?, F, BK3).
-match_class(mint(K1, K2), mint(XK1, XK2), Vs, F?, mint(BK1?, BK2?)) :-
+match_class(issue(K1, K2, K3, K4), issue(XK1, XK2, XK3, XK4), Vs, F?, issue(BK1?, BK2?, BK3?, BK4?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
-    match_int(K2?, XK2?, R1?, F, BK2).
-match_class(swap(K1, K2, K3, K4, K5, K6), swap(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, swap(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_const(K2?, XK2?, R1?, R2, BK2),
+    match_set(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(swap(K1, K2, K3, K4, K5, K6, K7, K8, K9), swap(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8, XK9), Vs, F?, swap(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?, BK9?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
     match_key(K3?, XK3?, R2?, R3, BK3),
-    match_int(K4?, XK4?, R3?, R4, BK4),
-    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_set(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, R6, BK6),
+    match_key(K7?, XK7?, R6?, R7, BK7),
+    match_const(K8?, XK8?, R7?, R8, BK8),
+    match_int(K9?, XK9?, R8?, F, BK9).
+match_class(pay(K1, K2, K3, K4, K5, K6), pay(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, pay(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_set(K5?, XK5?, R4?, R5, BK5),
     match_int(K6?, XK6?, R5?, F, BK6).
-match_class(pay(K1, K2, K3), pay(XK1, XK2, XK3), Vs, F?, pay(BK1?, BK2?, BK3?)) :-
+match_class(pay_issuer(K1, K2, K3, K4, K5), pay_issuer(XK1, XK2, XK3, XK4, XK5), Vs, F?, pay_issuer(BK1?, BK2?, BK3?, BK4?, BK5?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
-    match_int(K3?, XK3?, R2?, F, BK3).
-match_class(redeem(K1, K2, K3), redeem(XK1, XK2, XK3), Vs, F?, redeem(BK1?, BK2?, BK3?)) :-
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_set(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, F, BK5).
+match_class(redeem(K1, K2, K3, K4), redeem(XK1, XK2, XK3, XK4), Vs, F?, redeem(BK1?, BK2?, BK3?, BK4?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
-    match_key(K3?, XK3?, R2?, F, BK3).
+    match_set(K3?, XK3?, R2?, R3, BK3),
+    match_key(K4?, XK4?, R3?, F, BK4).
 match_class(K, _, _, nomatch, K?) :- otherwise | true.
 
 %% match_key(K, X, F0, F, K1): a hole K, unknown, takes the key X; a key K matches X where the two are equal.
@@ -266,6 +351,17 @@ match_key(K, _, nomatch, nomatch, K?).
 match_key(K, X, found(Vs), found([X? | Vs?]), K?) :- unknown(K?) | true.
 match_key(K, X, found(Vs), found(Vs?), K?) :- K? =?= X? | true.
 match_key(K, _, found(_), nomatch, K?) :- otherwise | true.
+
+%% match_const and match_set: a note's type, and the set of notes a class names, each matched where the two are equal; a class with holes names every type and every set.
+procedure match_const(Constant?, Constant?, Found?, Found, Constant).
+match_const(C, _, nomatch, nomatch, C?).
+match_const(C, X, found(Vs), found(Vs?), C?) :- C? =?= X? | true.
+match_const(C, _, found(_), nomatch, C?) :- otherwise | true.
+
+procedure match_set(List(Constant)?, List(Constant)?, Found?, Found, List(Constant)).
+match_set(C, _, nomatch, nomatch, C?).
+match_set(C, X, found(Vs), found(Vs?), C?) :- C? =?= X? | true.
+match_set(C, _, found(_), nomatch, C?) :- otherwise | true.
 
 procedure match_int(Integer?, Integer?, Found?, Found, Integer).
 match_int(I, _, nomatch, nomatch, I?).

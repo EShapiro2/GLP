@@ -221,4 +221,43 @@ void main() {
       );
     });
   });
+
+  group('validity times (RFC 5280 §4.1.2.5.1)', () {
+    final rootKey = TestEcKey('utctime-root');
+    final leafKey = TestEcKey('utctime-leaf');
+    final root = rootCertificate('UTCTime Root', rootKey);
+    Uint8List leaf(DateTime notBefore, DateTime notAfter) => certificate(
+          subject: 'UTCTime Leaf',
+          subjectKey: leafKey,
+          issuer: 'UTCTime Root',
+          issuerKey: rootKey,
+          serial: 2,
+          notBefore: notBefore,
+          notAfter: notAfter,
+        );
+
+    test('an Android attestation leaf, valid 1970 to 2048, reads so and '
+        'validates today', () {
+      // Android's KeyStore gives an attestation certificate the default
+      // validity 1970-01-01 to 2048-01-01, both UTCTime: 700101000000Z and
+      // 480101000000Z.  Read with the year pivot at 75, 70 became 2070 and
+      // every Android attestation was refused as not yet valid (two Pixels,
+      // 2026-11-11).
+      final der = leaf(DateTime.utc(1970, 1, 1), DateTime.utc(2048, 1, 1));
+      final cert = X509Certificate.fromDer(der);
+      expect(cert.notBefore, DateTime.utc(1970, 1, 1));
+      expect(cert.notAfter, DateTime.utc(2048, 1, 1));
+      expect(
+        () => validateChain(chain: [der, root], pinnedRoots: [root], at: now),
+        returnsNormally,
+      );
+    });
+
+    test('a two-digit year of 50 to 99 is 19YY, of 00 to 49 is 20YY', () {
+      final cert = X509Certificate.fromDer(
+          leaf(DateTime.utc(1950, 1, 1), DateTime.utc(2049, 12, 31, 23, 59, 59)));
+      expect(cert.notBefore, DateTime.utc(1950, 1, 1));
+      expect(cert.notAfter, DateTime.utc(2049, 12, 31, 23, 59, 59));
+    });
+  });
 }

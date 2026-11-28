@@ -1,0 +1,2 @@
+Funded DAO extends DAO and Coins: holds
+Funded DAO extends it (DAO and Coins): holds

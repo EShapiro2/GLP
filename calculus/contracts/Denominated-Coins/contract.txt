@@ -1,0 +1,7 @@
+Denominated Coins
+Denominated Coins inherits from Coins.
+*Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+Alice is a party.
+1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
+2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

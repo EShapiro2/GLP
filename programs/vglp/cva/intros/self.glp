@@ -2,7 +2,7 @@
 %% The play of the canonical CVA platform of vGLP's contract intros
 %% (../contracts.glp, contract_named(intros, C)), platform.vglp, which
 %% programs/vglp/cva/compile.sh prints from it: GKK's acquaintance and
-%% introduction (programs/gsc/GKK.glp) with no identity, so that a contract
+%% introduction (programs/gsc/Knowledge.glp) with no identity, so that a contract
 %% compiled here has an introduction at a commit (vGLP 613ee8d, Section 3.2,
 %% Definition "Introduction Rule, Introduce Peers": "Commit, and Outcome on a
 %% commit, of an attempt of [t]_j at p add the same messages and record for
@@ -85,7 +85,7 @@
 %%   never asked.
 %% unable: bob does not open; alice peeks at bob, bob's machine votes no,
 %%   unable, its state lacking open, and alice is told the refusal,
-%%   refused(peek(alice, bob), bob, unable([open], [])); bob is never asked.
+%%   refused(peek(alice, bob), bob, unable([open], [], [])); bob is never asked.
 %% signing: alice, who knows bob, posts a, an utterance she signed, and
 %%   b, an utterance bob signed and she signed again.  Her machine sends bob a
 %%   and not b, unsigned(bob, x) holding of a alone, and credits bob b and not

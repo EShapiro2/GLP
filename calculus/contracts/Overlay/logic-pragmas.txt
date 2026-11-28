@@ -1,0 +1,10 @@
+Overlay
+Overlay extends Friendship.
+Alice, Bob and Carol are persons.
+1. ■ Point friend: Alice may point to Bob, provided Alice and Bob are friends.
+2. ■ Point transitive: Alice may point to Carol, provided Alice knows Carol, Alice points to Bob and Bob points to Carol.
+3. ■ Unpoint: Alice may cease pointing to Bob.
+Logic pragmas.
+Vocabulary: x points to y = points_to(x,y).
+After x points to y, which requires x does not point to y: x points to y.
+After x ceases pointing to y: no longer x points to y.

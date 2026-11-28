@@ -1,0 +1,2 @@
+Bank extends Organisation and Denominated Currencies: holds
+Bank extends it (Organisation and Denominated Currencies): holds

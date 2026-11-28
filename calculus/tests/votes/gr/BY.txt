@@ -1,0 +1,3 @@
+BY: Bylaws
+BY instantiates OC with bylaws; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z.
+Votes and Double are numbers.

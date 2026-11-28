@@ -53,6 +53,7 @@ import 'package:glp_runtime/runtime/saved_state.dart';
 import 'package:glp_runtime/runtime/machine_state.dart' show GoalId, GoalRef;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart' show bytesEqual;
+import 'package:glp_runtime/wire/instruction_codec.dart' show encodeCode;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/stored_program.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
@@ -240,6 +241,22 @@ class AgentRuntime {
   /// and leaves the queue non-empty — and no program that quiesces reaches it.
   int maxQuiescenceCycles = 200000;
 
+  /// Whether set_clock/1 may set this agent's clock (the GLP paper,
+  /// appendix-guards, "Clock access (now/1, set_clock/1)"): not on a
+  /// smartphone, which is what this class runs; a test that sets the date
+  /// says so.
+  final bool clockSettable;
+
+  /// The compiled program the host gives the agent to run in place of
+  /// [program]'s source (IGLP, Implementation Notes, "Boot": "A host may give
+  /// an agent, at its start, the compiled program it runs in place of the
+  /// program's source: a module value, which the loader verifies as it
+  /// verifies a module the agent adopts, and whose certificate's key the host
+  /// accepts; the agent runs it and compiles nothing").  The host accepts the
+  /// key by giving the program; the agent verifies the module's certificate
+  /// ([_verifyCompiled]).  Null where the agent compiles [program].
+  final StoredProgram? compiled;
+
   AgentRuntime({
     required this.agentId,
     required this.program,
@@ -252,6 +269,8 @@ class AgentRuntime {
     GlpNetwork? network,
     this.stateStore,
     this.installedApp,
+    this.clockSettable = false,
+    this.compiled,
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
@@ -428,7 +447,7 @@ class AgentRuntime {
     // save, so set at a start where the application crashed since it last
     // ran (IGLP db0a117, Persistence, When and Restart).
     final crashed = store != null && await store.loadRunning();
-    _setUp();
+    _setUpProgram();
     if (saved != null && await _restoreOrLose(store!, saved)) {
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
@@ -528,8 +547,64 @@ class AgentRuntime {
       _updateRefusal = null;
       _updated = false;
       _programToKeep = false;
-      _setUp();
+      _setUpProgram();
       return false;
+    }
+  }
+
+  /// Set the agent up under the program it is to run: the compiled program
+  /// its host gave it, verified, where it gave one, and else [program]'s
+  /// compilation.
+  void _setUpProgram() {
+    final given = compiled;
+    if (given != null) _verifyCompiled(given);
+    _setUp(stored: given);
+  }
+
+  /// The loader's first step on the module of a compiled program the host
+  /// gave (IGLP, Code Format, "Loader"): the body hashes to the certificate's
+  /// compiled identity, and the certificate's signature verifies under the
+  /// key it carries ([Artefact.certificateRefusal], as run/2 and run/3 ask
+  /// it).  And the code the agent runs is that module's code linked with the
+  /// root's, as every program's is ([GlpEngine.combinedProgram]): each
+  /// procedure the module compiles is compiled there to the same
+  /// instructions, encoded with the procedures they call by name, the two codes
+  /// differing only in where the root's procedures and the kernels stand in
+  /// the table of symbols.
+  static void _verifyCompiled(StoredProgram given) {
+    final module = given.module;
+    if (module == null) {
+      throw ArgumentError('the compiled program given holds no module, so '
+          'there is no certificate to verify');
+    }
+    final artefact = module.artefact as Artefact;
+    final refusal = artefact.certificateRefusal;
+    if (refusal != null) {
+      throw ArgumentError('the compiled program given is not run: $refusal');
+    }
+    final runs = {
+      for (final sym in Artefact.fromBytes(given.code).symbols.reversed)
+        sym.signature: sym
+    };
+    // A procedure's instructions, the procedures they call numbered by name,
+    // so that the two codes' tables of symbols do not differ them.
+    final number = <String, int>{};
+    Uint8List byName(List<Object> ops) => encodeCode(ops,
+        procIndexOf: (name) => number.putIfAbsent(name, () => number.length));
+    var same = true;
+    for (final a in artefact.symbols) {
+      if (!a.compiled) continue;
+      final b = runs[a.signature];
+      if (b == null ||
+          !b.compiled ||
+          !bytesEqual(byName(a.ops), byName(b.ops))) {
+        same = false;
+        break;
+      }
+    }
+    if (!same) {
+      throw ArgumentError('the code of the compiled program given is not its '
+          'module\'s code');
     }
   }
 
@@ -559,6 +634,7 @@ class AgentRuntime {
 
     // Enable madGLP mode (creates the MadContext)
     engine.enableMadGLP(agentId: selfName);
+    engine.runtime.clockSettable = clockSettable;
 
     // Load the one program (TGLP, def:program).  A directory with a self.glp
     // is linked whole.  A self-contained module file is a program too (TGLP
@@ -574,8 +650,16 @@ class AgentRuntime {
       _code = stored.code;
       _image = stored.image;
       _appModule = stored.module;
-      _log('INIT: running the program the store keeps, the version the agent '
-          'terminated under, in place of $program\'s compilation');
+      // The engine runs it: a goal posted to it, the initial goal at a first
+      // start, is checked against its entry points and its type scope and
+      // runs its code ([GlpEngine.runCompiled]).
+      engine.runCompiled(stored.image,
+          module: stored.module, scope: stored.typeScope);
+      _log(identical(stored, compiled)
+          ? 'INIT: running the compiled program the host gave; nothing is '
+              'compiled'
+          : 'INIT: running the program the store keeps, the version the agent '
+              'terminated under, in place of $program\'s compilation');
     } else {
       if (FileSystemEntity.isDirectorySync(program)) {
         _log('INIT: Loading program from $program');
@@ -813,7 +897,7 @@ class AgentRuntime {
     // entry of its procedure there; a goal of a module launched by run/3 runs
     // that module's code, which the update leaves as it is.
     final savedApp = kept.module;
-    _setUp();
+    _setUpProgram();
     _restore(saved,
         savedUnder: savedUnder,
         savedAppModule: savedApp == null

@@ -1,29 +1,24 @@
 %% programs/tests/neg_guard_boot/agent_boot.glp
 %%
-%% Negative fixture: an invalid guard in the agent program of a multi-isolate
-%% boot with no program directory --- REPL :boot, IsolateManager on a
-%% BootConfig alone --- the agent program being what follows the boot clause.
+%% Negative fixture: an invalid guard in the agents' program of a
+%% multi-isolate boot, the program directory agent/ beside this file ---
+%% REPL :boot, IsolateManager with programDir.  Until 2026-11-10 the program
+%% followed the boot clause in this file, which the loader now refuses.
 %% GLP-Spec glp.tex, Definition "Guarded Clause": "G is a conjunction of guard
 %% predicates"; true is no guard predicate of the catalogue (GLP-Spec
 %% appendix-guards.tex) and no unit clause defines it, so the agent's load is
 %% refused and the boot fails.  agent.glp beside it is the same agent program
 %% as a module file, the one program an AgentRuntime runs.
+%
+%% The agents' program is the program directory agent/ beside this file,
+%% which the agents load, this file carrying its boot clause and the persons
+%% it names and nothing else (TGLP 6ce148a, modules.tex, "Entry and the
+%% absence of a boot module"; IGLP, Implementation Notes, "Boot").
 
 procedure boot.
 boot :-
     agent(ch(_?, _), ch(_?, _))@alice,
     say(alice, ch(_?, _))@alice.
-procedure agent_init(_?, _?).
-agent_init(Id, _) :- true | send_to_user([hello(Id?)]).
-
-%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input, the agent's key having been made at its spawn.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
-
-%% The agent's program, by the name its person tells it.
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
-start([alice | _], N) :- agent_init(alice, N?).
-start(_, _) :- otherwise | true.
 
 %% The person at each agent: it tells the agent its name, and reads nothing.
 exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).

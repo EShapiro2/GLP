@@ -1,0 +1,14 @@
+Encounters (expanded schemas)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Encounters:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Encounters:0 - | A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
+Encounters:0 - | Environment: x is nearby y.
+Encounters:1 ■ Open place: open_place(Alice) <- ~open_place(Alice) guarded by Alice.
+Encounters:1 ■ Close place: ~open_place(Alice) <- open_place(Alice) guarded by Alice.
+Encounters:2 ■ Encounter: knows(Alice,Bob), knows(Bob,Alice) <- ~knows(Alice,Bob), ~knows(Bob,Alice), nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob must Alice, Bob.

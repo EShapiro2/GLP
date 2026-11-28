@@ -139,7 +139,7 @@ Step ::= req(Request)
 Script ::= [] ; [Step | Script].
 
 Logged  ::= Screen ; did(Step).
-Watched ::= watched(Key, _).
+Watched ::= watched(Key, Logged).
 
 ReqId     ::= req(Integer).
 SgCmd     ::= connect(Key) ; decision(Decision, Key, ReqId).

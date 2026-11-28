@@ -1,6 +1,6 @@
 #!/bin/bash
 # The transformation of the sGLP sources of the two examples and of the eight
-# run tests into GLP (programs/sglp, transform.glp; sGLP's paper, the
+# run tests into GLP (programs/sglp/transform/transform.glp; sGLP's paper, the
 # repository svGLP-Stochastic-Volitional-GLP, Section 4, "The transformation"),
 # through the REPL.
 #
@@ -21,7 +21,9 @@
 #                                              canonical CVA platform and the platform's
 #                                              interface <iface>, or with --check compare
 #
-# In one REPL session it loads programs/sglp and calls transform(P, Part) for
+# It reads the terms V and S of the clause source(V, S) of each program's
+# *_sglp.glp, and in one REPL session it loads programs/sglp/transform, the
+# transformation's directory, and calls transform(P, V, S, Part) for
 # P social_graph, coins, reader, delivery, receipt, panel, numbers, steps, screen and census and Part profiles
 # and population, and writes what each prints between its lines "%% transform
 # begin" and "%% transform end" to its directory's Part.glp:
@@ -35,10 +37,11 @@
 # notes_sglp.glp and tests/census/ from village_sglp.glp (sGLP's task of 2026-10-20
 # 08:00 UTC, item 7), the run tests' programs
 # holding no call of the transformation (sGLP's tasks 6 and 8 of 2026-10-10
-# 07:59 and 09:33 UTC).  The program it loads includes the printed files,
-# which the harnesses call, so they are printed by the program that holds
-# them, the files it prints being those it loaded where the sources are
-# unchanged; --check says whether they are.
+# 07:59 and 09:33 UTC).  The sources are read here and not by the
+# transformation, since a qualifier names a child of the caller's directory
+# (TGLP, modules.tex, Compilation) and the programs' directories are siblings
+# of programs/sglp/transform (sGLP #12, Code_inbox 2026-11-11 20:14 UTC, item
+# 5).  --check says whether the files in place are what it prints.
 #
 # Prints one line per file.  Exits 0 if all twenty were printed, with no fault
 # of the checks (a line "%% not transformed: ..."), and, with --check, each is
@@ -104,6 +107,25 @@ term_of() {
         print $1 if /^\s*$name\s*\((.*)\)\s*\.\s*$/s;
     ' "$1"
 }
+# source_of <dir>: the arguments V, S of the unit clause source(V, S) of
+# <dir>'s one *_sglp.glp, its comments dropped and its whitespace one space,
+# quoted atoms and strings kept as written, where what is left is its
+# declaration exported procedure source(SglpTerms, SglpTerms) and the clause;
+# exit 2, the fault named, otherwise.
+source_of() {
+    local f
+    set -- "$1"/*_sglp.glp
+    if [ $# -ne 1 ] || [ ! -f "$1" ]; then
+        echo "transform.sh: ${1%/\*_sglp.glp} holds no single *_sglp.glp" >&2
+        return 2
+    fi
+    f=$(term_of "$1" source 2)
+    if [ -z "$f" ]; then
+        echo "transform.sh: $1 is not the declaration and the clause source(V, S)" >&2
+        return 2
+    fi
+    printf '%s' "$f"
+}
 if [ $# -ge 1 ] && [ "$1" = "--interface" ]; then
     { { [ $# -eq 6 ] || { [ $# -eq 7 ] && [ "$7" = "--check" ]; }; } &&
       [ "$3" = "--source" ] && [ "$5" = "--out" ]; } || usage
@@ -145,7 +167,7 @@ if [ -n "$IFACE" ]; then
     PARTS="profiles population"
     {
         echo ':limit 1000000000000000'
-        echo "$HERE"
+        echo "$HERE/transform"
         echo "transform_terms($V, $S, cva_profiles)."
         echo "transform_terms($V, $S, cva_population)."
         echo ':quit'
@@ -155,28 +177,14 @@ elif [ -n "$SRC" ]; then
     # whitespace one space, quoted atoms and strings kept as written; what is
     # left must be the declaration and the clause source(V, S), whose arguments
     # are the goal's.
-    set -- "$SRC"/*_sglp.glp
-    if [ $# -ne 1 ] || [ ! -f "$1" ]; then
-        echo "transform.sh: $SRC holds no single *_sglp.glp" >&2
-        exit 2
-    fi
-    VS=$(perl -0777 -ne '
-        my $q = qr/\x27(?:[^\x27\\]|\\.)*\x27|"(?:[^"\\]|\\.)*"/;
-        s/($q)|%[^\n]*|(\s+)/defined $1 ? $1 : defined $2 ? " " : ""/ge;
-        s/^\s*(?:exported\s+)?procedure\s+source\s*\(\s*SglpTerms\s*,\s*SglpTerms\s*\)\s*\.//;
-        print $1 if /^\s*source\s*\((.*)\)\s*\.\s*$/s;
-    ' "$1")
-    if [ -z "$VS" ]; then
-        echo "transform.sh: $1 is not the declaration and the clause source(V, S)" >&2
-        exit 2
-    fi
+    VS=$(source_of "$SRC") || exit 2
     if [ "$CHECK" = 1 ]; then OUT="$WORK/out"; else OUT="$SRC"; fi
     BASE="$SRC"
     mkdir -p "$OUT" || exit 2
     PARTS="profiles population"
     {
         echo ':limit 1000000000000000'
-        echo "$HERE"
+        echo "$HERE/transform"
         for p in $PARTS; do
             echo "transform_terms($VS, $p)."
         done
@@ -194,13 +202,18 @@ else
     BASE="$HERE"
     mkdir -p "$OUT/examples/social_graph" "$OUT/examples/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" "$OUT/tests/steps" "$OUT/tests/screen" "$OUT/tests/census" || exit 2
 
+    for prog in examples/social_graph examples/coins tests/reader tests/delivery tests/receipt tests/panel tests/numbers tests/steps tests/screen tests/census; do
+        v=$(source_of "$HERE/$prog") || exit 2
+        printf -v "VS_${prog##*/}" '%s' "$v"
+    done
     PARTS="examples/social_graph/profiles examples/social_graph/population examples/coins/profiles examples/coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population tests/steps/profiles tests/steps/population tests/screen/profiles tests/screen/population tests/census/profiles tests/census/population"
     {
         echo ':limit 1000000000000000'
-        echo "$HERE"
+        echo "$HERE/transform"
         for p in $PARTS; do
             prog=${p%/*}
-            echo "transform(${prog##*/}, ${p##*/})."
+            vn="VS_${prog##*/}"
+            echo "transform(${prog##*/}, ${!vn}, ${p##*/})."
         done
         echo ':quit'
     } > "$WORK/input"

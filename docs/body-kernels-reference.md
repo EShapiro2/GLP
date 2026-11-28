@@ -66,6 +66,12 @@ Body kernels are the mechanism by which GLP system-mode code (in `programs/self.
 | `_list_to_tuple` | 2 | Convert GLP list to tuple term |
 | `_tuple_to_list` | 2 | Convert tuple term to GLP list |
 
+### Text
+
+| Kernel | Arity | Description |
+|--------|-------|-------------|
+| `_hash` | 2 | `_hash(S?, H)` — H is the SHA-256 of the UTF-8 bytes of the string S, lowercase hex (`Hash`); the program-level `hash/2` guards S ground (GLP-Spec appendix-guards, "Text") |
+
 ### Time
 
 | Kernel | Arity | Description |

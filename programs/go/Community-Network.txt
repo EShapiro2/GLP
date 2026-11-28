@@ -1,0 +1,172 @@
+% Community Network --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as Community Network:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: Organisation and Denominated Currencies, restricting and strengthening Organisation (Udi, 2026-11-20, to GO #14).
+% Last changed: 2026-11-25, by GO #15: Interface lines on the compound bond(Day) terms (Calculus c679a4a): the deposits for Carol without <votes of the other party>, Accept by bond for Alice without <maturity>, as pragmas.sh gives them.
+% Schemas: Community-Network.glp beside this file.
+Community Network
+Community Network inherits from Backed Community Bank (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a community network.
+1. ■ Set stake: Those who decide for Orga may set S.
+2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+3. ■ Members. Found: Organisation:1, only if Alice is a member of the community. Join: Organisation:3, only if Bob is a member of the community.
+4. ○ Loss of membership. Those who decide for Orga will end Bob's participation in Orga if he ceases to be a member of the community.
+Logic pragmas
+Community Network extends Backed Community Bank, and augments it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Deal an agreement, S, Held, Sum, Total, Pot, Back, Rest, Part and Fee numbers; in clause 2 Alice is the customer and Bob the provider.
+1. ■ Set stake: Those who decide for Orga may set the stake of Orga at S, provided Orga is an organisation.
+2. ■ Arbitration. Raise: Alice may raise to Carol her dispute with the provider Bob over Deal in Orga, provided Sum and Total Gov-coins are locked in Orga on Deal between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Provider raise: Bob may raise to Carol his dispute with the customer Alice over Deal in Orga, provided Sum and Total Gov-coins are locked in Orga on Deal between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Arbitrate: Carol may decide the release of Back Gov-coins to Alice and Rest Gov-coins to Bob of the Sum and Total locked between them on Deal in Orga less her fee Fee, provided the terms of Deal set the arbiter's fee at Fee, Pot is Sum plus Total, Part is Back plus Rest and Pot is Part plus Fee. Arbitrate for the customer: Carol may decide the release of Back Gov-coins to the customer Alice of the Sum and Total locked with the provider Bob on Deal in Orga less her fee Fee, provided the terms of Deal set the arbiter's fee at Fee, Pot is Sum plus Total and Pot is Back plus Fee. Arbitrate for the provider: Carol may decide the release of Rest Gov-coins to the provider Bob of the Sum and Total locked with the customer Alice on Deal in Orga less her fee Fee, provided the terms of Deal set the arbiter's fee at Fee, Pot is Sum plus Total and Pot is Rest plus Fee. Arbitrate without fee: Carol may decide the release without fee of Back Gov-coins to Alice and Rest Gov-coins to Bob of the Sum and Total locked between them on Deal in Orga, provided the terms of Deal set the arbiter's fee at Fee, Fee is less than 1, Pot is Sum plus Total and Pot is Back plus Rest. Arbitrate for the customer without fee: Carol may decide the release without fee to the customer Alice of the Sum and Total Gov-coins locked with the provider Bob on Deal in Orga, provided the terms of Deal set the arbiter's fee at Fee and Fee is less than 1. Arbitrate for the provider without fee: Carol may decide the release without fee to the provider Bob of the Sum and Total Gov-coins locked with the customer Alice on Deal in Orga, provided the terms of Deal set the arbiter's fee at Fee and Fee is less than 1. Arbitrate for the fee: Carol may decide the release as her fee of the Sum and Total Gov-coins locked between the provider Bob and the customer Alice on Deal in Orga, provided the terms of Deal set the arbiter's fee at Pot and Pot is Sum plus Total. The coins are released less the fee the terms set, which is released to Carol.
+3. ■ Members. Found: Organisation:1 Found, only if Alice is a participant of Gov, and then Orga has Gov as its community. Join: Organisation:3 Join, only if Orga has Gov as its community and Bob is a participant of Gov.
+4. ○ Loss of membership. Those who decide for Orga will end Bob's participation in Orga if he ceases to be a member of the community.
+Logic pragmas.
+Vocabulary: z has the stake at the number n = stake(z,n); z has c as its community = community(z,c); x has n f-denominated c-coins locked in z on k as the customer of y = customer_lock(x,y,z,k,c,f,n); y has n f-denominated c-coins locked in z on k as the provider of x = provider_lock(y,x,z,k,c,f,n); w holds the dispute of x and y over k in z = dispute(w,x,y,z,k); the terms of k set the arbiter's fee at n, for w = arbiter_fee(w,k,n).
+n and m c-coins are locked in z on k between the provider y and the customer x: x has n Dollar-denominated c-coins locked in z on k as the customer of y and y has m Dollar-denominated c-coins locked in z on k as the provider of x.
+x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.
+the earlier stake of z has ended: z has the stake at no number.
+x is a customer of z: x knows z, z has Gov as its community, x is a participant of Gov and x accepts a Dollar-denominated Gov-coin in payment.
+y is a provider of z: y knows z, z has Gov as its community, y is a participant of Gov, z has the stake at the number S, y holds Held Gov-coins and Held is at least S.
+After g sets the stake of z at n: the earlier stake of z has ended and z has the stake at the number n.
+After x raises to w x's dispute with the provider y over k in z, which requires w does not hold the dispute of x and y over k in z: w holds the dispute of x and y over k in z.
+After y raises to w y's dispute with the customer x over k in z, which requires w does not hold the dispute of x and y over k in z: w holds the dispute of x and y over k in z.
+After w decides the release of p c-coins to x and q c-coins to y of the n and m locked between them on k in z less w's fee f: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, x holds p c-coins, y holds q c-coins and w holds f c-coins.
+After w decides the release of p c-coins to the customer x of the n and m locked with the provider y on k in z less w's fee f: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, x holds p c-coins and w holds f c-coins.
+After w decides the release of q c-coins to the provider y of the n and m locked with the customer x on k in z less w's fee f: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, y holds q c-coins and w holds f c-coins.
+After w decides the release without fee of p c-coins to x and q c-coins to y of the n and m locked between them on k in z: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, x holds p c-coins and y holds q c-coins.
+After w decides the release without fee to the customer x of the n and m c-coins locked with the provider y on k in z: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, x holds n c-coins and x holds m c-coins.
+After w decides the release without fee to the provider y of the n and m c-coins locked with the customer x on k in z: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, y holds n c-coins and y holds m c-coins.
+After w decides the release as w's fee of the n and m c-coins locked between the provider y and the customer x on k in z: no longer w holds the dispute of x and y over k in z, no longer n and m c-coins are locked in z on k between the provider y and the customer x, w holds n c-coins and w holds m c-coins.
+Environment: the terms of k set the arbiter's fee at n, for w.
+Parameters: x has n f-denominated c-coins locked in z on k as the customer of y; y has n f-denominated c-coins locked in z on k as the provider of x.
+Interface pragmas
+Look: 🕸️, network
+Found: Alice [Found] <organisation> <role>
+  Orga: Alice asks to found you.
+Set stake: Decider [Set stake] <stake>
+  Codecider: Decider asks to set the stake of Orga.
+Arbitration: Alice [Raise] <arbiter>
+  Bob [Provider raise] <arbiter>
+  Carol [Arbitrate] <community> <denomination> <to customer> <to provider> [Arbitrate for the customer] <community> <denomination> <to customer> [Arbitrate for the provider] <community> <denomination> <to provider> [Arbitrate without fee] <community> <denomination> <to customer> <to provider> [Arbitrate for the customer without fee] <community> <denomination> [Arbitrate for the provider without fee] <community> <denomination> [Arbitrate for the fee] <community> <denomination>
+Issue: AliceOfficer [Issue for Alice] <denomination>
+  Proposer [Proposal of Alice for Issue] <amount> <type>
+  Voter [Vote of Alice for Issue]
+  AliceOfficer [First issue for Alice]
+  Proposer [Proposal of Alice for First issue] <amount> <denomination>
+  Voter [Vote of Alice for First issue]
+Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination>
+  Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
+  Voter [Vote of Alice for Swap]
+  Alice [Swap for Bob] <officer of the other party> <issuer wanted> <amount given> <amount wanted> <votes of the other party>
+  BobOfficer: Alice asks to swap coins with your organisation Bob.
+  Proposer [Proposal of Bob for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
+  Voter [Vote of Bob for Swap]
+  AliceOfficer [Swap for Alice and Bob] <officer of the other party> <denomination>
+  BobOfficer: AliceOfficer asks to swap coins of the organisation Alice with your organisation Bob.
+  AliceOfficer [Deposit for Alice] <denomination>
+  Carol: AliceOfficer asks to deposit coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Deposit] <amount> <issuer> <type> <escrow> <beneficiary> <condition>
+  Voter [Vote of Alice for Deposit]
+  Alice [Deposit for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit coins with your organisation Carol.
+  Proposer [Proposal of Carol for Deposit] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
+  Voter [Vote of Carol for Deposit]
+  AliceOfficer [Deposit for Alice and Carol] <officer of the other party> <denomination>
+  CarolOfficer: AliceOfficer asks to deposit coins of the organisation Alice with your organisation Carol.
+  AliceOfficer [Redeem for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem] <issuer> <issuer wanted>
+  Voter [Vote of Alice for Redeem]
+  AliceOfficer [Redeem coin against bond for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem coin against bond] <issuer> <issuer wanted> <maturity wanted>
+  Voter [Vote of Alice for Redeem coin against bond]
+  AliceOfficer [Redeem bond for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem bond] <issuer> <maturity> <issuer wanted>
+  Voter [Vote of Alice for Redeem bond]
+  AliceOfficer [Redeem bond against bond for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem bond against bond] <issuer> <maturity> <issuer wanted> <maturity wanted>
+  Voter [Vote of Alice for Redeem bond against bond]
+  Proposer [Proposal of Alice for Deposit own coins] <amount> <denomination> <escrow> <beneficiary> <condition>
+  AliceOfficer [Deposit own coins for Alice]
+  Carol: AliceOfficer asks to deposit the organisation Alice's own coins with you.
+  Proposer [Proposal of Carol for Deposit own coins] <depositor> <amount> <denomination> <beneficiary> <condition>
+  Alice [Deposit own coins for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit her own coins with your organisation Carol.
+  AliceOfficer [Deposit own coins for Alice and Carol] <officer of the other party>
+  CarolOfficer: AliceOfficer asks to deposit the organisation Alice's own coins with your organisation Carol.
+  AliceOfficer [Deposit with the issuer for Alice]
+  Carol: AliceOfficer asks to deposit your coins, held by the organisation Alice, with you.
+  Alice [Deposit with the issuer for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit your organisation Carol's coins with it.
+  AliceOfficer [Deposit with the issuer for Alice and Carol] <officer of the other party>
+  CarolOfficer: AliceOfficer asks to deposit your organisation Carol's coins, held by the organisation Alice, with it.
+  AliceOfficer [Deposit more for Alice]
+  Carol: AliceOfficer asks to deposit more coins of the organisation Alice with you.
+  Alice [Deposit more for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit more coins with your organisation Carol.
+  AliceOfficer [Deposit more for Alice and Carol] <officer of the other party>
+  CarolOfficer: AliceOfficer asks to deposit more coins of the organisation Alice with your organisation Carol.
+  Proposer [Proposal of Alice for Deposit own bonds] <amount> <denomination> <maturity> <escrow> <beneficiary> <condition>
+  AliceOfficer [Deposit own bonds for Alice]
+  Carol: AliceOfficer asks to deposit the organisation Alice's own bonds with you.
+  Proposer [Proposal of Carol for Deposit own bonds] <depositor> <amount> <denomination> <maturity> <beneficiary> <condition>
+  Alice [Deposit own bonds for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit her own bonds with your organisation Carol.
+  AliceOfficer [Deposit own bonds for Alice and Carol] <officer of the other party>
+  CarolOfficer: AliceOfficer asks to deposit the organisation Alice's own bonds with your organisation Carol.
+  AliceOfficer [Deposit bond with the issuer for Alice]
+  Carol: AliceOfficer asks to deposit your bonds, held by the organisation Alice, with you.
+  Alice [Deposit bond with the issuer for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit your organisation Carol's bonds with it.
+  AliceOfficer [Deposit bond with the issuer for Alice and Carol] <officer of the other party>
+  CarolOfficer: AliceOfficer asks to deposit your organisation Carol's bonds, held by the organisation Alice, with it.
+  AliceOfficer [Deposit bond more for Alice]
+  Carol: AliceOfficer asks to deposit more bonds of the organisation Alice with you.
+  Alice [Deposit bond more for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit more bonds with your organisation Carol.
+  AliceOfficer [Deposit bond more for Alice and Carol] <officer of the other party>
+  CarolOfficer: AliceOfficer asks to deposit more bonds of the organisation Alice with your organisation Carol.
+Pay issuer: AliceOfficer [Pay issuer for Alice] <denomination>
+  Proposer [Proposal of Alice for Pay issuer] <issuer> <amount> <type>
+  Voter [Vote of Alice for Pay issuer]
+Pay: AliceOfficer [Pay for Alice] <denomination>
+  Bob: AliceOfficer asks to pay coins of the organisation Alice to you.
+  Proposer [Proposal of Alice for Pay] <payee> <amount> <issuer> <type>
+  Voter [Vote of Alice for Pay]
+  Alice [Pay for Bob] <officer of the other party> <amount>
+  BobOfficer: Alice asks to pay coins to your organisation Bob.
+  Proposer [Proposal of Bob for Pay] <other party> <amount> <issuer> <type>
+  Voter [Vote of Bob for Pay]
+  AliceOfficer [Pay for Alice and Bob] <officer of the other party> <denomination>
+  BobOfficer: AliceOfficer asks to pay coins of the organisation Alice to your organisation Bob.
+Escrow: CarolOfficer [Release for Carol] <denomination>
+  Bob: CarolOfficer asks to release coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Release] <beneficiary> <amount> <issuer> <type> <depositor> <condition>
+  Voter [Vote of Carol for Release]
+  Carol [Release for Bob] <officer of the other party> <amount>
+  BobOfficer: Carol asks to release coins to your organisation Bob.
+  Proposer [Proposal of Bob for Release] <escrow> <amount> <issuer> <type> <depositor> <condition>
+  Voter [Vote of Bob for Release]
+  CarolOfficer [Release for Carol and Bob] <officer of the other party> <denomination>
+  BobOfficer: CarolOfficer asks to release coins held by the organisation Carol to your organisation Bob.
+  CarolOfficer [Return for Carol] <denomination>
+  Alice: CarolOfficer asks to return coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Return] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
+  Voter [Vote of Carol for Return]
+  Carol [Return for Alice] <officer of the other party> <amount>
+  AliceOfficer: Carol asks to return coins to your organisation Alice.
+  Proposer [Proposal of Alice for Return] <escrow> <amount> <issuer> <type> <beneficiary> <condition>
+  Voter [Vote of Alice for Return]
+  CarolOfficer [Return for Carol and Alice] <officer of the other party> <denomination>
+  AliceOfficer: CarolOfficer asks to return coins held by the organisation Carol to your organisation Alice.
+Issue denominated bond: AliceOfficer [Issue denominated bond for Alice]
+  Proposer [Proposal of Alice for Issue denominated bond] <amount> <denomination> <maturity>
+  Voter [Vote of Alice for Issue denominated bond]
+Accept: AliceOfficer [Accept for Alice]
+  Proposer [Proposal of Alice for Accept] <limit> <denomination> <issuer>
+  Voter [Vote of Alice for Accept]
+  AliceOfficer [Accept by bond for Alice]
+Pay accepted coins: AliceOfficer [Pay accepted coins for Alice]
+  Proposer [Proposal of Alice for Pay accepted coins] <payee> <issuer> <denomination>
+  Voter [Vote of Alice for Pay accepted coins]
+  AliceOfficer [Pay own accepted coins for Alice] [Pay accepted coins to the issuer for Alice]

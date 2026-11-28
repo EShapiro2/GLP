@@ -1,0 +1,3 @@
+Promoted Community Market extends Promoted Matching and Community Market: holds
+Promoted Community Market extends it (Promoted Matching and Community Market): holds
+Promoted Community Market restricts it (Promoted Matching and Community Market): holds

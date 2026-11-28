@@ -1,0 +1,7 @@
+C: Required role consent
+Alice is a person.
+1. ■ Act: Alice may act, and those who decide for Alice must consent.
+Logic pragmas.
+Vocabulary: x is ready = ready(x).
+Roles: those who decide for x = deciders(x).
+After x acts: x is ready.

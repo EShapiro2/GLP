@@ -94,7 +94,7 @@
 #       answering fewer a saver; and its credit where it is shown an offer with
 #       Held above 20, which the cautious answer no and the generous yes, every
 #       such answer agreeing with its line.
-# (x)   the transformation (transform.glp, transform.sh; the task of 2026-10-03
+# (x)   the transformation (transform/transform.glp, transform.sh; the task of 2026-10-03
 #       09:27 UTC): the printed modules in place, examples/social_graph/profiles.glp and
 #       population.glp and examples/coins/profiles.glp and population.glp, are what the
 #       transformation prints from the sGLP sources, graph_sglp.glp and
@@ -220,8 +220,8 @@
 #       three answers.
 # (xviii) the harness of every canonical CVA platform (programs/sglp/cva/;
 #       sGLP's task of 2026-10-18 20:50 UTC, and of 2026-11-04 16:22 UTC, item
-#       3), on the canonical platform of the social graph of the current GSG
-#       cascade record (cascade/GSG/platform.vglp), compiled to GLP by the
+#       3), on the canonical platform of the social graph of the current Friendship
+#       cascade record (cascade/Friendship/platform.vglp), compiled to GLP by the
 #       REPL's :emit, with the scripted profiles of tests/cva/scripted_sglp.glp:
 #       the platform's interface printed in sGLP's term form (cva/interface.sh),
 #       the record's interface.glp, its types, its volitional declarations,
@@ -262,6 +262,22 @@
 #       draw each agent's stochastic person of its role; and the run refused
 #       for a census drawing nobody and one drawing a person of a role of no
 #       dimension.
+# (xxi) the machine's clock (tests/clock; Audit #4, Grassroots-Audit
+#       programs/sglp/cva/harness.glp.in.md, Finding 2): forty rated goals in a
+#       chain, each of rate 1 a day, each released goal spawning a goal that,
+#       one goal later, reads now/1; each reading is the Release's simulated
+#       time in milliseconds, from 1970-01-01, up to under a second of wall
+#       time, and of its day.
+# (xxii) a platform whose agent is agent/6, of an environment (Audit #4,
+#       Finding 1): tests/environment/environment_sglp.glp over the canonical
+#       platform of Local Overlay (cascade/Local-Overlay), its census of two
+#       persons and its environment/2, exported by the printed profiles; two
+#       agents for a day (cva/run.sh), each agent's first view showing its
+#       person's environment, bound(two) and bound(three), and each
+#       establishing its identity; run.sh refusing, with exit 2 and nothing
+#       run, a source with no environment/2 over that platform, and a platform
+#       whose agent is neither agent/5 nor agent/6 (cascade/Encounters,
+#       agent/8).
 # And, unnumbered: the printer (each line one string, by GLP's string_concat/2
 # and term_to_string/2) and the seeds (tests/seeds, Appendix B, "Seeds").
 #
@@ -610,12 +626,12 @@ check "the printed modules are what the transformation prints from the sGLP sour
 # first.
 V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
 P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
-repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$P, person(r), run(2, [mix(d, [share(p, 0.5)])], 1, day, 1)], profiles)."
-repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)." \
     "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], population)."
-repl "$WORK/txzero.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txzero.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$P, person(r), binds('Q', p_q), run(2, [mix(d, [share(p, 1.0), share(r, 0.0)])], 1, day, 1)], population)." \
     "transform_terms($V, [$P, person(r), binds('Q', p_q), run(2, [mix(d, [share(r, 0.0), share(p, 1.0)])], 1, day, 1)], population)."
 sed 's/^\(GLP> \)*//' "$WORK/txbad.out" > "$WORK/txbad.lines"
@@ -661,7 +677,7 @@ check "the mended source is translated: the token and its clause go(_), its stop
 # reader would read as anything else quoted, a capitalised type's name not.
 QV="[type('Note', ['Hello there', '42', plain]), type('Q', [q(dual('Note'))]), volitional('Q', '\\'Q\\'', q_w, ask(dual('Note')))]"
 QP="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q('Hello there')), [], []), clause(ans(q('42')), [], []), clause(ans(q(plain)), [], [])"
-repl "$WORK/txtext.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txtext.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($QV, [$QP, type('Tag', ['one tag', other('Note', dual('Note'))]), run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)."
 sed 's/^\(GLP> \)*//' "$WORK/txtext.out" > "$WORK/txtext.lines"
 ! grep -q '^%% not transformed' "$WORK/txtext.lines" &&
@@ -683,7 +699,7 @@ RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), '\'Rating?\
 RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Person'), dual('Integer'))), clause(fair_rating(var('R?'), var('_'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), slot(var('R'))), rate(1, day))]), decl(give(dual('Integer'), dual('Slot'('Rating')))), clause(give(var('K'), slot(rating(var('K?')))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), '\'Bid?\'', bid_r, offer('Integer'))]"
 BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Person'), dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_'), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
-repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($RV, [$RP], profiles)." \
     "transform_terms($RV, [$RP], population)." \
     "transform_terms($BV, [$BP], population)."
@@ -733,7 +749,7 @@ NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), t
 NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Person'), dual('Integer'))), clause(p_panel(var('_'), var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
 OP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Person'), dual('Integer'))), clause(fair_rating(var('R?'), var('_'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 CV="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A'))), compiled(ask, 2), compiled(ask1, 3), compiled(ans, 1)]"
-repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($PV, [$PP], population)." \
     "transform_terms($NV, [$NP], population)." \
     "transform_terms($RV, [$OP], population)." \
@@ -762,8 +778,8 @@ tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
     [ "$(grep -c '^relay_1(A, Type, ' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^relay_1(_, ' "$WORK/txmoded.2" &&
     grep -q "present_1(_, _, panel(\[\]), panel(\[\]), panel(\[\]), C0, C0?, Fs0?, Fs0, _, _) \. " "$WORK/txmoded.2.flat" &&
     grep -q "present_1(A, Type, panel(\[card(Z1, Z2?) | Z4\]), panel(\[card(Z1?, Z3) | Z5?\]), panel(\[card(Z1?, '[$]h'(C0?, 0)) | S1?\]), C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "answer_1(Integer?, Constant?, Integer?, Integer?, _?, YesNo?, YesNo, MutualRef?, MutualRef?)\. answer_1(A, Type, C, J, F, Y, Y?, Mon, Log) :- ground(Y?) , ground(F?) | stream_append(time(Time), Mon?, _) , whole_frame(F?, C?, J?, Y?, E) , stream_append(entry(Time?, A?, Type?, E?), Log?, _) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "present_2(Integer?, Constant?, List(Card)?, List(Card), _, Integer?, Integer, Stream(Slot(_)), Stream(Slot(_))?, MutualRef?, MutualRef?)\. present_2(_, _, \[\], \[\], \[\], C0, C0?, Fs0?, Fs0, _, _) \. present_2(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], \[card(Z1?, '[$]h'(C0?, 0)) | S1?\], C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "answer_1(Integer?, Constant?, Integer?, Integer?, Term?, YesNo?, YesNo, MutualRef?, MutualRef?)\. answer_1(A, Type, C, J, F, Y, Y?, Mon, Log) :- ground(Y?) , ground(F?) | stream_append(time(Time), Mon?, _) , whole_frame(F?, C?, J?, Y?, E) , stream_append(entry(Time?, A?, Type?, E?), Log?, _) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "present_2(Integer?, Constant?, List(Card)?, List(Card), Term, Integer?, Integer, Stream(Slot(Term)), Stream(Slot(Term))?, MutualRef?, MutualRef?)\. present_2(_, _, \[\], \[\], \[\], C0, C0?, Fs0?, Fs0, _, _) \. present_2(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], \[card(Z1?, '[$]h'(C0?, 0)) | S1?\], C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
     ! grep -q '^present_3\|^answer_2' "$WORK/txmoded.2"
 check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown whole once the term the program writes has no reader, the panel and its list of cards built and shown once complete, each card's answer a question of its own, logged in the panel as shown whole" $?
 grep -q '^%% not transformed: a rated goal of a procedure with an output argument(key(give, 2))$' "$WORK/txmoded.3" &&
@@ -791,7 +807,7 @@ OLDP="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Integer'))), clause(
 VP="[type('A', [a]), type('Q', [q(dual('A'))]), type('Person', [person('Constant', 'Constant', 'List'('Constant'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
 VS="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A'))), compiled(seen, 1)]"
 RUN1="run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)"
-repl "$WORK/txcensus.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txcensus.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$CW, $P1, $P2, $RUN2], profiles)." \
     "transform_terms($V, [$CW, $P1, $P2, $RUN2], population)." \
     "transform_terms($V, [$CW, $P1, person(p3), run(w, [mix(d1, r1, [share(p1, 1.0)]), mix(d2, r2, [share(p3, 1.0)])], 1, day, 1)], population)." \
@@ -1110,22 +1126,22 @@ sr=$?
     [ "$sr" -eq 2 ] && grep -q '^record.sh: the unit of --until is second, minute, hour, day, week or year, singular or plural, not month$' "$WORK/unit_rec.out" &&
     [ ! -e "$WORK/unit_root" ]
 check "a horizon in months is refused by run.sh and by record.sh with exit 2, naming the six units, and nothing made (sGLP's paper, Appendix B)" $?
-# The canonical platform of the social graph of the current GSG cascade
-# record, cascade/GSG/platform.vglp, compiled to GLP by :emit in a scratch
+# The canonical platform of the social graph of the current Friendship cascade
+# record, cascade/Friendship/platform.vglp, compiled to GLP by :emit in a scratch
 # directory under programs/tests, a container with no self.glp, as cascade.sh
 # compiles it.
 CVA="$WORK/cva"; mkdir -p "$CVA/printed"
 EMITD="$GLP_DIR/programs/tests/sglp_cva_emit_$$"
 rm -rf "$EMITD"; mkdir -p "$EMITD"
-cp "$GLP_DIR/cascade/GSG/platform.vglp" "$EMITD/platform.vglp"
+cp "$GLP_DIR/cascade/Friendship/platform.vglp" "$EMITD/platform.vglp"
 repl "$WORK/cva_emit.out" ":emit $EMITD"
 cp "$EMITD/platform.vglp" "$CVA/platform.vglp"; cp "$EMITD/platform.glp" "$CVA/platform.glp" 2>/dev/null
 rm -rf "$EMITD"
 [ -s "$CVA/platform.glp" ] && grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question)))\.$' "$CVA/platform.glp"
 check "the canonical platform of the social graph compiled to GLP, its agent/5 the compilation's, with its ask stream" $?
-bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
+bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" Friendship > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
 st=$?
-[ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/GSG/interface.glp" &&
+[ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/Friendship/interface.glp" &&
     grep -q "^  type('Request', \[propose('Proposal')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Approval', \[approval('Asking', 'List'('Word'), dual('YesNo'))\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Output', \[view('Key', 'List'('Atom'), 'List'('Key'), 'List'('Approved'), 'List'('Tab')), refused('Approved', 'Key', 'Reason')\]),$" "$CVA/interface.glp" &&
@@ -1136,7 +1152,7 @@ st=$?
     grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, greet(" "$CVA/interface.glp" &&
     grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 3),$" "$CVA/interface.glp" &&
     [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
-check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, \"The compilation\")" $?
+check "the platform's interface in sGLP's term form, the Friendship record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, \"The compilation\")" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
 bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
 st=$?
@@ -1368,6 +1384,44 @@ grep -q '^Ok = no$' "$WORK/census_refused.lines" && [ "$(grep -c '^Ok = no$' "$W
     [ "$(grep -c '^refused$' "$WORK/census_refused.lines")" -eq 2 ] &&
     ! grep -q '^entry(\|^clock(' "$WORK/census_refused.lines"
 check "a census drawing no person, and one drawing a person of a role of no dimension, are refused by the run, which takes no goal but the line refused (Section 3, after Definition \"Well-Formed\")" $?
+
+echo "--- (xxi) the machine's clock is the simulated clock"
+repl "$WORK/clock.out" ':limit 1000000000000' "$HERE/tests/clock" 'clock(40).'
+grep -q '✓ Loaded program' "$WORK/clock.out"
+check "tests/clock loads" $?
+grep -o 'r([^)]*)' "$WORK/clock.out" | awk -F'[(,) ]+' '
+    { t = $2; m = $3; d = m - int(t * 1000); if (d < 0 || d >= 1000) bad++
+      if (int(m / 86400000) != int(t / 86400)) bad++; n++; last = t }
+    END { printf "        %d readings, the last at %.0f s, %d not of their Release\n", n, last, bad
+          exit !(n == 40 && last > 86400 && !bad) }'
+check "each of forty Releases, a day apart on average, read by now/1 one goal after the released goal's: its simulated time in milliseconds from 1970-01-01, up to under a second, and its day" $?
+
+echo "--- (xxii) a platform of an environment, agent/6"
+ENVD="$WORK/env"; mkdir -p "$ENVD"
+bash "$HERE/transform.sh" --interface "$GLP_DIR/cascade/Local-Overlay/interface.glp" --source "$HERE/tests/environment/environment_sglp.glp" --out "$ENVD" > "$WORK/env_tx.out" 2>&1
+st=$?
+[ "$st" -eq 0 ] && grep -q '^exported procedure environment(Person?, List(Atom))\.$' "$ENVD/profiles.glp" &&
+    grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question)))\.$' "$GLP_DIR/cascade/Local-Overlay/platform.glp"
+check "the source of an environment transformed over Local Overlay's interface, whose agent is agent/6: the printed profiles export environment(Person?, List(Atom))" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/env_tx.out"
+bash "$HERE/cva/run.sh" "$GLP_DIR/cascade/Local-Overlay/platform.glp" "$ENVD" census '1 day' 1 "$WORK/env.log" > "$WORK/env_run.out" 2>&1
+st=$?
+[ "$st" -eq 0 ] &&
+    grep -q '^0	1	output	view(p1, \[bound(two)\], ' "$WORK/env.log" &&
+    grep -q '^0	2	output	view(p2, \[bound(three)\], ' "$WORK/env.log" &&
+    grep -q '	1	Request?	propose(establish(p1))$' "$WORK/env.log" &&
+    grep -q '	2	Request?	propose(establish(p2))$' "$WORK/env.log" &&
+    grep -q '	1	output	view(p1, \[identity, person, bound(two)\], ' "$WORK/env.log"
+check "two agents of Local Overlay for a day (cva/run.sh): each agent's first view shows its person's environment, bound(two) and bound(three), and each establishes its identity" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/env_run.out"
+bash "$HERE/cva/run.sh" "$GLP_DIR/cascade/Local-Overlay/platform.glp" "$CVA/census" census '1 day' 1 "$WORK/env_none.log" > "$WORK/env_none.out" 2>&1
+s1=$?
+bash "$HERE/cva/run.sh" "$GLP_DIR/cascade/Encounters/platform.glp" "$ENVD" census '1 day' 1 "$WORK/env_eight.log" > "$WORK/env_eight.out" 2>&1
+s2=$?
+[ "$s1" -eq 2 ] && grep -q "^run.sh: the platform's agent is agent/6, of an environment, and .* exports no environment(Person?, List(Atom))$" "$WORK/env_none.out" &&
+    [ "$s2" -eq 2 ] && grep -q "^run.sh: the platform's agent is agent/5 or agent/6, not 8$" "$WORK/env_eight.out" &&
+    [ ! -e "$WORK/env_none.log" ] && [ ! -e "$WORK/env_eight.log" ]
+check "run.sh refuses, with exit 2 and nothing run, a source with no environment/2 over Local Overlay, and Encounters, whose agent is agent/8" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

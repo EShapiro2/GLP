@@ -5,14 +5,15 @@
 #   bash programs/apps/compile.sh --check    print into a scratch directory and compare
 #
 #   <app>  contract  owner's file
-#   gkk    gkk       programs/gsc/GKK.glp
-#   gsg    gsg       programs/gsc/GSG.glp
-#   gsn    gsn       programs/gsc/GSN.glp
-#   gsnp   gsnp      programs/gai/GSNP.glp
-#   gai    gai       programs/gai/GAI.glp
-#   gc     gc        programs/currencies/coins/GC.glp
-#   gb     gb        programs/currencies/bonds/GB.glp
-#   gff    gff       programs/gff/GFF.glp
+#   gkk    knowledge       programs/gsc/Knowledge.glp
+#   gsg    friendship       programs/gsc/Friendship.glp
+#   gsn    groups       programs/gsc/Groups.glp
+#   gsnp   provenance_groups      programs/gai/Provenance-Groups.glp
+#   gai    ai_agents    programs/gai/AI-Agents.glp
+#   gc     gc        programs/currencies/coins/Coins.glp
+#   gb     gb        programs/currencies/bonds/Bonds.glp
+#   dgc    denominated_currencies  programs/currencies/sovereign/Denominated-Currencies.glp
+#   gff    feeds       programs/gff/Feeds.glp     (GFF, adopted from the Calculus, which has no GFF-I: Udi, 2026-11-15, to GFF #6)
 #
 # The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract, its verdict, its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise, and its pragmas, the words its app shows, read from the NAME.txt beside the owner's file and from those of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh (vGLP, Section 5.4, "The contract's words"), each act the schema its button names (GSC, Section 2).  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
 #
@@ -22,30 +23,32 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-APPS="gkk gsg gsn gsnp gai gc gb gff"
+APPS="gkk gsg gsn gsnp gai gc gb dgc gff"
 
 contract_of() { # contract_of <app> ; the checker's name of its contract
     case "$1" in
-        gkk) echo gkk ;;
-        gsg) echo gsg ;;
-        gsn) echo gsn ;;
-        gsnp) echo gsnp ;;
-        gai) echo gai ;;
-        gc) echo gc ;;
-        gb) echo gb ;;
-        gff) echo gff ;;
+        gkk) echo knowledge ;;
+        gsg) echo friendship ;;
+        gsn) echo groups ;;
+        gsnp) echo provenance_groups ;;
+        gai) echo ai_agents ;;
+        gc) echo coins ;;
+        gb) echo bonds ;;
+        dgc) echo denominated_currencies ;;
+        gff) echo feeds ;;
     esac
 }
 file_of() { # file_of <app> ; the owner's file that holds its contract
     case "$1" in
-        gkk) echo "$GLP_DIR/programs/gsc/GKK.glp" ;;
-        gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
-        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
-        gsnp) echo "$GLP_DIR/programs/gai/GSNP.glp" ;;
-        gai) echo "$GLP_DIR/programs/gai/GAI.glp" ;;
-        gc) echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
-        gb) echo "$GLP_DIR/programs/currencies/bonds/GB.glp" ;;
-        gff) echo "$GLP_DIR/programs/gff/GFF.glp" ;;
+        gkk) echo "$GLP_DIR/programs/gsc/Knowledge.glp" ;;
+        gsg) echo "$GLP_DIR/programs/gsc/Friendship.glp" ;;
+        gsn) echo "$GLP_DIR/programs/gsc/Groups.glp" ;;
+        gsnp) echo "$GLP_DIR/programs/gai/Provenance-Groups.glp" ;;
+        gai) echo "$GLP_DIR/programs/gai/AI-Agents.glp" ;;
+        gc) echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
+        gb) echo "$GLP_DIR/programs/currencies/bonds/Bonds.glp" ;;
+        dgc) echo "$GLP_DIR/programs/currencies/sovereign/Denominated-Currencies.glp" ;;
+        gff) echo "$GLP_DIR/programs/gff/Feeds.glp" ;;
     esac
 }
 
@@ -85,7 +88,7 @@ for app in $APPS; do
     fi
     # The contract's words: its pragmas, from its NAME.txt and those of the contracts it extends.
     pr=no_pragmas
-    if [ -f "${src%.glp}.txt" ] && ! pr=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" "$rd" 2> "$WORK/pr.err"); then
+    if [ -f "${src%.glp}.txt" ] && ! pr=$(printf '%s\n' "$rd" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
         echo "$app: its pragmas were not read: $(head -1 "$WORK/pr.err")"
         OK=0
         continue
@@ -101,7 +104,14 @@ for app in $APPS; do
         OK=0
         continue
     fi
+    # The developer's values, NAME.values beside the contract's file, its owner's (vGLP 922ac53, Section 5.4), as cascade.sh passes them; with none, compile/5.
+    vf="${src%.glp}.values"
+    if [ -f "$vf" ]; then
+        dv="dev(\"[$(grep -v '^[[:space:]]*$' "$vf" | paste -s -d, - | sed -e 's/,/, /g')]\")"
+        printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$rd" "$vt" "$intro" "$pr" "$dv" > "$WORK/p.in"
+    else
     printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$rd" "$vt" "$intro" "$pr" > "$WORK/p.in"
+    fi
     repl "$WORK/p.in" "$WORK/p.out"
     mkdir -p "$WORK/out/$app"
     out="$WORK/out/$app/platform.vglp"
@@ -130,6 +140,7 @@ for app in $APPS; do
             OK=0
         fi
     else
+        mkdir -p "$HERE/$app"
         cp "$out" "$HERE/$app/platform.vglp"
         echo "$HERE/$app/platform.vglp: $(wc -l < "$out" | tr -d ' ') lines"
     fi

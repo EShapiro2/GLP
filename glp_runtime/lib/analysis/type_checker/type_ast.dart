@@ -66,9 +66,21 @@ class TypeRef extends TypeExpr {
   /// types"; TGLP parameterized-types.tex, Definition "Opaque Type").  It is
   /// no primitive of the runtime --- no term is of it but a term of an opaque
   /// type --- and [DFAState.isPrimitiveType] does not count it.
+  ///
+  /// `Term` is among them likewise: the built-in type of every produced term,
+  /// `Term?` of every consumed one (TGLP typed-glp.tex, "Type Declarations";
+  /// [termType]).  No primitive of the runtime either, and
+  /// [DFAState.isPrimitiveType] does not count it.
   static const builtins = {
-    'Integer', 'Real', 'String', 'Module', 'MutualRef', opaqueUnion,
+    'Integer', 'Real', 'String', 'Module', 'MutualRef', opaqueUnion, termType,
   };
+
+  /// The built-in type `Term` (TGLP typed-glp.tex, "Type Declarations"): "the
+  /// type of every produced term: it is defined as by a rule Term ::= Integer
+  /// ; Real ; String ; Module ; f(Term, ..., Term), with an alternative for
+  /// every functor f of every arity n >= 1.  Its dual Term? is the type of
+  /// every consumed term."
+  static const termType = 'Term';
 
   /// The built-in type `Opaque`, the union of all opaque types (TGLP
   /// parameterized-types.tex, Definition "Opaque Type": "a state with no

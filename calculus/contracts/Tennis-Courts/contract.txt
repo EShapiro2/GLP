@@ -1,0 +1,10 @@
+Tennis Courts
+Tennis Courts inherits from Booking and Partners.
+The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
+A booking is of the one who books and of a *partner*, and counts among the outstanding bookings of each.
+Alice and Carol are persons, Club a club, Court a court, Slot a slot.
+1. ■ Book: Booking:1, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound; Carol is the partner of the booking.
+2. ■ Organisation and ward. Organisation ward acquaint: Club, an organisation, and Wendy, a ward, may jointly come to know each other.
+3. ■ Cancel: Booking:2; the cancel frees the slot and ends the partner's part in the booking.
+4. ■ Withdraw: Carol may withdraw as the partner of a booking, which stays the booking of the one who booked.
+5. ■ Partner: Alice and Carol may jointly make Carol the partner of a booking of Alice that has no partner, Carol a participant of the Club with fewer outstanding bookings than the bound; so a partner is replaced, the old one withdrawing, while the slot stays booked.

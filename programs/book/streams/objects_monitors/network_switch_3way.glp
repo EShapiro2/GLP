@@ -9,7 +9,10 @@
 
 NetMsg ::= msg(Constant, Constant).
 
-procedure network(_?, _?, _?).
+%% A port of the switch: an agent's name and the switch's end of its channel.
+Port ::= (Constant, Channel(Stream(NetMsg), Stream(Constant))).
+
+procedure network(Port?, Port?, Port?).
 
 %% P to Q forwarding
 network((P,ch([msg(Dest,X)|In], Out?)),(Q,ChQ),(R,ChR)) :-

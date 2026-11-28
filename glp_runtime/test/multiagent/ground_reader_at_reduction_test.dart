@@ -15,7 +15,6 @@ library;
 import 'dart:io';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
@@ -24,6 +23,8 @@ import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/wire/codec.dart' show wireMsgKindAcknowledgement;
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:test/test.dart';
+
+import 'boot_program.dart';
 
 String get _rootSelf => File('../programs/self.glp').absolute.path;
 
@@ -40,15 +41,19 @@ final String _procs = File(_procsPath)
 final String _oneAgent = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
-start([alice | _], N) :- alice_init(alice, N?).
-start(_, _) :- otherwise | true.
 exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
 say(P, ch(_, [P?])).
+''';
 
-procedure alice_init(_?, _?).
+/// _oneAgent's agents' program, a program directory's self.glp (boot_program.dart).
+final String _oneAgentProgram = '''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(F)), Stream(NetMsg(F)))?).
+agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
+procedure start(Stream(Constant)?, Stream(NetMsg(F))?).
+start([alice | _], N) :- alice_init(alice, N?).
+start(_, _) :- otherwise | true.
+
+procedure alice_init(Constant?, Stream(NetMsg(F))?).
 alice_init(_, _) :- p(a, Y), r(Y?).
 $_procs''';
 
@@ -57,20 +62,25 @@ $_procs''';
 final String _twoAgents = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
+
+/// _twoAgents's agents' program, a program directory's self.glp (boot_program.dart).
+final String _twoAgentsProgram = '''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(F)), Stream(NetMsg(F)))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+procedure start(Stream(Constant)?, Stream(NetMsg(F))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start([bob | _], N) :- bob_init(bob, N?).
 start(_, _) :- otherwise | true.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
-procedure alice_init(_?, _?).
+procedure alice_init(Constant?, Stream(NetMsg(F))?).
 alice_init(_, _) :- send_to_net([msg(bob, Y?)]), p(a, Y).
 
-procedure bob_init(_?, _?).
+procedure bob_init(Constant?, Stream(NetMsg(F))?).
 bob_init(_, [msg(_, Y) | _]) :- r(Y?).
+bob_init(_, []).
 $_procs''';
 
 /// As [_twoAgents], with a itself communicated to alice: bob sends alice the
@@ -80,26 +90,36 @@ $_procs''';
 final String _fromBob = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
+
+/// _fromBob's agents' program, a program directory's self.glp (boot_program.dart).
+final String _fromBobProgram = '''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Msg)), Stream(NetMsg(Msg)))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+%% What the two agents send each other: bob the constant alice's p reads, alice
+%% the term p assigns.
+Msg ::= to_alice(Constant) ; to_bob(F).
+
+procedure start(Stream(Constant)?, Stream(NetMsg(Msg))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start([bob | _], N) :- bob_init(bob, N?).
 start(_, _) :- otherwise | true.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
-procedure alice_init(_?, _?).
-alice_init(_, [msg(_, A) | _]) :- send_to_net([msg(bob, Y?)]), p(A?, Y).
+procedure alice_init(Constant?, Stream(NetMsg(Msg))?).
+alice_init(_, [msg(_, to_alice(A)) | _]) :- send_to_net([msg(bob, to_bob(Y?))]), p(A?, Y).
+alice_init(_, _) :- otherwise | true.
 
-procedure bob_init(_?, _?).
-bob_init(_, In) :- send_to_net([msg(alice, A?)]), give(A), take(In?).
+procedure bob_init(Constant?, Stream(NetMsg(Msg))?).
+bob_init(_, In) :- send_to_net([msg(alice, to_alice(A?))]), give(A), take(In?).
 
 procedure give(Constant).
 give(a).
 
-procedure take(_?).
-take([msg(_, Y) | _]) :- r(Y?).
+procedure take(Stream(NetMsg(Msg))?).
+take([msg(_, to_bob(Y)) | _]) :- r(Y?).
+take(_) :- otherwise | true.
 $_procs''';
 
 /// alice's half of [_twoAgents], run in one engine over madGLP: she sends bob the reader Y?, and p assigns Y its value.
@@ -197,8 +217,7 @@ void main() {
     tearDown(() async => manager.shutdown());
 
     test('q and r at one agent: q receives a and r receives f(a)', () async {
-      final config = BootLoader().load(_oneAgent);
-      config.rootSelfGlpPath = _rootSelf;
+      final config = bootWithProgram(_oneAgent, _oneAgentProgram);
       await manager.boot(config);
       manager.start();
       await manager.settle();
@@ -208,8 +227,7 @@ void main() {
 
     test('q at alice and r at bob: q receives a and r receives f(a)',
         () async {
-      final config = BootLoader().load(_twoAgents);
-      config.rootSelfGlpPath = _rootSelf;
+      final config = bootWithProgram(_twoAgents, _twoAgentsProgram);
       await manager.boot(config);
       manager.start();
       await manager.settle();
@@ -220,8 +238,7 @@ void main() {
 
     test('a assigned at bob, q at alice and r at bob: q receives a and r '
         'receives f(a)', () async {
-      final config = BootLoader().load(_fromBob);
-      config.rootSelfGlpPath = _rootSelf;
+      final config = bootWithProgram(_fromBob, _fromBobProgram);
       await manager.boot(config);
       manager.start();
       await manager.settle();

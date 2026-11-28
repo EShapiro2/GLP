@@ -1,0 +1,7 @@
+Friendship
+Friendship inherits from Knowledge.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice and Bob are persons.
+1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+2. ■ Unfriend: Alice may end her friendship with Bob.
+3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.

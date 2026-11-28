@@ -1,0 +1,7 @@
+Stays
+Stays inherits from Coins.
+Alice and Bob are persons.
+1. ◆ List place: Alice, who can host guests at a place, may list it under a new name of hers.
+2. ■ Book: Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.
+3. ■ Cancel: Before the night, Alice may cancel a stay, paying Bob back its price in Alice-coins.
+4. ■ Review: After the night has come, Bob may review his stay, once; Alice keeps the review.

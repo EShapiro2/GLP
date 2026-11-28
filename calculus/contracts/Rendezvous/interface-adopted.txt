@@ -1,0 +1,5 @@
+Interface pragmas
+Open server: Carol [Open server]
+Invite by link: Alice [Sign link] <link> [Invite by link]
+Use link: Bob [Use link] <alice> <link>
+Reconnection: Alice [Present]

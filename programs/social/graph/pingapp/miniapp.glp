@@ -1,5 +1,5 @@
 %% miniapp.glp --- the test mini-app of the super-app plays: its entry
-%% miniapp/4, the super-app's entry template at the mini-app's own types
+%% miniapp/3, the super-app's entry template at the mini-app's own types
 %% PingShown and PingMsg (self.glp).
 %%
 %% A mini-app holds, at activation, the variables the super-app posted with
@@ -8,8 +8,7 @@
 %% which it shows its person what it draws; its channel to the social graph,
 %% on which the social graph hands it, at each invitation, one end of a root
 %% channel to the execution of the same mini-app at a friend, and reports a
-%% held link (Section 5.4); and the calendar, which it keeps no dates for and
-%% ignores.  On each conversation the execution reports to its person that it
+%% held link (Section 5.4).  On each conversation the execution reports to its person that it
 %% opened, greets the other over the root channel, and reports the greeting
 %% it receives.  What it reports reaches the person as its output thread,
 %% construct 0, drawn again with every item so far as each arrives (vGLP,
@@ -32,8 +31,8 @@
 %% alice (GSA paper, Section 5.4, "Whom the Grassroots App knows"); released,
 %% alice's execution would read the value and report got(V).
 
-exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
-miniapp(Id, ch(Gs, Draws?), ch(Down, Up?), _) :-
+exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?).
+miniapp(Id, ch(Gs, Draws?), ch(Down, Up?)) :-
     ground(Id?) |
     loop(Id?, Down?, [], Ui, Up, [], []),
     show(Ui?, Gs?, Draws).

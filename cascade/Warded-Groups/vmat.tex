@@ -1,0 +1,13171 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+person_unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Alice
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+message
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+message
+}}
+(
+\Bob
+,
+Text
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+create
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+close
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+remove
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+leave
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+post
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+post_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Alice
+,
+Grupo
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deliver
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+group_delivered
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+group_message
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+group_delivered
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+group_message
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_leader
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+group_delivered
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+group_message
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+group_delivered
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+enter
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+creator
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+make_guardian
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Bob
+,\ 
+q \neq 
+\mathit{Carol}
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+resign
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+end_guardian
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+,\ 
+q \neq 
+\mathit{Carol}
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{\detokenize{
+identity
+}}
+(
+\mathit{Dave}
+)
+\land
+\mathit{\detokenize{
+person
+}}
+(
+\mathit{Dave}
+)
+\land
+\mathit{\detokenize{
+guardian
+}}
+(
+\mathit{Dave}
+,
+\Bob
+)
+)
+,\\
+&
+\text{guarded by } \{
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+guardian_unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Alice
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+ward_acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+Alice
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+ward_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+ward_end
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Alice
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Alice
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+ward_unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Alice
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+wards_acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+Alice
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+Bob
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+wards_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Dave}
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Dave}
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+wards_of_one_guardian_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+retire
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+c_
+{
+\Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+c_
+{
+\Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+c_
+{
+\Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+c_
+{
+\Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+retired
+}}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus K_
+q
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+(c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+q
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+(c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+q
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+(c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+q
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus K_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+(c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+(c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+(c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{where } K_
+q
+ \text{ holds every atom of } c_
+q
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+\ast
+)
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+friend
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Carol}
+\,(
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+,
+\mathit{Carol}
+)
+\rightarrow
+\mathit{\detokenize{
+identity
+}}
+(
+\mathit{Carol}
+)
+\land
+\mathit{\detokenize{
+person
+}}
+(
+\mathit{Carol}
+)
+\land
+\mathit{\detokenize{
+guardian
+}}
+(
+\mathit{Carol}
+,
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+,
+\mathit{Dave}
+)
+\rightarrow
+\mathit{\detokenize{
+identity
+}}
+(
+\mathit{Dave}
+)
+\land
+\mathit{\detokenize{
+guardian
+}}
+(
+\mathit{Dave}
+,
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{p}_{
+5
+}
+\,(
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+,
+\mathit{p}_{
+5
+}
+)
+\rightarrow
+\mathit{\detokenize{
+identity
+}}
+(
+\mathit{p}_{
+5
+}
+)
+\land
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{p}_{
+5
+}
+,
+\Alice
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{p}_{
+6
+}
+\,(
+\mathit{\detokenize{
+member
+}}
+(
+\Alice
+,
+\ast
+,
+\mathit{p}_{
+6
+}
+)
+\rightarrow
+\mathit{\detokenize{
+identity
+}}
+(
+\mathit{p}_{
+6
+}
+)
+)
+,\\
+&
+\text{making } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\Alice
+,
+\mathit{Dave}
+)
+\rightarrow
+\neg 
+\mathit{\detokenize{
+guardian
+}}
+(
+\mathit{Dave}
+,
+\Alice
+)
+)
+,\\
+&
+\text{making } 
+\forall 
+\mathit{p}_{
+5
+}
+\,(
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+,
+\mathit{p}_{
+5
+}
+)
+\rightarrow
+\neg 
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{p}_{
+5
+}
+,
+\Alice
+)
+)
+,\\
+&
+\text{making } 
+\forall 
+\mathit{p}_{
+6
+}
+\,(
+\mathit{\detokenize{
+member
+}}
+(
+\Alice
+,
+\ast
+,
+\mathit{p}_{
+6
+}
+)
+\rightarrow
+\neg 
+\mathit{\detokenize{
+listed
+}}
+(
+\mathit{p}_{
+6
+}
+,
+\Alice
+,
+\ast
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+ward_message
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+message
+}}
+(
+\Bob
+,
+Text
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+ward_post
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+ward_post_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+posted
+}}
+(
+Text
+,
+\Alice
+,
+Grupo
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+ward_create
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+retired
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+ward_close
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+)
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+guardian_close
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+listed
+}}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+ward_join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+wards_join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Dave}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Dave}
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+wards_of_one_guardian_join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+ward_withdraw
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+ward_add
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+guardian
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+ward_leave
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+ward_remove
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}

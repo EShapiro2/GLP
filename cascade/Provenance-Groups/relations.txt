@@ -1,0 +1,4 @@
+Provenance Groups extends Groups and AI Agents: holds
+Provenance Groups extends it (Groups and AI Agents): holds
+Provenance Groups restricts it (Groups and AI Agents): holds
+Provenance Groups strengthens it (Groups and AI Agents): holds

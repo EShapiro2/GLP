@@ -1,0 +1,4 @@
+Interface pragmas
+Dividend: Alice [Set dividend] <div> <votes>
+  Erin [Vote on dividend] <div>
+  Bob [Claim] <total> <div> [Claim own coins] <total> <div> [Claim coins of the corporation] <total> <div>

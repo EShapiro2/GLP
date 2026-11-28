@@ -1,12 +1,15 @@
 %% ---------------------------------------------------------------------------
-%% programs/apps/gb --- the app of GB, Grassroots Bonds (Currencies' contract, programs/currencies/bonds/GB.txt and GB.glp; Coordination Appendix C), which extends GKK, Grassroots Keys and Knowledge, and not GSG, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").
+%% programs/apps/gb --- the app of GB, Grassroots Bonds (Currencies' contract, programs/currencies/bonds/Bonds.txt and Bonds.glp; Coordination Appendix C), which extends GKK, Grassroots Keys and Knowledge, and not GSG, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").
 %%
-%% The directory is a certified program of its own: the platform, the mini-app entry miniapp/4 that wraps it (miniapp.glp), its scripted person (person.glp) and the play that activates it by run/3, two executions over one conversation, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gb.glpw is what the super-app installs.
+%% The directory is a certified program of its own: the platform, the mini-app entry miniapp/3 that wraps it (miniapp.glp), its scripted person (person.glp) and the play that activates it by run/3, two executions over one conversation, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gb.glpw is what the super-app installs.
 %%
 %% The types of platform.vglp, written again for the declarations of this directory's modules, but for those the compilation forms --- Question, Drawn and Ask(Q) --- which the linker writes into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names them (vGLP, Section 6.3, "The canonical compilation") (the plays of programs/vglp/cva/social_graph likewise).  The compiled module's own definitions shadow these within it, and the two must agree.
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
+Speech   ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; program(Module) ; Speech.
+CValue ::= Constant ; bond(Integer).
 Class ::=
 establish(Peer)
 ;
@@ -14,44 +17,29 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer, Integer)
+issue(Peer, CValue, List(Constant), Integer)
 ;
-mint_bond(Peer, Integer, Integer)
+swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, Integer)
 ;
-first_date(Peer, Integer)
+pay(Peer, Peer, Peer, CValue, List(Constant), Integer)
 ;
-advance(Peer, Integer)
+pay_issuer(Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, Integer, Peer, Integer)
+deposit(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, Speech)
 ;
-swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+release(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer)
+return(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
+redeem(Peer, Peer, List(Constant), Peer)
 ;
-pay(Peer, Peer, Integer)
+redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer)
 ;
-redeem(Peer, Peer, Peer)
+redeem_bond(Peer, Peer, Integer, List(Constant), Peer)
 ;
-redeem_cb(Peer, Peer, Peer, Integer)
-;
-redeem_bc(Peer, Peer, Integer, Peer)
-;
-redeem_bb(Peer, Peer, Integer, Peer, Integer)
-;
-deposit_c(Peer, Peer, Peer, Integer)
-;
-deposit_b(Peer, Peer, Peer, Integer, Integer)
-;
-release_c(Peer, Peer, Peer, Integer)
-;
-release_b(Peer, Peer, Peer, Integer, Integer)
-;
-return_c(Peer, Peer, Peer, Integer)
-;
-return_b(Peer, Peer, Peer, Integer, Integer)
+redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer)
 .
+
 Proposal ::=
 establish(Peer)
 ;
@@ -59,53 +47,41 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer, Integer)
+issue(Peer, CValue, List(Constant), Integer)
 ;
-mint_bond(Peer, Integer, Integer)
+swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, Integer)
 ;
-swap(Peer, Peer, Peer, Integer, Peer, Integer)
+pay(Peer, Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+pay_issuer(Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer)
+deposit(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, Speech)
 ;
-swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
+release(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-pay(Peer, Peer, Integer)
+return(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-redeem(Peer, Peer, Peer)
+redeem(Peer, Peer, List(Constant), Peer)
 ;
-redeem_cb(Peer, Peer, Peer, Integer)
+redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer)
 ;
-redeem_bc(Peer, Peer, Integer, Peer)
+redeem_bond(Peer, Peer, Integer, List(Constant), Peer)
 ;
-redeem_bb(Peer, Peer, Integer, Peer, Integer)
-;
-deposit_c(Peer, Peer, Peer, Integer)
-;
-deposit_b(Peer, Peer, Peer, Integer, Integer)
-;
-release_c(Peer, Peer, Peer, Integer)
-;
-release_b(Peer, Peer, Peer, Integer, Integer)
-;
-return_c(Peer, Peer, Peer, Integer)
-;
-return_b(Peer, Peer, Peer, Integer, Integer)
+redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer)
 .
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
-Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote     ::= yes ; no(Reason).
-Decision ::= commit ; abort(Peer, Reason) ; yield.
+Reason   ::= declined ; unable ; unable(List(Atom), List(Atom), List(String)).
+Vote     ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
 Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; request(Rho, Integer).
+           ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Atom     ::= identity ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; date(Integer) ; dated.
+Atom     ::= identity ; person ; knows(Peer) ; note(Peer, CValue, CValue) ; escrow_note(Peer, CValue, Peer, Peer, Speech, CValue).
 Approved ::= Proposal.
 Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
@@ -123,10 +99,10 @@ Route    ::= route(Key, Stream(Net)?).
 Routes   ::= [] ; [Route | Routes].
 Sending  ::= went ; held(Net).
 
-%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types: Drawn, what its dispatcher draws for its person, and Net, the messages of its root channels, the platform's network messages (miniapp.glp).
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+%% The mini-app's entry, the instance of the root's entry template miniapp/3 (programs/self.glp) at the mini-app's two types: Drawn, what its dispatcher draws for its person, and Net, the messages of its root channels, the platform's network messages (miniapp.glp).
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 %% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen, the screen it reports.
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).

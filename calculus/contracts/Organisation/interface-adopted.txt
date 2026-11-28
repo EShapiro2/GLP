@@ -1,0 +1,24 @@
+Interface pragmas
+Found: Alice [Found] <orga> <role>
+  Alice [Found by an organisation] <orga> <gov> <role>
+  Gov: Alice asks for your consent to found by an organisation.
+Acts of the organisation: Bob [Propose] <motion> [Vote]
+  Alice [Act]
+Participation: Bob [Join] <orga> <decider>
+  Decider: Bob asks for your consent to join.
+  Codecider: Bob asks for your consent to join.
+  Bob [Leave] [Officer leave]
+  Decider [Expel] <bob>
+  Codecider: Decider asks for your consent to expel.
+  Decider [Officer expel] <bob>
+  Codecider: Decider asks for your consent to officer expel.
+Officers: Bob [Appoint] <role>
+  Decider: Bob asks for your consent to appoint.
+  Codecider: Bob asks for your consent to appoint.
+  Bob [Resign]
+  Decider [End officer] <bob>
+  Codecider: Decider asks for your consent to end officer.
+  Bob [Officer unfriend]
+  Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Amend: Alice [Amend]

@@ -1,0 +1,7 @@
+Feeds
+Feeds inherits from Labelled Overlay.
+A *feed* is named by its author.
+Alice, Bob and Carol are persons, Bob and Carol possibly one person.
+1. ■ Post: Alice has a feed and may post to it an item, created or received.
+2. ■ Deliver: Alice, who has a Carol-pointer to Bob who knows her, receives from Bob every item of Carol's feed that Bob holds.
+3. ■ Labeled point transitive: Labelled Overlay:2, only if Carol knows Alice.

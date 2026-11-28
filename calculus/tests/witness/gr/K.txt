@@ -1,0 +1,7 @@
+K: Witness
+Alice is a person.
+1. ■ Go: Alice may go, provided Alice is tied to someone.
+Logic pragmas.
+Vocabulary: x likes y = likes(x,y); x owes y = owes(x,y); x has gone = gone(x).
+x is tied to y: x likes y and x owes y.
+After x goes: x has gone.

@@ -1,0 +1,5 @@
+MRO: Overseen Club
+MRO instantiates MRC with the overseers of z for those who decide for z.
+Bob is a person, Orga a club.
+Logic pragmas.
+Roles: the overseers of z = overseers(z), listed by z has y as a member and y is a member of z.

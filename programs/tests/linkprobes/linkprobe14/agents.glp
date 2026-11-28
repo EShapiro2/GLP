@@ -10,39 +10,34 @@
 %% send, so alice sees it, from carol, where it reached carol before she
 %% forwarded the end, and never on the held link.  See ../linkprobes.md.
 
-Greeting ::= hello(Constant).
-GreetStream ::= [] ; [Greeting | GreetStream].
-GreetChannel ::= ch(GreetStream, GreetStream?).
-Outer ::= chan(GreetChannel).
-OuterStream ::= [] ; [Outer | OuterStream].
-NetContent ::= stream(OuterStream).
-NetMsg ::= msg(Constant, NetContent).
-NetStream ::= [] ; [NetMsg | NetStream].
 
 %% bob: make the channel, keep one end, send the other to carol, and greet.
-exported procedure bob_init(_?, _?).
+exported procedure bob_init(Keys?, Stream(NetMsg(NetContent))?).
 bob_init(keys(Me, [Carol]), _) :-
     send_to_net([msg(Carol?, stream(S?))]),
     new_channel(Mine, Theirs),
     put(S, Theirs?),
     greet(Me?, Mine?).
+bob_init(_, _) :- otherwise | true.
 
 procedure put(OuterStream, GreetChannel?).
 put([chan(C?)], C).
 
 %% carol: forward what bob sent her to alice, on a stream of her own.
-exported procedure carol_init(_?, _?).
+exported procedure carol_init(Keys?, Stream(NetMsg(NetContent))?).
 carol_init(keys(_, [Alice]), [msg(_, stream(S)) | _]) :-
     send_to_net([msg(Alice?, stream(S1?))]),
     forward(S?, S1).
+carol_init(_, _) :- otherwise | true.
 
 procedure forward(OuterStream?, OuterStream).
 forward([chan(C) | _], [chan(C?)]).
 forward([], []).
 
 %% alice: greet on the end that reached her through carol.
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(Keys?, Stream(NetMsg(NetContent))?).
 alice_init(keys(Me, _), [msg(_, stream(S)) | _]) :- await(Me?, S?).
+alice_init(_, _) :- otherwise | true.
 
 procedure await(Constant?, OuterStream?).
 await(Me, [chan(C) | _]) :- ground(Me?) | greet(Me?, C?).

@@ -1,22 +1,24 @@
 #!/bin/bash
 # The compiler from an act-schema contract to its canonical CVA platform in
 # vGLP (programs/vglp/cva/compiler; vGLP, Section 3.2, the paragraph on act
-# schemas, and Section 5.4, "The compilation"), run on the social graph's, the social network's and the currency's contracts, read
+# schemas, and Section 5.4, "The compilation"), run on the social graph's, the social network's, the currency's and the organisation's contracts, read
 # from their owners' files, and on vGLP's own, contracts.glp, through the REPL.
 #
 #   bash programs/vglp/cva/compile.sh            print into programs/vglp/cva/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
-# for <contract> social_graph, social_network and currency, the directories of GSG (GSC's,
-# programs/gsc/GSG.glp, the checker's gsg, the social graph), GSN (GSC's,
-# programs/gsc/GSN.glp, the checker's gsn, the social network) and GC
-# (Currencies', programs/currencies/coins/GC.glp, the checker's gc; Section
-# 3.4), each the one copy in its owner's file (claude.md "Sessions", the
-# cascade rule; Coordination Appendix C), and nudge, introduce, gnudge,
-# childsafe, link, friends, waves, parts, opens, groups, counter, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts and shares, vGLP's, which contracts.glp beside the compiler
+# for <contract> social_graph, social_network, currency and organisation, the directories of Friendship (GSC's,
+# programs/gsc/Friendship.glp, the checker's friendship, the social graph), Groups (GSC's,
+# programs/gsc/Groups.glp, the checker's groups, the social network) and Coins
+# (Currencies', programs/currencies/coins/Coins.glp, the checker's coins; Section
+# 3.4) and Organisation (GO's, programs/go/Organisation.glp, the checker's
+# organisation; GO #15, 2026-11-24 21:22 UTC, for Audit PR 108, Finding 19), each the one copy in its owner's file (claude.md "Sessions", the
+# cascade rule; Coordination Appendix C), its file and the name its file gives
+# it found by the table of the contracts' names, calculus/NAMES.txt, and nudge, introduce, gnudge,
+# childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts and shares, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
-# none (GSC's three name none).  A contract is checked before it is compiled
+# none (GSC's, Currencies' and GO's name none).  A contract is checked before it is compiled
 # (GSC, Section 5): for each contract, a REPL session on its owner's file, or
 # on contracts.glp, prints it, contract_named/2; one on programs/gsc prints the
 # checker's verdict on it, check/2; and one on the compiler calls
@@ -41,25 +43,63 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-THEIRS="gsg gsn gc"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts"
+THEIRS="social_graph social_network currency organisation"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds cvalues holds"
 CONTRACTS="$THEIRS $OURS"
 
+# The contract of each of GSC's and Currencies' rows, by its name in the table
+# of the contracts' names, calculus/NAMES.txt ("name on main | name | file name
+# | row and atom | row and atom on main"), the one source of the names: the
+# social graph is Friendship, the social network Groups and the currency Coins
+# (Udi, 2026-11-16; Code #33, vGLP_inbox.md, 23:53 UTC), and the organisation
+# Organisation.  A row is the directory
+# of its platform and plays here.
+contract_name() {
+    case "$1" in
+        social_graph)   echo Friendship ;;
+        social_network) echo Groups ;;
+        currency)       echo Coins ;;
+        organisation)   echo Organisation ;;
+    esac
+}
+# The table, calculus/NAMES.txt, or the file CONTRACT_NAMES names, a table of
+# the same form, as pragmas.sh reads it: lines of four columns, or of five.
+NAMES="${CONTRACT_NAMES:-$GLP_DIR/calculus/NAMES.txt}"
+table_row() { # table_row <name> ; its row of the table, its first four columns joined by "|"
+    awk -F'|' -v n="$1" '
+        f && (NF == 4 || NF == 5) { for (i = 1; i <= NF; i++) gsub(/^[ \t]+|[ \t]+$/, "", $i); if ($2 == n) { print $1 "|" $2 "|" $3 "|" $4; exit } }
+        { x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x); if ((NF == 4 || NF == 5) && x == "name on main") f = 1 }
+    ' "$NAMES"
+}
+# The owner's file of the contract of a row, by the table: the NAME.glp of its
+# file name, "the name with a hyphen for each space and no apostrophe: NAME.txt,
+# NAME.glp" (calculus/NAMES.txt), under programs/; and the name its file gives
+# it, contract_named/2, "the atom of contract_named", the file name in lower
+# case, a hyphen as an underscore (ibid.), the table's fourth column.
+row_file() { # row_file <row> ; "<file>|<atom>"
+    local r f g
+    r=$(table_row "$(contract_name "$1")")
+    [ -n "$r" ] || return 1
+    f=$(printf '%s' "$r" | cut -d'|' -f3)
+    for g in "$GLP_DIR"/programs/*/"$f.glp" "$GLP_DIR"/programs/*/*/"$f.glp"; do
+        [ -f "$g" ] && { printf '%s|%s\n' "$g" "$(printf '%s' "$r" | cut -d'|' -f4)"; return 0; }
+    done
+    return 1
+}
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
     case "$1" in
-        gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
-        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
-        gc)  echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
+        social_graph|social_network|currency|organisation) row_file "$1" | cut -d'|' -f1 ;;
         *)   echo "$HERE/contracts.glp" ;;
     esac
 }
-dir_of() { # dir_of <contract> ; the directory of its platform and plays here
+name_in() { # name_in <contract> ; the name its file gives it, contract_named/2
     case "$1" in
-        gsg) echo social_graph ;;
-        gsn) echo social_network ;;
-        gc)  echo currency ;;
-        *)   echo "$1" ;;
+        social_graph|social_network|currency|organisation) row_file "$1" | cut -d'|' -f2 ;;
+        *)  echo "$1" ;;
     esac
+}
+dir_of() { # dir_of <contract> ; the directory of its platform and plays here
+    echo "$1"
 }
 DIRS=$(for c in $CONTRACTS; do dir_of "$c"; done | tr '\n' ' ')
 
@@ -93,7 +133,7 @@ repl() {   # repl <input file> <output file>; the REPL's lines, prompts stripped
 for c in $CONTRACTS; do
     d=$(dir_of "$c")
     src=$(contract_file "$c")
-    printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$c" > "$WORK/c.in"
+    printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$(name_in "$c")" > "$WORK/c.in"
     repl "$WORK/c.in" "$WORK/$c.c.out"
     ct=$(grep -E '^C = ' "$WORK/$c.c.out" | head -1 | sed -e 's/^C = //')
     # The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
@@ -118,7 +158,7 @@ for c in $CONTRACTS; do
         pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
         [ -n "$pr" ] || pr=no_pragmas
     elif [ -f "${src%.glp}.txt" ] \
-        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$rd" 2> "$WORK/$c.pr.err"); then
+        && ! pr=$(printf '%s\n' "$rd" > "$WORK/$c.rd" && bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "@$WORK/$c.rd" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
         continue
     fi
@@ -135,7 +175,13 @@ for c in $CONTRACTS; do
         grep -hE '^(Error|✗)' "$WORK/$c".*.out | head -3 >> "$WORK/status"
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
+    # The values the developer gives, one atom a line in <dir>/values beside the platform, as the contract's Vocabulary writes them (vGLP 922ac53, Section 5.4: "A platform is deployed when its developer compiles it, giving the compiler the values"), passed as dev(Text), Text their list; nodev where there is no such file.
+    if [ -f "$HERE/$d/values" ]; then
+        dv="dev(\"[$(grep -v '^[[:space:]]*$' "$HERE/$d/values" | paste -s -d, - | sed -e 's/,/, /g')]\")"
+    else
+        dv=nodev
+    fi
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$(name_in "$c")" "$rd" "$vt" "$it" "$pr" "$dv" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/$c.p.out"
     f="$OUT/$d/platform.vglp"
     if ! awk '

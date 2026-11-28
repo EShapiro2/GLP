@@ -1,0 +1,10 @@
+O: Organisation
+Alice is a person, Orga an organisation, Motion a motion.
+1. ■ Vote: Alice may vote on Motion in Orga, provided Alice is entitled to vote on Motion in Orga. Act: Alice may take Motion for Orga, provided Alice is a member of Orga and the votes decide Motion in Orga.
+Logic pragmas.
+Vocabulary: x is a member of z = member(x,z); z has x as a member = has_member(z,x); x holds the role r in z = role(x,z,r); z has x in the role r = has_role(z,x,r); z holds x's vote on m = vote(z,x,m); x is entitled to vote on m in z = voter(x,z,m); the votes decide m in z = decided(z,m); z has m taken = taken(z,m).
+After x votes on m in z, which requires z does not hold x's vote on m: z holds x's vote on m.
+After x takes m for z, which requires z does not have m taken: z has m taken.
+Parameters: x is entitled to vote on m in z; the votes decide m in z.
+Default: x is a member of z for x is entitled to vote on m in z.
+Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.

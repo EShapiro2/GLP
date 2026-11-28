@@ -1,0 +1,30 @@
+%% Type checking of =.. and ..= (TGLP typed-constant-readers.tex): a goal
+%% T =.. L is checked at =..(Term, Stream(Term)?) if L is a list of terms, and
+%% a goal L ..= T at ..=(Stream(Term), Term?) if T is a term expression.
+
+Terms ::= [] ; [Term | Terms].
+
+%% make(F?, As?, T): T is the term of functor F and arguments As.
+procedure make(String?, Terms?, Term).
+make(F, As, T?) :- T =.. [F?|As?].
+
+%% parts(T?, Ps): Ps is the functor and the arguments of the compound T.
+procedure parts(Term?, Terms).
+parts(T, Ps?) :- Ps ..= T?.
+
+%% rename(T?, F?, T1): T1 is the compound T under the functor F: a term is
+%% taken apart and one is built of its parts, each a Term.
+procedure rename(Term?, String?, Term).
+rename(T, F, T1?) :- Ps ..= T?, rest(Ps?, As), T1 =.. [F?|As?].
+
+procedure rest(Terms?, Terms).
+rest([], []).
+rest([_|As], As?).
+
+%% pair(X?, Y?, T): a list written out, its elements term expressions.
+procedure pair(Integer?, Term?, Term).
+pair(X, Y, T?) :- T =.. [pair, X?, f(Y?, [X?])].
+
+%% twice(F?, A?, T): the writer of one composition read by another.
+procedure twice(String?, Term?, Term).
+twice(F, A, T?) :- T0 =.. [F?, A?], T =.. [F?, T0?].

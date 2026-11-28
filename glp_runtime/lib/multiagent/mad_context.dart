@@ -119,7 +119,23 @@ class MadContext {
   /// The agent's networking layer (set at boot). Backs the seam predicates
   /// (IGLP Definition "Seam Predicates"); `sign/3` and `signature/2` sign and
   /// verify under the runtime's person identity, not through the layer.
-  GlpNetwork? network;
+  GlpNetwork? get network => _network;
+  GlpNetwork? _network;
+
+  /// Bind the agent's layer.  A simulation's layer names each agent by the
+  /// readable name standing for its key, and the runtime then gives a program
+  /// every key by that name ([GlpRuntime.keyName]): "a readable name stands
+  /// for a key" (IGLP, Implementation Notes, "Simulation realisation"), so
+  /// that one person is one name everywhere a program meets them.
+  set network(GlpNetwork? network) {
+    _network = network;
+    if (network is SimulationNetworkClient) {
+      final directory = network.directory;
+      runtime.keyName =
+          (hex) => directory.idOf(PubKey.fromHex(hex)) ?? hex;
+      runtime.keyNamed = (name) => directory.pkOf(name)?.hex ?? name;
+    }
+  }
 
   /// Called after a place event the layer reports is delivered onto its
   /// place's stream ([deliverPlaceEvent]), so that the host runs: a place
@@ -1069,11 +1085,7 @@ class MadContext {
   /// sender of a message (IGLP, Remark "Agent Names"; Implementation Notes,
   /// "Simulation realisation": "a readable name stands for a key").
   Term _presenceTerm(String functor, PubKey pk) {
-    final network = this.network;
-    final name = network is SimulationNetworkClient
-        ? network.directory.idOf(pk) ?? pk.hex
-        : pk.hex;
-    return StructTerm(functor, [ConstTerm(name)]);
+    return StructTerm(functor, [ConstTerm(runtime.keyName(pk.hex))]);
   }
 
   /// A presence the layer reported on [underlay]: to the host's

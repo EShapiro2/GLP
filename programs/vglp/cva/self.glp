@@ -21,7 +21,7 @@
 %% request question open, once one is drawn; refresh grants refresh, an Input
 %% addressed to no construct, on which the dispatcher has every construct, and
 %% construct 0, draw again what it last drew (vGLP d433f71, Section 6.3);
-%% own(Ks, R) grants R likewise,
+%% own(Ks, R) grants R likewise, and own(Ks, R, Es) grants R and then, for each at(K, Xs) of Es, each grant of Xs on the K-th argument of R's proposal, the elements of a set the request names, each a constant, and [end] (vGLP, Section 6.3, the paragraph after the construct process: an open request asks a list one element at a time, end ending it),
 %% once the person has written into each of the holes Ks the agent's own key,
 %% which the last view drawn shows, R reading the holes wherever it names the agent:
 %% a person proposing a class that names its agent names it by the key it
@@ -39,9 +39,11 @@ Peer       ::= Key.
 Carried(X, R) ::= hello(Peer, R) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
 Msg(X, R)  ::= msg(Peer, Carried(X, R)).
 Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
-Step(T, Q, S, P, D) ::= req(T) ; own(Holes, T) ; look ; wait(Cond(Q, S, P, D)) ; approval(Q, T) ; refresh.
+Step(T, Q, S, P, D) ::= req(T) ; own(Holes, T) ; own(Holes, T, Elems(T)) ; look ; wait(Cond(Q, S, P, D)) ; approval(Q, T) ; refresh ; clock(Integer).
 Cond(Q, S, P, D) ::= known(Peer) ; holds(S) ; lacks(S) ; has(S, Integer) ; refused(P, Peer, D) ; asked(Q) ; asking.
 Holes      ::= [] ; [Peer? | Holes].
+Elems(T)   ::= [] ; [ElemsAt(T) | Elems(T)].
+ElemsAt(T) ::= at(Integer, List(T)).
 Steps(T, Q, S, P, D) ::= [] ; [Step(T, Q, S, P, D) | Steps(T, Q, S, P, D)].
 Sess       ::= nosess ; sess(Integer, Path).
 %% What the person reads: the program's output, the views and the notices; an attempt or a hello asked; the views of the request, propose(R), and of the answer yes or no, each as the compilation forms Questioned(S), S ; input(Path) (vGLP, Section 6.3, "The construct process"); an approval question, of a platform compiled with or without its contract's words; and what the dispatcher draws.
@@ -51,7 +53,10 @@ HRequest(R) ::= propose(R) ; input(Path).
 HAnswer    ::= yes ; no ; input(Path).
 HApproval(K, W) ::= approval(K, HAnswer) ; approval(K, W, HAnswer).
 %% And the widget terms the platform's declarations name, each an alternative of the union the person channel carries: last_state, approval_sentence and the request widget's term social_menu(E), E the list of its entries, of the types the platform prints with it (vGLP 668df7d, Section 6.3, the paragraph after the construct process; vGLP 0eeea71, Section 5.4).
-HDrawn(R, K, W, S, P, D, B, E) ::= request_r(HRequest(R)) ; approval_w(HApproval(K, W)) ; output(List(HView(S, P, D, B))) ; propose(R) ; yes ; no ; last_state ; approval_sentence ; social_menu(E).
+HDrawn(R, K, W, S, P, D, B, E) ::= request_r(HRequest(R)) ; approval_w(HApproval(K, W)) ; output(List(HView(S, P, D, B))) ; propose(R) ; yes ; no ; last_state ; approval_sentence ; social_menu(E) ; Constant ; [HEnd | HNil].
+%% A request naming a set asks its elements by an open request, each element a constant and the list ended by end (vGLP, Section 6.3, the paragraph after the construct process): the platform's Drawn has Constant and [DrawnEnd | DrawnNil], which the person reads as these alternatives.
+HEnd       ::= end.
+HNil       ::= [].
 Seen(K)    ::= seen(Integer, Path, K).
 Seens(K)   ::= [] ; [Seen(K) | Seens(K)].
 PSt(T, Q, S, P, D, B, K) ::= ps(Sess, List(HView(S, P, D, B)), Seens(K), Steps(T, Q, S, P, D)).
@@ -184,6 +189,14 @@ advance(ps(sess(Id, P), [view(Me, S, K, A, Ts)|Vs], Cs, [own(Ks, R)|Ss]), Gs?, G
     advance(ps(nosess, [view(Me?, S?, K?, A?, Ts?)|Vs?], Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
 advance(ps(sess(Id, P), [], Cs, [own(Ks, R)|Ss]), Gs1?, Gs1, ps(sess(Id?, P?), [], Cs?, [own(Ks?, R?)|Ss?]), Log1?, Log1).
 advance(ps(nosess, T, Cs, [own(Ks, R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?)|Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P), [view(Me, S, K, A, Ts)|Vs], Cs, [own(Ks, R, Es)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(Me?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    grant_elems(Id?, P?, Es?, Gs2, Gs3?),
+    advance(ps(nosess, [view(Me?, S?, K?, A?, Ts?)|Vs?], Cs?, Ss?), Gs3, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P), [], Cs, [own(Ks, R, Es)|Ss]), Gs1?, Gs1, ps(sess(Id?, P?), [], Cs?, [own(Ks?, R?, Es?)|Ss?]), Log1?, Log1).
+advance(ps(nosess, T, Cs, [own(Ks, R, Es)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?, Es?)|Ss?]), Log1?, Log1).
 %% look logs menu(K, Ks), the agent's own key and the persons it knows, as the last view drawn shows them; with none drawn yet, the step waits.
 advance(ps(sess(Id, P), [V|Vs], Cs, [look|Ss]), Gs?, Gs1, St1?, [M?|Log?], Log1) :-
     ground(Id?), ground(P?), ground(V?), ground(Vs?) |
@@ -198,6 +211,10 @@ advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
 advance(ps(Se, T, Cs, [approval(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(Cs?), ground(K?) |
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
+%% clock(T) sets the machine's clock to T, Unix milliseconds, by GLP's set_clock/1, so that a play has the day it wants: the compiled agent of a contract that requires the day reads the date by now/1 (vGLP, Section 5.4: "the compiled agent reads it from its phone whenever it computes a condition"; GLP #16, vGLP_inbox, 2026-11-15 20:30 UTC, Udi approving set_clock).  The clock is the machine's, so one step sets it for every agent of the play.
+advance(ps(Se, T, Cs, [clock(Ms)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- integer(Ms?) |
+    set_clock(Ms?),
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
 
 %% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
@@ -209,6 +226,21 @@ fill(_, []).
 %% its holes filled, is ground.
 procedure(T) grant(Integer?, Path?, T?, PersonIn(T), PersonIn(T)?).
 grant(Id, P, R, [input(Id?, P?, R?)|Gs1?], Gs1) :- ground(R?) | true.
+
+%% grant_elems(Id, P, Es, Gs, Gs1): for each at(K, Xs) of Es, each X of Xs granted on the question Id at the path of the K-th argument of the proposal the request at P names, P followed by 1 and K, as the platform's open_proposal reads it (path/3).
+procedure(T) grant_elems(Integer?, Path?, Elems(T)?, PersonIn(T), PersonIn(T)?).
+grant_elems(_, _, [], Gs1?, Gs1).
+grant_elems(Id, P, [at(K, Xs)|Es], Gs?, Gs1) :- ground(Id?), ground(P?), integer(K?) |
+    path_app(P?, [1, K?], Q),
+    grant_each(Id?, Q?, Xs?, Gs, Gs2?),
+    grant_elems(Id?, P?, Es?, Gs2, Gs1?).
+procedure(T) grant_each(Integer?, Path?, List(T)?, PersonIn(T), PersonIn(T)?).
+grant_each(_, _, [], Gs1?, Gs1).
+grant_each(Id, Q, [X|Xs], [input(Id?, Q?, X?)|Gs?], Gs1) :- ground(Id?), ground(Q?), ground(X?) |
+    grant_each(Id?, Q?, Xs?, Gs, Gs1?).
+procedure path_app(Path?, Path?, Path).
+path_app([], Q, Q?).
+path_app([I|P], Q, [I?|R?]) :- path_app(P?, Q?, R).
 
 procedure(T, Q, S, P, D, B, K) waited(YN?, PSt(T, Q, S, P, D, B, K)?, PersonIn(T), PersonIn(T)?, PSt(T, Q, S, P, D, B, K), Stream(Logged(Q, T, S, P, D, B)),
     Stream(Logged(Q, T, S, P, D, B))?).

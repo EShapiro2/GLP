@@ -1,0 +1,19 @@
+Trading Company
+Trading Company extends Corporation.
+Vocabulary: z has paid a coin for v = paid_for(z,v); z has paid n coins for v = paid_for(z,v,*n); z has paid exactly n coins for v = paid_for(z,v,#n); z has received v = received(z,v); z holds the good v = holds_good(z,v); z has sold v to y = sold(z,v,y).
+x is a buyer of z: x holds the role Buyer in z.
+x is a keeper of z: x holds the role Keeper in z.
+x is a seller of z: x holds the role Seller in z.
+After x and y decide that z pays y n w-coins for v: no longer z holds n w-coins, y holds n w-coins and z has paid n coins for v.
+After x records the receipt of v by z, which requires z has not received v: z has received v and z holds the good v.
+After x and y decide that y pays z n w-coins for v: no longer y holds n w-coins, z holds n w-coins, no longer z holds the good v and z has sold v to y.
+Trading Company:0 - | A *trading company* is a corporation whose bylaws name three roles, *buyer*, *keeper* and *seller*, each held by its first officer. A *good* is a thing it buys and sells.
+Trading Company:0 - | Alice, Bob, Carol, Dave, Erin and Frank are persons, Orga a trading company, Ware a good, Sum a number; Frank is possibly any of the others or Orga.
+Trading Company:1 ■ Buy: ~note(Orga,Frank,coin,*Sum), note(Dave,Frank,coin,*Sum), paid_for(Orga,Ware,*Sum) <- role(Alice,Orga,Buyer), knows(Alice,Dave), knows(Dave,Alice), note(Orga,Frank,coin,*Sum) guarded by Alice, Dave possibly Alice=Frank, Dave=Frank, Frank=Orga.
+Trading Company:1 ■ | Ware is a good Dave delivers to Orga.
+Trading Company:2 ◆ Receive: received(Orga,Ware), holds_good(Orga,Ware) <- role(Bob,Orga,Keeper), paid_for(Orga,Ware), ~received(Orga,Ware) guarded by Bob.
+Trading Company:2 ◆ | Orga then holds it.
+Trading Company:3 ■ Sell: ~note(Erin,Frank,coin,*Sum), note(Orga,Frank,coin,*Sum), ~holds_good(Orga,Ware), sold(Orga,Ware,Erin) <- role(Carol,Orga,Seller), knows(Carol,Erin), knows(Erin,Carol), note(Erin,Frank,coin,*Sum), holds_good(Orga,Ware) guarded by Carol, Erin possibly Carol=Frank, Erin=Frank, Frank=Orga.
+Trading Company:3 ■ | Ware is then sold to Erin and Orga holds it no more.
+Trading Company:4 ○ | Keeping.
+Trading Company:4 ○ | Bob, a keeper, will keep every good Orga holds, and release a good sold to Erin to Erin.

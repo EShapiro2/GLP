@@ -1,0 +1,2 @@
+Corporation extends Organisation and Denominated Currencies: holds
+Corporation extends it (Organisation and Denominated Currencies): holds

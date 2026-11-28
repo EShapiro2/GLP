@@ -1,0 +1,1 @@
+Community Bank extends Bank: holds

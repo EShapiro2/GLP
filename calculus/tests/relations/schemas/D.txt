@@ -1,0 +1,2 @@
+D: D (expanded schemas)
+D:1 ■ Greet: greeted(Alice,Bob) <- ~greeted(Alice,Bob) guarded by Alice.

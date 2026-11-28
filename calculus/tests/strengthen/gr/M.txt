@@ -1,0 +1,4 @@
+M: Wrong
+M strengthens K.
+Alice and Bob are persons.
+1. ■ Meet: K:1, and then Alice has met Bob.

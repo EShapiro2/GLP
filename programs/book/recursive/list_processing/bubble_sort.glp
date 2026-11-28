@@ -25,14 +25,3 @@ bubble([], [], no).
 procedure continue(Flag?, NumList?, NumList).
 continue(yes, Xs, Sorted?) :- bsort(Xs?, Sorted).
 continue(no, Sorted, Sorted?).
-
-%% Metainterpreter support
-procedure reduce(_?, _).
-reduce(bubble_sort(Xs, Sorted?), bsort(Xs?, Sorted)).
-reduce(bsort(Xs, Sorted?), (bubble(Xs?, Ys, Swapped), continue(Swapped?, Ys?, Sorted))).
-reduce(bubble([X,Y|Xs], [Y?|Ys?], yes), bubble([X?|Xs?], Ys, _)) :- X? > Y? | true.
-reduce(bubble([X,Y|Xs], [X?|Ys?], Swapped?), bubble([Y?|Xs?], Ys, Swapped)) :- X? =< Y? | true.
-reduce(bubble([X], [X?], no), true).
-reduce(bubble([], [], no), true).
-reduce(continue(yes, Xs, Sorted?), bsort(Xs?, Sorted)).
-reduce(continue(no, Sorted, Sorted?), true).

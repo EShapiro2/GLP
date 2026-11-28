@@ -1,0 +1,85 @@
+Knowledge  commute yes; return yes; recover same
+Friendship commute yes; return yes; recover same
+Forwarding commute yes; return yes; recover same
+MSG        commute yes; return yes; recover same
+SND        commute yes; return yes; recover equivalent
+names: 0 names of two kinds neither of which is under the other
+5 contracts, 0 with a fault
+--- sasx/Forwarding.txt
+Forwarding (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+Forwarding:0 - | Alice, Bob and Carol are persons, Item an item.
+Knowledge:0 - | A party to a contract must have an identity.
+Knowledge:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Forwarding:0 - | The *author* of an item is its first signer.
+Forwarding:1 ■ Sign: item(Alice,Item) <- ~item(Alice,Item) guarded by Alice.
+Forwarding:2 ■ Forward: item(Bob,Item@Alice) <- item(Alice,Item), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+--- sasx/Friendship.txt
+Friendship (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+Friendship:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | A party to a contract must have an identity.
+Knowledge:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+--- sasx/Knowledge.txt
+Knowledge (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | A party to a contract must have an identity.
+Knowledge:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+--- sasx/MSG.txt
+MSG: Messages (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+MSG:0 - | Alice, Bob and Carol are persons, Text a message.
+Knowledge:0 - | A party to a contract must have an identity.
+Knowledge:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+MSG:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+--- sasx/SND.txt
+SND: Signed Messages (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+SND:0 - | Alice, Bob and Carol are persons, Text a message, Item an item.
+Knowledge:0 - | A party to a contract must have an identity.
+Knowledge:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+MSG:1 ■ Message: item(Bob,Text@Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Forwarding:0 - | The *author* of an item is its first signer.
+Forwarding:1 ■ Sign: item(Alice,Item) <- ~item(Alice,Item) guarded by Alice.
+Forwarding:2 ■ Forward: item(Bob,Item@Alice) <- item(Alice,Item), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+SND:1 ■ Forward twice: item(Bob,Item@Bob@Alice) <- item(Alice,Item@Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.

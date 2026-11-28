@@ -1,0 +1,20 @@
+All 66 contracts under their names of calculus/NAMES.txt (Udi, 2026-11-16), from Calculus code ee7ccc55.
+
+A name is one plain word, or two in their English order; a contract's title line is its name; a citation reads
+"Community Bank:1".  60 contracts are renamed and six keep their names: Notes, Coins, Bonds, Shares, Agora, DAO.  The
+contracts are otherwise those of the publication of 2026-11-16 on main (Calculus code 32d16c50): no word but the names
+and the titles changes, and no term.
+
+Run, at Calculus code ee7ccc55: 66 certified by GLP's checker (GSC); 63 with a platform.glp that loads; 3 parametric,
+with no platform until instantiated: Ads, Community Network, Auction.  calculus/contracts/STATE.txt has a line a
+contract.
+
+The checks: gcsas.py 66 contracts, 0 with a fault; tests.py 54 cases, 0 that differ; relations.py 112 relations, 112
+hold; supplied.py, typecheck_places.py, possibly.py, redundant.py 0.
+
+calculus/contracts/NAME/, by file name, has each contract's files for adoption: contract.txt, logic-pragmas.txt,
+schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt, relations.txt, term.glp.txt,
+verdict.txt, interface.txt and interface-adopted.txt; the platforms are printed at adoption.
+
+Adopt: python3 calculus/tools/adopt.py --write NAME <dir>; the check: adopt.py --check.  adopt.py finds an owner's
+file under its file name, and under its name on main until it is renamed.

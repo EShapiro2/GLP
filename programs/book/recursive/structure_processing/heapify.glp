@@ -34,25 +34,3 @@ adjust(X, tree(X2, L2, R2), tree(X1, L, R), tree(X1?, tree(X2?, L2?, R2?), HeapR
 procedure greater(Number?, Tree?).
 greater(_, void).
 greater(X, tree(X1, _, _)) :- X? >= X1? | true.
-
-%% reduce clauses for metainterpreter
-procedure reduce(_?, _).
-reduce(heapify(void, void), true).
-reduce(heapify(tree(X, L, R), Heap?), (heapify(L?, HeapL), heapify(R?, HeapR), adjust(X?, HeapL?, HeapR?, Heap))).
-reduce(adjust(X, void, void, tree(X?, void, void)), true).
-reduce(adjust(X, void, tree(X2, L2, R2), tree(X?, void, tree(X2?, L2?, R2?))), true) :-
-    X? >= X2? | true.
-reduce(adjust(X, tree(X1, L1, R1), void, tree(X?, tree(X1?, L1?, R1?), void)), true) :-
-    X? >= X1? | true.
-reduce(adjust(X, tree(X1, L1, R1), tree(X2, L2, R2), tree(X?, tree(X1?, L1?, R1?), tree(X2?, L2?, R2?))), true) :-
-    X? >= X1?, X? >= X2? | true.
-reduce(adjust(X, tree(X1, L, R), void, tree(X1?, HeapL?, void)), adjust(X?, L?, R?, HeapL)) :-
-    X? < X1? | true.
-reduce(adjust(X, tree(X1, L, R), tree(X2, L2, R2), tree(X1?, HeapL?, tree(X2?, L2?, R2?))), adjust(X?, L?, R?, HeapL)) :-
-    X? < X1?, X1? >= X2? | true.
-reduce(adjust(X, void, tree(X1, L, R), tree(X1?, void, HeapR?)), adjust(X?, L?, R?, HeapR)) :-
-    X? < X1? | true.
-reduce(adjust(X, tree(X2, L2, R2), tree(X1, L, R), tree(X1?, tree(X2?, L2?, R2?), HeapR?)), adjust(X?, L?, R?, HeapR)) :-
-    X? < X1?, X1? >= X2? | true.
-reduce(greater(_, void), true).
-reduce(greater(X, tree(X1, _, _)), true) :- X? >= X1? | true.

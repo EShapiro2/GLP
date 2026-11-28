@@ -1,0 +1,21 @@
+%% agent/self.glp --- the agents' program of ../agent_boot.glp, moved out of
+%% it: a boot file carries its boot clause and the persons it names, and the
+%% agents' program is a program directory (TGLP 6ce148a, modules.tex, "Entry
+%% and the absence of a boot module").  See ../agent_boot.glp for what it exercises.
+
+%% The agent's name, of a type that is no constant type, so that its reader
+%% occurring twice is the SRSW violation it is (TGLP, "Readers of constant
+%% types" licenses a repeated reader of a constant type).
+Name ::= name(Constant).
+
+procedure(X) agent_init(Name?, Stream(NetMsg(X))?).
+agent_init(Id, _) :- send_to_user([hello(Id?), again(Id?)]).
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input, the agent's key having been made at its spawn.
+exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+
+%% The agent's program, by the name its person tells it.
+procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+start([alice | _], N) :- agent_init(name(alice), N?).
+start(_, _) :- otherwise | true.

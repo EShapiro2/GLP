@@ -1,0 +1,11 @@
+Auction
+Auction inherits from Local Overlay.
+A *pickup delay* is measured from the award. The *terms* of a call state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
+Alice is a rider and Bob a driver. A person can be either a rider or a driver but not both.
+1. ■ Call. Call: Alice, who has no open call and no ride, may call for bids on a ride from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms. Forward call: Each of them forwards the call to the persons they point to.
+2. ■ Bid: Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
+3. ■ Award. Award: After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked. Close: If the terms select no bidder, Alice may close the call.
+4. ■ Pickup: The pickup is recorded when Alice and Bob are both at the pickup point.
+5. ■ Arrive: When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say.
+6. ■ Cancel: If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say.
+7. ■ Withdraw: Alice may withdraw her open call before the bidding period ends.

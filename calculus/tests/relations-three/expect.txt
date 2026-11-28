@@ -1,0 +1,2 @@
+C3 composes B with D and F: holds
+C4 composes B with D and F: FAILS: F:1 Wave: not in C4

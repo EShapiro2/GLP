@@ -1,0 +1,4 @@
+D: Greetings decided by friends
+D restricts P.
+Alice and Bob are persons.
+1. ■ Greet: P:1, decided by the friends of Bob in place of those who decide for Bob.

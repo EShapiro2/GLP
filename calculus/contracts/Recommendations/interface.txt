@@ -1,0 +1,16 @@
+Recommendations
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ◆ Recommend.  Alice may recommend Bob, whom she knows, for something, a skill or a service, once for each thing; Bob keeps the recommendation.
+5. ■ Show.  Bob may show a recommendation he holds to Carol, whom he knows, once; Carol then sees who recommended Bob and for what.
+6. ■ Withdraw.  Alice may withdraw a recommendation; it is then gone from Bob and from everyone Bob showed it to, and Alice may not make it again.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Recommend: Alice [Recommend] <skill>
+Show: Bob [Show]
+Withdraw: Alice [Withdraw] <bob> <skill>

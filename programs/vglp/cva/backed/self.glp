@@ -13,38 +13,38 @@
 %% quantifiers bind matching any value, and the initiator evaluates the
 %% formula on the readings, each atom, anchor, count and sum taken in the
 %% reading of the person who holds it"), as GBCC:1's cc_join
-%% (programs/go/GBCC.glp).  Written as GSC writes a contract, k a numeric
-%% variable:
+%% (programs/go/Backed-Community.glp).  Written as GSC writes a contract, r and k
+%% numeric variables naming a deposit and a debt, a local state being a set:
 %%
 %%   acquaint(o?, b?)     :  at o  not knows(b), +knows(b)
 %%                           at b  not knows(o), +knows(o)
 %%   appoint(o?, c?)      :  at o  not officer(c), +officer(c)
 %%                           at c  not officer_of(o), +officer_of(o)
-%%   deposit(c? ; k)      :  at c  +k reserve
-%%   owe(o?, c ; k)       :  at o  officer(c), +k owes(c)
+%%   deposit(c? ; r)      :  at c  not reserve(r), +reserve(r)
+%%   owe(o?, c ; k)       :  at o  officer(c), not owes(c, k), +owes(c, k)
 %%                           at c  officer_of(o)
-%%   repay(o? ; c)        :  at o  -owes(c), +repaid(c)
+%%   repay(o? ; c, k)     :  at o  -owes(c, k), +repaid(c, k)
 %%   join(o?, b?, c[officer(o, c)])
 %%                        :  at o  knows(b), not officer(b), +officer(b)
 %%                           at b  knows(o), not officer_of(o), +officer_of(o)
 %%                           at each c  +cotreasurer(b)
 %%                        only if forall c (officer(o, c) ->
-%%                           #owes(c) at o =< #reserve at c)
+%%                           #y owes(c, y) at o =< #z reserve(z) at c)
 %%
 %% join's formula holds atoms at o and at each treasurer c, so it is of the
 %% part's condition: o's reading holds its officer and owes atoms, each c's
 %% its reserve atoms, which its vote yes carries, and o, the initiator,
 %% evaluates the formula on them at the Tally of the last yes.
 %%
-%% play_backed: carol deposits 2 and answers yes to alice's appointment, so
-%% alice's organisation has one treasurer, carol, holding reserve 2.  alice
+%% play_backed: carol makes deposits 1 and 2 and answers yes to alice's appointment, so
+%% alice's organisation has one treasurer, carol, holding two deposits.  alice
 %% and bob come to know each other, and alice
-%% records that carol owes 3 and asks bob to join; bob answers yes, carol's
+%% records carol's debts 1, 2 and 3 and asks bob to join; bob answers yes, carol's
 %% machine votes yes unasked, its vote carrying her two reserve atoms, and
 %% alice's tally finds the formula failing, carol's 3 owed above her
 %% reserve, and refuses the attempt on its condition, alice the refuser,
 %% unable; alice is told refused(join(alice, bob), alice, unable), her
-%% request ended.  alice records a repayment, carol owing 2, at most her
+%% request ended.  alice records the repayment of debt 1, carol owing 2, at most her
 %% reserve, and asks again; bob answers yes again, the formula holds, and it
 %% commits: alice holds officer(bob), bob officer_of(alice), and carol
 %% cotreasurer(bob).
@@ -67,16 +67,19 @@ exported procedure play_backed(Stream(ScriptLog), Stream(ScriptLog), Stream(Scri
 play_backed(LA?, LB?, LC?, N?) :-
     trio([own([A1], propose(appoint(A1?, carol))), wait(holds(officer(carol))),
           own([A7], propose(acquaint(A7?, bob))), wait(holds(knows(bob))),
-          own([A2], propose(owe(A2?, carol, 3))), wait(has(owes(carol), 3)),
+          own([A2], propose(owe(A2?, carol, 1))), wait(holds(owes(carol, 1))),
+          own([A8], propose(owe(A8?, carol, 2))), wait(holds(owes(carol, 2))),
+          own([A9], propose(owe(A9?, carol, 3))), wait(holds(owes(carol, 3))),
           own([A3], propose(join(A3?, bob))),
           wait(refused(join(alice, bob), alice, unable)),
-          own([A4], propose(repay(A4?, carol))), wait(holds(repaid(carol))),
+          own([A4], propose(repay(A4?, carol, 1))), wait(holds(repaid(carol, 1))),
           own([A6], propose(join(A6?, bob))), wait(holds(officer(bob)))],
          [approval(acquaint(alice, bob), yes),
           approval(join(alice, bob, [carol]), yes),
           approval(join(alice, bob, [carol]), yes),
           wait(holds(officer_of(alice)))],
-         [own([C1], propose(deposit(C1?, 2))), wait(has(reserve, 2)),
+         [own([C1], propose(deposit(C1?, 1))), wait(holds(reserve(1))),
+          own([C2], propose(deposit(C2?, 2))), wait(holds(reserve(2))),
           approval(appoint(alice, carol), yes),
           wait(holds(officer_of(alice))),
           wait(holds(cotreasurer(bob)))],

@@ -15,8 +15,10 @@
 %%   persons/5): its initial goal as vGLP's compilation of the canonical
 %%   platform states it, agent/5 of the platform's module with its key, its
 %%   input stream from the network, its output stream to the network, the
-%%   program's output to its person, and its ask stream (vGLP, Section 5.4,
-%%   "The compilation"); its screen on the program's output to its person and
+%%   program's output to its person, and its ask stream, or agent/6, with the
+%%   environment of its person fifth, where the contract has an
+%%   "Environment:" line (vGLP, Section 5.4, "The compilation"; agent5.glp.in
+%%   and agent6.glp.in, one of which run.sh appends to this file); its screen on the program's output to its person and
 %%   its person process on that ask stream, the dispatcher's place being the
 %%   person process's and the person's screen the screen (Definition
 %%   "Simulation Program"), with its stochastic person, its person and its
@@ -59,12 +61,24 @@ imported procedure population#cva_check(Integer?, Stream(Key)?, Constant).
 imported procedure(X) population#cva_agents(Integer?, Stream(Key)?, MutualRef?,
                                             MutualRef?, Stream(Key),
                                             Stream(Seat(X))).
-imported procedure population#cva_draw(Integer?, Stream(Key)?, Stream(_)).
+imported procedure population#cva_draw(Integer?, Stream(Key)?, Stream(population#Drawn)).
 
 %% run(Ks?, C?, U?, Seed?): the run of the run declaration's persons until C
 %% Us from Seed, Ks the keys of run n agents, or empty where it names a census.
+%% The machine's clock is set to 0, the simulated clock's start, before the
+%% run starts, now/1 reading it once it is set, so that the agents' first
+%% reading of the date is the run's (monitor.glp, which sets it at each
+%% Release).
 exported procedure run(Stream(Key)?, Number?, Span?, Integer?).
 run(Ks, C, U, Seed) :- ground(Ks?), number(C?), integer(Seed?) |
+    set_clock(0),
+    now(T0),
+    started(T0?, Ks?, C?, U?, Seed?).
+
+%% started(T0?, Ks?, C?, U?, Seed?): the run, once the machine's clock reads
+%% T0, from 0.
+procedure started(Integer?, Stream(Key)?, Number?, Span?, Integer?).
+started(T0, Ks, C, U, Seed) :- integer(T0?), ground(Ks?), number(C?), integer(Seed?) |
     split_random_seed(Seed?, Clock, Base),
     population # cva_check(Base?, Ks?, Ok),
     go(Ok?, Base?, Ks?, C?, U?, Clock?).
@@ -81,39 +95,30 @@ go(yes, B, Ks, C, U, Clock) :- integer(B?), ground(Ks?), number(C?), integer(Clo
     send_to_user(Entries?),
     monitor(Requests?, Clock?, H?, Log?),
     population # cva_agents(B?, Ks?, Mon?, Log?, Keys, Seats),
-    network(Keys?, Seats?).
+    network(Keys?, Seats?, B?, Ks?).
 go(no, _, _, _, _, _) :- send_to_user([refused]).
 
-%% network(Ks?, Ss?): the network over the agents keyed Ks, and at each agent
-%% its initial goal on its seat of Ss.  The tree routes by @<, so it is built
+%% network(Ks?, Ss?, B?, K0?): the network over the agents keyed Ks, and at
+%% each agent its initial goal on its seat of Ss, B and K0 the seed and the
+%% keys of the run's persons, from which agent6.glp.in draws them again.  The tree routes by @<, so it is built
 %% over the keys sorted by @< and the seats sorted with them, each agent's
 %% input stream kept with its key: a census's keys are in its own order, which
 %% need not be @<'s, and a message to the key K reaches the agent keyed K
 %% (GLP-Spec, the transaction Cold-call).  Keys p1..pN zero-padded are
 %% already in @< order, and sorting leaves them as they are.
-procedure network(Stream(Key)?, Stream(Seat(Output))?).
-network(Ks, Ss) :- ground(Ks?) |
+procedure network(Stream(Key)?, Stream(Seat(Output))?, Integer?, Stream(Key)?).
+network(Ks, Ss, B, K0) :- ground(Ks?) |
     sort_keys(Ks?, [], SKs),
     sort_seats(Ss?, [], SSs),
     keys_length(Ks?, 0, N),
     tree(1, N?, SKs?, Net?, Ins, []),
     mwm(Merges?, Net),
-    agents(SSs?, Ins?, Merges).
-
-%% agents(Ss?, Ins?, Merges): at each agent, its initial goal, agent/5 of the
-%% platform, with its key, its input stream of Ins, its output stream for
-%% mwm/2, and the program's output to its person and its ask stream, the
-%% writers its seat holds.
-procedure agents(Stream(Seat(Output))?, Stream(Stream(Net))?, MwmInput(Net)).
-agents([seat(K, Asks?, Thr?)|Ss], [In|Ins], [merge(Out?)|Ms?]) :-
-    agent(K?, In?, Out, Thr, Asks),
-    agents(Ss?, Ins?, Ms).
-agents([], [], []).
+    agents(SSs?, Ins?, Merges, B?, K0?).
 
 %% draw(Ks?, Seed?, D): D the list of agent(A, P), each agent's stochastic
 %% person P, A of 1..N in order, the persons' order, drawn from its seed as
-%% cva_agents/6 draws it, without the run.
-exported procedure draw(Stream(Key)?, Integer?, Stream(_)).
+%% cva_agents/6 draws it, without the run, of population.glp's type Drawn.
+exported procedure draw(Stream(Key)?, Integer?, Stream(population#Drawn)).
 draw(Ks, Seed, D?) :- ground(Ks?), integer(Seed?) |
     split_random_seed(Seed?, _, Base),
     population # cva_draw(Base?, Ks?, D).

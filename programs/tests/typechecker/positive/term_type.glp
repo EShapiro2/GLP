@@ -1,0 +1,38 @@
+%% The built-in type Term (TGLP typed-glp.tex, "Type Declarations"): the type
+%% of every produced term, Term? of every consumed one.  A procedure that
+%% takes Term? accepts every consumed term: one of its clauses has a variable
+%% there (well-typing.tex, after Definition "Well-Typed GLP Program").
+
+Terms ::= [] ; [Term | Terms].
+Head ::= Term.
+Clause ::= clause(Head, Terms).
+
+%% leaves(T?, N): N counts the variables var(_) of T and its other leaves,
+%% taken to depth two.
+procedure leaves(Term?, Integer).
+leaves(var(_), 1).
+leaves(f(A, B), N?) :- leaves(A?, N1), leaves(B?, N2), N := N1? + N2?.
+leaves(_, 1) :- otherwise | true.
+
+%% name_of(T?, S): the name of a variable var(S), S a string, else none: the
+%% guard string/1 narrows the Term to a String.
+procedure name_of(Term?, String).
+name_of(var(X), Y?) :- string(X?) | Y = X?.
+name_of(_, none) :- otherwise | true.
+
+%% A term of a type whose paths are produced throughout is passed where a
+%% Term is expected (well-typing.tex, "Subtyping").
+procedure count(Stream(Integer)?, Integer).
+count(Xs, N?) :- leaves(Xs?, N).
+
+%% A Term is produced as any term is.
+procedure wrap(Integer?, Term).
+wrap(N, box(N?)).
+
+%% A defined type over Term, and one that is Term by a bare alternative.
+procedure head_of(Clause?, Head).
+head_of(clause(H, _), H?).
+
+procedure heads(Terms?, Integer).
+heads([], 0).
+heads([T|Ts], N?) :- leaves(T?, N1), heads(Ts?, N2), N := N1? + N2?.

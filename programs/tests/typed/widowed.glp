@@ -9,6 +9,7 @@
 %%
 %%   watch(W, O), holder(W?, T?), release(T)    O = widowed, once holder/2 ends
 %%   watch(W, O), holder(W?, T?)                suspended: holder/2 holds W?
+%%   watch(W, O), keeper(W?, 4611686018427387904, T?)   suspended, whatever the integer
 %%   wait(R?, O), assign(R)                     O = got(hello): assigned first
 %%   wait(R?, O), owner(R, T?)                  suspended: owner/2 holds R
 %%
@@ -30,6 +31,11 @@ holder(_, go).
 
 procedure release(Go).
 release(go).
+
+%% A goal of the agent that holds an integer of any magnitude: the guard's
+%% look through the agent's goals reads it as it reads any other term.
+procedure keeper(Constant?, Integer?, Go?).
+keeper(_, _, go).
 
 procedure wait(Constant?, Fate).
 wait(hello, got(hello)).

@@ -1,0 +1,7 @@
+Resilient Feeds
+Resilient Feeds extends Feeds.
+Vocabulary: y has been pointed to by x with a w-pointer = pointed(y,x,w).
+After x adds a redundant w-pointer to y, which requires x does not have a w-pointer to y and y has not been pointed to by x with a w-pointer: x has a w-pointer to y and y has been pointed to by x with a w-pointer.
+Resilient Feeds:0 - | d > 1 is an integer.
+Resilient Feeds:0 - | Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
+Resilient Feeds:1 ■ Redundant point: pointer(Alice,Bob,Carol), pointed(Bob,Alice,Carol) <- pointer(Alice,Dave,Carol), pointer(Alice,<D,Carol), friend(Alice,Bob), friend(Bob,Alice), pointer(Bob,Erin,Carol), ~pointer(Alice,Bob,Carol), ~pointed(Bob,Alice,Carol) possibly Alice=Dave, Alice=Erin, Bob=Dave, Bob=Erin, Carol=Dave, Carol=Erin, Dave=Erin.

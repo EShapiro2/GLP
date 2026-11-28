@@ -1,0 +1,19 @@
+% Single-Person Company --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 6.1 and cites a clause as Single-Person Company:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: Corporation, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-16, by GO #8.
+% Changed 2026-11-22 by GO #14: the first line restricts, the names line and clause 1 Join, for the audit's finding 4 (Udi, 2026-11-22 16:15 UTC, in the project chat: "yes").
+% Schemas: Single-Person-Company.glp beside this file.
+Single-Person Company
+Single-Person Company inherits from Corporation.
+A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, and admit no participant but the sole officer.
+Bob is a person, Orga a single-person limited-liability company.
+1. ■ Join: Organisation:3, only if Bob is the first officer of Orga.
+Logic pragmas
+Single-Person Company weakens Corporation.
+A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, and admit no participant but the sole officer.
+Bob is a person, Orga a single-person limited-liability company.
+1. ■ Join: Organisation:3 Join, only if Orga has Bob as its first officer.
+Interface pragmas
+Look: 👤, money

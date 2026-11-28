@@ -1,0 +1,22 @@
+Guardians
+Guardians extends Friendship.
+Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Alice and Bob are persons, Wendy and Will wards; in clause 4 Alice and Bob are possibly one person.
+1. ■ Enter: Alice may create Wendy, and Wendy must consent, provided Alice is a person. Alice chooses Wendy's key pair.
+2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob a guardian of Wendy, with the consent of Bob, provided Wendy is a ward, Wendy is not retired, Bob is a person, Wendy has Alice as a guardian and Bob counts Alice as a friend. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy. Guardian unfriend: Bob may end his friendship with his ward Wendy. Wendy may not end a friendship with her guardian.
+3. ■ Ward and person. Person unfriend: Friendship:2. Ward acquaint: Wendy and Bob may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person. Ward befriend: Wendy and Bob may jointly become friends, with the consent of Alice, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Bob is a person, Wendy and Bob know each other and Alice and Bob are friends. Ward end: Wendy may end her friendship with Bob, provided he is not her guardian. Unfriend: Bob may end his friendship with Wendy, provided Bob is not a guardian of Wendy. Ward unfriend: Alice may end the friendship of Wendy and Bob, provided Wendy has Alice as a guardian and Bob is not a guardian of Wendy.
+4. ■ Wards. Wards acquaint: Wendy and Will may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian. Wards befriend: Wendy and Will may jointly become friends, with the consent of Alice and Bob, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Will is a ward, Will is not retired, Will has Bob as a guardian, Wendy and Will know each other, Alice knows Will and Alice and Bob are friends. Wards of one guardian befriend: Wendy and Will may jointly become friends, with the consent of Alice, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Will is a ward, Will is not retired, Will has Alice as a guardian and Wendy and Will know each other.
+5. ■ Retire: Those who decide for Wendy may retire Wendy. Wendy can then take no act.
+Logic pragmas.
+Vocabulary: z is a ward = ward(z); x has y as a guardian = has_guardian(x,y); y is a guardian of x = guardian(y,x); y is the creator of x = creator(y,x); x is retired = retired(x).
+Roles: those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z; any guardian of z = any_guardian(z), any one listed by z has y as a guardian and y is a guardian of z.
+z has no guardians: no one is a guardian of z and z has no one as a guardian.
+z has no friends: z counts no one as a friend and no one counts z as a friend.
+After x creates z, which requires z does not have an identity: z has an identity, z is a ward, z has x as a guardian, x is the creator of z, x is a guardian of z, x and z know each other and x and z are friends.
+After g makes y a guardian of z, which requires y is not a guardian of z and z does not have y as a guardian: y is a guardian of z, z has y as a guardian, y and z know each other and y and z are friends.
+After y ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
+After g ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
+After y ends y's friendship with y's ward z: y and z are no longer friends, no longer y is a guardian of z and no longer z has y as a guardian.
+After g ends the friendship of x and y: x and y are no longer friends.
+After x and y come to know each other: x and y know each other.
+After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.

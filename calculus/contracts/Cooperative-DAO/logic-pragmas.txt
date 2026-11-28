@@ -1,0 +1,4 @@
+Cooperative DAO
+Cooperative DAO extends Cooperative.
+A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer.
+Orga is a DAO.

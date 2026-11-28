@@ -31,13 +31,18 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from papers import FIXES, SOURCES, arxiv_of, pdf_name  # noqa: E402
+from papers import FIXES, ONLY_SOURCES, SOURCES, arxiv_of, pdf_name  # noqa: E402
 
 OUT = os.environ.get('PAPERS_DIR', '/var/lib/glp/papers')
 SRC = os.environ.get('PAPERS_SRC', '/var/lib/glp/papers-src')
 TOKEN = os.environ.get('PAPERS_TOKEN', '/etc/glp/github-token')
 LOCAL = os.environ.get('PAPERS_LOCAL')
 ARXIV_FILE = os.environ.get('ARXIV_FILE')
+# PAPERS_ONLY: the papers to build, by their keys, comma-separated, in place of
+# all of SOURCES; deploy/villagers.sh builds the Villagers paper so, into a
+# PAPERS_DIR of its own.
+if os.environ.get('PAPERS_ONLY'):
+    SOURCES = {k: {**SOURCES, **ONLY_SOURCES}[k] for k in os.environ['PAPERS_ONLY'].split(',')}
 
 
 def run(cmd, cwd=None, timeout=900):
@@ -82,11 +87,12 @@ def build(d, path, main):
             t = f.read()
         with open(mf, 'w') as f:
             f.write(t.replace(old, new))
-    # Built in the main file's own directory, which its inputs are relative
-    # to (CGMS's is ARXIV/main_ARXIV.tex), the PDF beside it.
-    here, base = os.path.split(os.path.join(work, main))
-    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', base], cwd=here)
-    pdf = os.path.join(here, base[:-4] + '.pdf')
+    # Built at the repository's root, as Overleaf builds it, whose inputs
+    # are relative to it (CGMS's main file is ARXIV/main_ARXIV.tex and reads
+    # ARXIV/sections/...); the PDF is written at the root.
+    base = os.path.basename(main)
+    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', main], cwd=work)
+    pdf = os.path.join(work, base[:-4] + '.pdf')
     if r.returncode != 0 or not os.path.exists(pdf):
         tail = '\n'.join((r.stdout + r.stderr).strip().splitlines()[-8:])
         raise RuntimeError(f'latexmk:\n{tail}')
@@ -138,15 +144,26 @@ def main():
         name = pdf_name(d)
         try:
             path = fetch(s['repo'])
+            # Anonymous: the main file's document class has the option
+            # anonymous, or its author is Anonymous (tools/papers.py, anonymous).
+            try:
+                with open(os.path.join(path, s['main']), encoding='utf-8', errors='replace') as f:
+                    tex = f.read()
+            except OSError:
+                tex = ''
+            st['anonymous'] = bool(re.search(r'\\documentclass\[[^\]]*\banonymous\b', tex) or re.search(r'\\author\{\s*Anonymous', tex))
             head = run(['git', 'rev-parse', 'HEAD'], cwd=path).stdout.strip()
             changed = run(['git', 'log', '-1', '--format=%cI'], cwd=path).stdout.strip()
             target = os.path.join(OUT, name + '.pdf')
-            if head != st.get('head') or not os.path.exists(target):
+            # What the PDF is built from besides the source: the main file and
+            # the fixes; a change of either rebuilds it too.
+            recipe = json.dumps({'main': s['main'], 'fixes': FIXES.get(d, [])}, sort_keys=True)
+            if head != st.get('head') or recipe != st.get('recipe') or not os.path.exists(target):
                 pdf = build(d, path, s['main'])
                 shutil.copy(pdf, target + '.tmp')
                 os.replace(target + '.tmp', target)
                 print(f'papers: {d} built at {head[:8]}')
-            st.update(head=head, changed=changed)
+            st.update(head=head, changed=changed, recipe=recipe)
             st.pop('error', None)
         except Exception as e:
             st['error'] = str(e)[:500]
@@ -158,6 +175,16 @@ def main():
             if st.get('changed') and st.get('arxiv_updated'):
                 st['ahead'] = when(st['changed']) > when(st['arxiv_updated'])
         state[d] = st
+    # A PDF whose paper has left SOURCES, or been renamed, is removed, and
+    # with it its state, so that neither the site nor the branch papers
+    # keeps it (papers/GGGA.pdf, SRC's under its old name, Code #28,
+    # 2026-11-12).
+    names = {pdf_name(d) + '.pdf' for d in SOURCES}
+    for f in os.listdir(OUT):
+        if f.endswith('.pdf') and f not in names:
+            os.remove(os.path.join(OUT, f))
+            print(f'papers: {f} removed, no paper of that name')
+    state = {d: st for d, st in state.items() if d in SOURCES}
     with open(sp + '.tmp', 'w') as f:
         json.dump(state, f, indent=1, sort_keys=True)
     os.replace(sp + '.tmp', sp)

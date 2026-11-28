@@ -9,7 +9,7 @@
 %% module lifts its exported procedures and the types their signatures carry
 %% (TGLP modules.tex, "The -expose directive"), so each type here is carried
 %% by a procedure exported here: Span by span/2, Slot by fill/2, SglpTerms by
-%% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform.glp,
+%% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform/transform.glp,
 %% "The question shown whole").  length/2 and length/3, ordinary GLP, are
 %% exported here too, since the transformation, the printed modules of
 %% tests/census and tests/screen and the examples' one_of call them (sGLP #11,
@@ -55,15 +55,15 @@ fill(slot(X?), X).
 %% open --- a list or a stream --- the relay builds the copy, B, and its
 %% skeleton, S, the term with each position the person writes marked
 %% '$h'(C, J), and the list of the slots, Fs, in which each answer of the
-%% question receives the skeleton (transform.glp, "The question shown whole").
+%% question receives the skeleton (transform/transform.glp, "The question shown whole").
 %% show_whole(B?, S?, Fs?, Y): once B has no reader, the copy complete, and S is
 %% ground, Y is assigned B, the copy shown at one place, and each slot of Fs
 %% is filled with S.
-exported procedure(X) show_whole(X?, _?, Stream(Slot(_))?, X).
+exported procedure(X) show_whole(X?, Term?, Stream(Slot(Term))?, X).
 show_whole(B, S, Fs, Y?) :- no_readers(B?), ground(S?) | Y = B?, show_slots(Fs?, S?).
 
 %% show_slots(Fs?, S?): each slot of Fs filled with the skeleton S.
-procedure show_slots(Stream(Slot(_))?, _?).
+procedure show_slots(Stream(Slot(Term))?, Term?).
 show_slots([], _).
 show_slots([F|Fs], S) :- ground(S?) | fill(F?, S?), show_slots(Fs?, S?).
 
@@ -72,7 +72,7 @@ show_slots([F|Fs], S) :- ground(S?) | fill(F?, S?), show_slots(Fs?, S?).
 %% and every other mark by '_': the entry of an answer to a question shown
 %% whole, the question as the person was shown it, the answer in place and
 %% the positions still open anonymous (Section 3, Definition "Log").
-exported procedure whole_frame(_?, Integer?, Integer?, _?, _).
+exported procedure whole_frame(Term?, Integer?, Integer?, Term?, Term).
 whole_frame('$h'(C1, J1), C, J, V, V?) :- C1? =:= C?, J1? =:= J? | true.
 whole_frame('$h'(C1, _), C, _, _, '_') :- C1? =\= C? | true.
 whole_frame('$h'(C1, J1), C, J, _, '_') :- C1? =:= C?, J1? =\= J? | true.
@@ -87,11 +87,12 @@ whole_frame(S, _, _, _, S?) :- otherwise, constant(S?) | true.
 %% arguments L, each argument's marks replaced as whole_frame/5 replaces them;
 %% the empty list, which ..= gives no compound term, has a clause, as the type
 %% checker requires of every list of the type.
-procedure whole_frame_parts(SglpTerms?, Integer?, Integer?, _?, _).
+%% L is a list of Terms, by ..= of a Term, and E a Term, by =.. of a functor and a list of Terms (TGLP typed-constant-readers.tex, "Type checking of =.. and ..="); the skeleton and its slots are of the built-in type Term, as the printed builds declare them (transform/transform.glp, build_decl/4).
+procedure whole_frame_parts(Stream(Term)?, Integer?, Integer?, Term?, Term).
 whole_frame_parts([], _, _, _, []).
 whole_frame_parts([F|As], C, J, V, E?) :- integer(C?), integer(J?), ground(V?) |
     whole_frame_list(As?, C?, J?, V?, Es), E =.. [F?|Es?].
-procedure whole_frame_list(SglpTerms?, Integer?, Integer?, _?, SglpTerms).
+procedure whole_frame_list(Stream(Term)?, Integer?, Integer?, Term?, Stream(Term)).
 whole_frame_list([], _, _, _, []).
 whole_frame_list([A|As], C, J, V, [E?|Es?]) :- integer(C?), integer(J?), ground(V?) |
     whole_frame(A?, C?, J?, V?, E), whole_frame_list(As?, C?, J?, V?, Es).
@@ -99,9 +100,9 @@ whole_frame_list([A|As], C, J, V, [E?|Es?]) :- integer(C?), integer(J?), ground(
 %% The term form of an sGLP program (README.md, "The term form"): a list of
 %% terms, one per declaration and clause, in GLP-Spec's term syntax; its
 %% elements are terms of any form, the source's heads and goals among them, so
-%% they are typed _, as a meta-interpreter's are (docs/typed-glp-manual.md,
-%% 18.3).
-SglpTerms ::= [] ; [_ | SglpTerms].
+%% they are of the built-in type Term (TGLP typed-glp.tex, "Type
+%% Declarations"; docs/typed-glp-manual.md, 18.3).
+SglpTerms ::= [] ; [Term | SglpTerms].
 
 %% terms_length(Ts?, N): N is the number of declarations and clauses in the
 %% term form Ts, counted in an accumulator by terms_length/3.

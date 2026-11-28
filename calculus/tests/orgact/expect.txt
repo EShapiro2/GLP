@@ -1,0 +1,8 @@
+OA         commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/OA.txt
+OA: An Organisation's Act (expanded schemas)
+OA:0 - | Alice, Bob and Carol are persons, Orga an organisation, Iris an issuer, Sum, Votes and Double numbers.
+OA:1 ■ Pay: ~coin(Orga,Iris,*Sum), coin(Bob,Iris,*Sum), ~vote_pay(Orga,_,Bob,Iris,Sum) <- participant(Alice,Orga), vote_pay(Orga,>=Votes,Bob,Iris,Sum), product(Double,Votes,2), has_participant(Orga,<Double), coin(Orga,Iris,*Sum) guarded by Alice.
+OA:1 ■ Vote to pay: vote_pay(Orga,Carol,Bob,Iris,Sum) <- participant(Carol,Orga), has_participant(Orga,Bob), ~vote_pay(Orga,Carol,Bob,Iris,Sum) guarded by Carol.

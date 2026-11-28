@@ -5,13 +5,15 @@
 %% AGENT1: Sender - sends a single value to agent2
 %% =============================================================================
 
-exported procedure agent1_init(_?, _?).
+exported procedure agent1_init(Keys?, Stream(NetMsg(Msg))?).
 agent1_init(keys(_, [Agent2]), _) :-
     send_to_net([msg(Agent2?, hello)]).
+agent1_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% AGENT2: Receiver - reads one message from network input
 %% =============================================================================
 
-exported procedure agent2_init(_?, _?).
+exported procedure agent2_init(Keys?, Stream(NetMsg(Msg))?).
 agent2_init(_, [msg(_, hello)|_]) :- true.
+agent2_init(_, _) :- otherwise | true.

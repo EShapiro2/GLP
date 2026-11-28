@@ -1,0 +1,1936 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+knows
+}}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+found
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+propose
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposed
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+propose_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposed
+}}
+(
+Prop
+,
+Delos
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deliver_proposal
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+delivered
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+delivered
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+vote_for
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+vote_for
+}}
+(
+\Alice
+,
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Bob
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+vote_own_for
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+vote_for
+}}
+(
+\Alice
+,
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+vote_against
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+vote_against
+}}
+(
+\Alice
+,
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Bob
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+vote_own_against
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+vote_against
+}}
+(
+\Alice
+,
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+member
+}}
+(
+Delos
+,
+\Alice
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+voted
+}}
+(
+Prop
+,
+Delos
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deliver_vote_for
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+delivered_vote
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+vote_for
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+vote_for
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+delivered_vote
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+vote_for
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_vote_against
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+delivered_vote
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+vote_against
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+vote_against
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+delivered_vote
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+vote_against
+}}
+(
+Carol
+,
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+pass
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+passed
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{\detokenize{
+vote_for
+}}
+(
+\Alice
+,
+X1
+,
+Prop
+,
+Delos
+)
+)
+\ge
+Votes
+\land
+Double
+=
+Votes
+\cdot
+2
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+X2
+,
+Delos
+)
+)
+<
+Double
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+reject
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+rejected
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+proposal
+}}
+(
+Prop
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+decided
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{\detokenize{
+vote_against
+}}
+(
+\Alice
+,
+X1
+,
+Prop
+,
+Delos
+)
+)
+\ge
+Votes
+\land
+Double
+=
+Votes
+\cdot
+2
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+X2
+,
+Delos
+)
+)
+<
+Double
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deliver_pass
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+delivered_decision
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+passed
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+passed
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+delivered_decision
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+passed
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_reject
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+delivered_decision
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+rejected
+}}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+steward
+}}
+(
+Delos
+)
+,
+\mathit{\detokenize{
+rejected
+}}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+delivered_decision
+}}
+(
+Prop
+,
+Delos
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+rejected
+}}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}

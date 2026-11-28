@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>An invitation · The Grassroots App</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--mute:#6e6e73;--line:#e5e5ea;--blue:#0a7aff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:560px;margin:0 auto;padding:48px 20px}
+h1{font-size:28px;line-height:1.2;margin:0 0 12px}
+p{margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:20px 0}
+.link{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;color:var(--mute);max-height:9em;overflow:auto}
+button{font:inherit;font-weight:600;color:#fff;background:var(--blue);border:0;border-radius:10px;padding:10px 18px;margin-top:12px;cursor:pointer}
+.mute{color:var(--mute);font-size:14px}
+a{color:var(--blue);text-decoration:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>An invitation to connect</h1>
+  <p id="say">Someone invited you to connect with them in the Grassroots App.</p>
+  <div id="have" hidden>
+    <p>On a phone with the Grassroots App, this link opens the app. If the app did not open, copy the invitation and paste it into the app, under Open link.</p>
+    <div class="card"><div class="link" id="link"></div><button id="copy">Copy the invitation</button></div>
+  </div>
+  <p id="none" hidden>This page carries no invitation: the link you opened is incomplete. Ask the person who sent it to send it again.</p>
+  <p class="mute">The Grassroots App runs apps owned and run by the people who use them, on their own phones. It is in testing and is not yet in the app stores. <a href="/">The Grassroots App Store</a> shows what it runs.</p>
+</main>
+<script>
+// The invitation is what follows the # of this page's address.  A browser
+// does not send it to the site, and this page sends it nowhere: it is shown
+// and copied here, on the person's own device (GNA, Section 6, Invitation
+// links).
+var link = decodeURIComponent(location.hash.slice(1));
+if (link) {
+  document.getElementById('have').hidden = false;
+  document.getElementById('link').textContent = link;
+  document.getElementById('copy').onclick = function () {
+    var b = this;
+    navigator.clipboard.writeText(link).then(function () { b.textContent = 'Copied'; }, function () { b.textContent = 'Select the text above and copy it'; });
+  };
+} else {
+  document.getElementById('none').hidden = false;
+}
+</script>
+</body>
+</html>

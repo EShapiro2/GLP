@@ -47,7 +47,7 @@ exported procedure panel_run(Integer?, Stream(YesNo)).
 panel_run(N, As?) :- harness # run(N?, As).
 
 %% The sGLP source in the term form, show_sglp.glp, for the transformation
-%% (programs/sglp/transform.glp).
+%% (programs/sglp/transform/transform.glp).
 imported procedure show_sglp#source(SglpTerms, SglpTerms).
 exported procedure source(SglpTerms, SglpTerms).
 source(V?, S?) :- show_sglp # source(V, S).

@@ -1,0 +1,27 @@
+% Written by tools/expand.py from rev/; do not edit.
+Booking
+An *identity* is a unique cryptographic key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, which the creator of an organisation decides, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Alice, Bob and Carol are persons, Orga and Will organisations.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:1. ■ Enter: Alice may create an organisation, Orga, and establish Orga's identity by choosing Orga's key pair. Alice is then the creator, an officer and a friend of Orga.
+Guardians:2, Organisation:4. ■ Officer decisions. Make officer: Those who decide for Orga may make Bob, a friend of an officer of Orga, an officer and a friend of Orga, with the consent of Bob, only if Bob is a participant; the decision names his role. Resign: Bob may end his guardianship of Orga. End officer: Those who decide for Orga, other than Bob, may end Bob's guardianship. Officer unfriend: Bob may end his friendship with Orga, which ends his guardianship. Orga may not end a friendship with her officer.
+Guardians:3. ■ Organisation and person. Organisation acquaint: Orga, an organisation of Alice, and Bob may jointly come to know each other. Organisation befriend: Orga may enter a relation with Bob with the consent of Bob and Alice, provided Orga and Bob know each other and Alice and Bob are friends. Organisation end, Unfriend, Organisation unfriend: Orga, Bob or Alice may end the relation of Bob and Orga.
+Guardians:4. ■ Organisations. Organisations acquaint: Orga, an organisation of Alice, and Will, an organisation of Bob, may jointly come to know each other. Organisations befriend: Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+Guardians:5. ■ Retire: Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
+Organisation:1. ■ Found: Alice, or an organisation with the consent of Alice, may create Orga (Guardians:1); Alice is then its first officer.
+Organisation:2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
+Organisation:3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+Organisation:5. ■ Amend: Those who decide it may amend the bylaws.
+Organisation:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+Booking:1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a resource of Orga.
+Booking:2. ■ Cancel: Alice may cancel her booking.

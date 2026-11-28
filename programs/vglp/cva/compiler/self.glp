@@ -27,9 +27,12 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
 %% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
 %% val(C), a constant the contract names, a value or an utterance, as an act's name or the name of a contract's bylaws (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value --- a whole number, a real, a string, or a program, a GLP module as text, which the runtime recognises, or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg): no variable, so no field and no place in a class term, and printed as C.
+%% cmp(F, As), a compound value f(t1, ..., tk), each ti a value, a value variable or a compound value, as Bonds' bond(Day), the type of a note due Day (GSC compound values, GLP c28d1c7: val(F, Args) read as cmp(F, Args), bound argument by argument to cmpv(F, Vals), matched by the same function symbol; Calculus #11, vGLP_inbox.md, 2026-11-25 02:45 UTC: a value variable over the constants ranges over the compound values too): no variable of its own, its variables those of its arguments.
+%% const(X), a value variable over the constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"): among a schema's variables, and where it occurs, const(X) or num(X).  The compiler takes it as num(X) for every check, as it takes a real variable, and prints its type, Constant, from the table of such variables (cvac.glp, consts_off, real_lx, real_heads); its place in an atom is of the kind const, as the place of val(C) is, its value held as v(C); it is a variable, so the schema-binding binds it, a request names it and a field takes it, a text, or it is local to a role, whose state binds it (README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String)
-            ; item_of(Arg) ; val(Constant).
+            ; item_of(Arg) ; val(Constant) ; const(Constant) ; set(Constant)
+            ; cmp(Constant, Args).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -88,7 +91,9 @@ QContract ::= [] ; [QSchema | QContract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= QContract ; reflexive(Preds, QContract).
 %% The contract as its owner writes it (programs/gsc/self.glp, WDeclared; GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do"): a schema's head may list its roles' names, schema(Name, Names, Vars, Roles), cschema(Name, Names, Vars, Reaches, Roles) and nschema(Name, Names, Vars, Constraint, Roles), and a contract may name its environment predicates, environment(Preds, Body).  The compiler reads it with the names and the environment predicates dropped (unnamed): pragmas.sh maps a pragma's names to the roles before the compiler reads the pragmas, and the one environment predicate the compiler knows, today, it knows by its name (cvac.glp, the day).
-RName    ::= Constant ; one(Constant, Constant).
+OneOfs    ::= [] ; [OneOf | OneOfs].
+RName    ::= Constant ; one(Constant, OneOf).
+%% A mark names one other or a list of others, or '_' for any of the others (root self.glp, OneOf; the Calculus prints one(Name, Others), Others the names the clause admits as one person with Name, GSC #19 and Calculus #8, 2026-11-17).
 Names     ::= [] ; [RName | Names].
 RChunks    ::= [] ; [RName | RChunks].
 WSchema   ::= schema(Constant, Args, RoleSpecs)
@@ -102,6 +107,19 @@ WSchema   ::= schema(Constant, Args, RoleSpecs)
 WContract ::= [] ; [WSchema | WContract].
 WBody     ::= WContract ; reflexive(Preds, WContract).
 WDeclared ::= WBody ; environment(Preds, WBody).
+%% A contract as it is offered to the compiler: a contract, or a parametric one, parametric(Params, Body), a relation of its schemas left open (GSC, Definition Parametric contract), which is certified and has no platform until it is instantiated (vGLP, Section 5.4: the compiler takes a contract whose schemas are given; Udi, 2026-11-10, of GO, reported by vGLP #25: "GO is parametric, not sure it can be executed on its own, without instantiating it further"): the compiler prints the line saying so (not_instantiated).
+WOffered  ::= WDeclared ; parametric(Preds, WDeclared).
+WDeclOpt  ::= wdecl(WDeclared) ; wparam.
+procedure wdeclared_of(WOffered?, WDeclOpt).
+wdeclared_of(parametric(_, _), wparam).
+wdeclared_of([], wdecl([])).
+wdeclared_of([S|Ss], wdecl([S?|Ss?])).
+wdeclared_of(reflexive(Rf, C), wdecl(reflexive(Rf?, C?))).
+wdeclared_of(environment(Ps, B), wdecl(environment(Ps?, B?))).
+procedure not_instantiated(Constant?).
+not_instantiated(Nm) :- ground(Nm?) |
+    said('%% not compiled', Nm?, H),
+    send_to_user(['%% compile begin', H?, '%% a parametric contract is certified and has no platform until it is instantiated: the compiler takes a contract whose schemas are given (vGLP, Section 5.4, "Speech-act schemas as local specifications")', '%% compile end']).
 procedure unnamed(WDeclared?, Declared).
 unnamed([], []).
 unnamed([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
@@ -111,6 +129,177 @@ procedure unnamed_b(WBody?, Declared).
 unnamed_b([], []).
 unnamed_b([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
 unnamed_b(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
+%% The possibly-one pairs of every schema of the contract as read (Ones, above).
+procedure ones_of(WDeclared?, Ones).
+ones_of([], []).
+ones_of([S|Ss], Os?) :- ground(S?), ground(Ss?) | ones_c([S?|Ss?], Os).
+ones_of(reflexive(_, Ss), Os?) :- ground(Ss?) | ones_c(Ss?, Os).
+ones_of(environment(_, B), Os?) :- ground(B?) | ones_b(B?, Os).
+procedure ones_b(WBody?, Ones).
+ones_b([], []).
+ones_b([S|Ss], Os?) :- ground(S?), ground(Ss?) | ones_c([S?|Ss?], Os).
+ones_b(reflexive(_, Ss), Os?) :- ground(Ss?) | ones_c(Ss?, Os).
+procedure ones_c(WContract?, Ones).
+ones_c([], []).
+ones_c([S|Ss], [O?|Os?]) :- ground(S?) | ones_s(S?, O), ones_c(Ss?, Os).
+procedure ones_s(WSchema?, OnePairs).
+ones_s(schema(Nm, _, _), ones(Nm?, [])).
+ones_s(cschema(Nm, _, _, _), ones(Nm?, [])).
+ones_s(nschema(Nm, _, _, _), ones(Nm?, [])).
+ones_s(qschema(Nm, _, _, _, _, _, _), ones(Nm?, [])).
+%% The names of the roles are the first of a schema's names, one for each of its roles; the names after them are the marks of its agent variables that are no roles, one(Name, Other), which programs/gsc/self.glp's as_read writes there (GSC #19, GLP GSC-marks f3314f4e: "Count the roles by the length of the roles' list"), and which vones_of reads.
+ones_s(schema(Nm, Ns, _, Rs), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+ones_s(cschema(Nm, Ns, _, _, Rs), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+ones_s(nschema(Nm, Ns, _, _, Rs), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+ones_s(qschema(Nm, Ns, _, _, _, Rs, _, _), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+procedure names_pairs(Names?, Sames).
+names_pairs(Ns, Ps?) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+%% The names of a schema's roles, as many of its names as it has roles.
+procedure role_names_of(Names?, RoleSpecs?, Names).
+role_names_of(_, [], []).
+role_names_of([], [_|_], []).
+role_names_of([N|Ns], [_|Rs], [N?|Ns1?]) :- role_names_of(Ns?, Rs?, Ns1).
+%% The marks of a schema's agent variables that are no roles, its names after those of its roles.
+procedure var_marks_of(Names?, RoleSpecs?, Names).
+var_marks_of(Ns, [], Ns?).
+var_marks_of([], [_|_], []).
+var_marks_of([_|Ns], [_|Rs], Ms?) :- var_marks_of(Ns?, Rs?, Ms).
+procedure name_pairs(Names?, Names?, Integer?, Sames).
+name_pairs([], _, _, []).
+name_pairs([one(_, O)|Ns], All, I, Ps?) :- ground(O?), ground(All?), integer(I?) |
+    others_of(O?, Os),
+    I1 := I? + 1,
+    name_pairs(Ns?, All?, I1?, Ps1),
+    other_pairs(Os?, All?, I?, Ps1?, Ps).
+name_pairs([_|Ns], All, I, Ps?) :- otherwise |
+    I1 := I? + 1,
+    name_pairs(Ns?, All?, I1?, Ps).
+%% The others a mark names: one, or a list.
+procedure others_of(OneOf?, OneOfs).
+others_of([], []).
+others_of([X|Xs], [X?|Ys?]) :- others_of(Xs?, Ys).
+others_of(C, [C?]) :- otherwise | true.
+procedure other_pairs(OneOfs?, Names?, Integer?, Sames?, Sames).
+other_pairs([], _, _, Ps, Ps?).
+other_pairs([O|Os], All, I, Ps0, Ps?) :- ground(O?), ground(All?), integer(I?), O? =?= '_' |
+    other_pairs(Os?, All?, I?, Ps0?, Ps1),
+    any_pairs(All?, 1, I?, Ps1?, Ps).
+other_pairs([O|Os], All, I, Ps0, Ps?) :- otherwise, ground(O?), ground(All?), integer(I?) |
+    name_index(All?, O?, 1, J),
+    other_pairs(Os?, All?, I?, Ps0?, Ps1),
+    keep_pair(J?, I?, Ps1?, Ps).
+procedure name_index(Names?, OneOf?, Integer?, Integer).
+name_index([], _, _, 0).
+name_index([one(M, _)|_], O, K, K?) :- M? =?= O? | true.
+name_index([X|_], O, K, K?) :- X? =?= O? | true.
+name_index([_|Xs], O, K, J?) :- otherwise | K1 := K? + 1, name_index(Xs?, O?, K1?, J).
+procedure keep_pair(Integer?, Integer?, Sames?, Sames).
+keep_pair(J, _, Ps, Ps?) :- J? =:= 0 | true.
+keep_pair(J, I, Ps, [same(J?, I?)|Ps?]) :- otherwise | true.
+%% A role marked one(Name, '_'), possibly the person of any of the others (GSC #19, programs/gsc/README.md, GSC-one 5cf7633b): a pair with each other role.
+procedure any_pairs(Names?, Integer?, Integer?, Sames?, Sames).
+any_pairs([], _, _, Ps, Ps?).
+any_pairs([_|Ns], K, I, Ps, Ps1?) :- integer(K?), integer(I?), K? =:= I? | K1 := K? + 1, any_pairs(Ns?, K1?, I?, Ps?, Ps1).
+any_pairs([_|Ns], K, I, Ps, [same(K?, I?)|Ps1?]) :- otherwise, integer(K?), integer(I?) | K1 := K? + 1, any_pairs(Ns?, K1?, I?, Ps?, Ps1).
+
+%% The pairs of persons of different names that a schema's clause names possibly one person where one of them is an agent variable that is no role, each vone(K, L), K and L role(I) or pvar(Name), or vone_any(K), K possibly the person of any of the others; every two other persons of different names are bound to different persons (vGLP, Section 5.4, "Speech-act schemas as local specifications": "and persons of different names to different persons but for two the clause names as possibly one person"; GSC, Definition "Binding" of every agent variable, GSC 8af7b7c).  A role marked one(Name, Other), Other a variable, gives vone(role(I), pvar(Other)); a variable's mark one(Name, Other) gives vone(pvar(Name), K), K the role or the variable named Other; and one(Name, '_') gives vone_any.
+VKey      ::= role(Integer) ; pvar(Constant).
+VOne      ::= vone(VKey, VKey) ; vone_any(VKey) ; vone_all.
+VOneL     ::= [] ; [VOne | VOneL].
+SVOnes    ::= vones(Constant, VOneL).
+SVOnesL   ::= [] ; [SVOnes | SVOnesL].
+%% A schema that declares no names, as the compiler's fixtures write it, has no names to keep apart: vone_all.
+procedure vones_of(WDeclared?, SVOnesL).
+vones_of([], []).
+vones_of([S|Ss], Os?) :- ground(S?), ground(Ss?) | vones_c([S?|Ss?], Os).
+vones_of(reflexive(_, Ss), Os?) :- ground(Ss?) | vones_c(Ss?, Os).
+vones_of(environment(_, B), Os?) :- ground(B?) | vones_b(B?, Os).
+procedure vones_b(WBody?, SVOnesL).
+vones_b([], []).
+vones_b([S|Ss], Os?) :- ground(S?), ground(Ss?) | vones_c([S?|Ss?], Os).
+vones_b(reflexive(_, Ss), Os?) :- ground(Ss?) | vones_c(Ss?, Os).
+procedure vones_c(WContract?, SVOnesL).
+vones_c([], []).
+vones_c([S|Ss], [O?|Os?]) :- ground(S?) | vones_s(S?, O), vones_c(Ss?, Os).
+procedure vones_s(WSchema?, SVOnes).
+vones_s(schema(Nm, _, _), vones(Nm?, [vone_all])).
+vones_s(cschema(Nm, _, _, _), vones(Nm?, [vone_all])).
+vones_s(nschema(Nm, _, _, _), vones(Nm?, [vone_all])).
+vones_s(qschema(Nm, _, _, _, _, _, _), vones(Nm?, [vone_all])).
+vones_s(schema(Nm, Ns, As, Rs), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, As?, Rs?, Vs).
+vones_s(cschema(Nm, Ns, As, _, Rs), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, As?, Rs?, Vs).
+vones_s(nschema(Nm, Ns, As, _, Rs), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, As?, Rs?, Vs).
+vones_s(qschema(Nm, Ns, As, _, _, Rs, _, _), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, As?, Rs?, Vs).
+procedure vones_n(Names?, Args?, RoleSpecs?, VOneL).
+vones_n(Ns, As, Rs, Vs?) :- ground(Ns?), ground(Rs?) |
+    role_names_of(Ns?, Rs?, Rn),
+    var_marks_of(Ns?, Rs?, Vm),
+    vones_rn(Rn?, Vm?, As?, Vs).
+procedure vones_rn(Names?, Names?, Args?, VOneL).
+vones_rn(Rn, Vm, As, Vs?) :- ground(Rn?), ground(As?) |
+    role_vones(Rn?, Rn?, As?, 1, Vs1),
+    var_vones(Vm?, Rn?, As?, Vs2),
+    vone_app(Vs1?, Vs2?, Vs).
+%% A role's mark whose other is no role's name: a variable, or '_'.
+procedure role_vones(Names?, Names?, Args?, Integer?, VOneL).
+role_vones([], _, _, _, []).
+role_vones([one(_, O)|Ns], Rn, As, I, Vs?) :- ground(O?), ground(Rn?), ground(As?), integer(I?) |
+    others_of(O?, Os),
+    I1 := I? + 1,
+    role_vones(Ns?, Rn?, As?, I1?, Vs1),
+    role_others(Os?, Rn?, As?, I?, Vs1?, Vs).
+role_vones([_|Ns], Rn, As, I, Vs?) :- otherwise, integer(I?) | I1 := I? + 1, role_vones(Ns?, Rn?, As?, I1?, Vs).
+procedure role_others(OneOfs?, Names?, Args?, Integer?, VOneL?, VOneL).
+role_others([], _, _, _, Vs, Vs?).
+role_others([O|Os], Rn, As, I, Vs0, [vone_any(role(I?))|Vs?]) :- ground(O?), ground(Rn?), ground(As?), integer(I?), O? =?= '_' |
+    role_others(Os?, Rn?, As?, I?, Vs0?, Vs).
+role_others([O|Os], Rn, As, I, Vs0, Vs?) :- otherwise, ground(O?), ground(Rn?), ground(As?), integer(I?) |
+    name_index(Rn?, O?, 1, J),
+    role_others(Os?, Rn?, As?, I?, Vs0?, Vs1),
+    role_vone(J?, I?, O?, As?, Vs1?, Vs).
+procedure role_vone(Integer?, Integer?, OneOf?, Args?, VOneL?, VOneL).
+role_vone(J, I, O, As, Vs, Vs1?) :- J? =:= 0 | arg_pvar(As?, O?, P), role_vone1(P?, I?, Vs?, Vs1).
+role_vone(_, _, _, _, Vs, Vs?) :- otherwise | true.
+procedure role_vone1(PFound?, Integer?, VOneL?, VOneL).
+role_vone1(pfound(N), I, Vs, [vone(role(I?), pvar(N?))|Vs?]).
+role_vone1(pnone, _, Vs, Vs?).
+%% The variable of the schema's arguments that a mark names, pvar(N), N taken from the arguments, which are typed: pfound(N), or pnone.
+PFound    ::= pfound(Constant) ; pnone.
+procedure arg_pvar(Args?, OneOf?, PFound).
+arg_pvar([], _, pnone).
+arg_pvar([pvar(N)|_], O, pfound(N?)) :- N? =?= O? | true.
+arg_pvar([_|As], O, P?) :- otherwise | arg_pvar(As?, O?, P).
+%% A variable's mark, one(Name, Others): each other a role's name, '_', or another variable.
+procedure var_vones(Names?, Names?, Args?, VOneL).
+var_vones([], _, _, []).
+var_vones([one(V, O)|Ms], Rn, As, Vs?) :- ground(V?), ground(O?), ground(Rn?), ground(As?) |
+    others_of(O?, Os),
+    var_vones(Ms?, Rn?, As?, Vs1),
+    var_others(Os?, V?, Rn?, As?, Vs1?, Vs).
+var_vones([_|Ms], Rn, As, Vs?) :- otherwise | var_vones(Ms?, Rn?, As?, Vs).
+procedure var_others(OneOfs?, Constant?, Names?, Args?, VOneL?, VOneL).
+var_others([], _, _, _, Vs, Vs?).
+var_others([O|Os], V, Rn, As, Vs0, [vone_any(pvar(V?))|Vs?]) :- ground(O?), ground(V?), ground(Rn?), ground(As?), O? =?= '_' |
+    var_others(Os?, V?, Rn?, As?, Vs0?, Vs).
+var_others([O|Os], V, Rn, As, Vs0, Vs?) :- otherwise, ground(O?), ground(V?), ground(Rn?), ground(As?) |
+    name_index(Rn?, O?, 1, J),
+    var_others(Os?, V?, Rn?, As?, Vs0?, Vs1),
+    var_vone(J?, V?, O?, As?, Vs1?, Vs).
+procedure var_vone(Integer?, Constant?, OneOf?, Args?, VOneL?, VOneL).
+var_vone(J, V, O, As, Vs, Vs1?) :- J? =:= 0 | arg_pvar(As?, O?, P), var_vone1(P?, V?, Vs?, Vs1).
+var_vone(J, V, _, _, Vs, [vone(pvar(V?), role(J?))|Vs?]) :- otherwise | true.
+procedure var_vone1(PFound?, Constant?, VOneL?, VOneL).
+var_vone1(pfound(N), V, Vs, [vone(pvar(V?), pvar(N?))|Vs?]).
+var_vone1(pnone, _, Vs, Vs?).
+procedure vone_app(VOneL?, VOneL?, VOneL).
+vone_app([], Ys, Ys?).
+vone_app([X|Xs], Ys, [X?|Zs?]) :- vone_app(Xs?, Ys?, Zs).
+
+%% The possibly-one pairs of the schema Nm, none where Os names it not.
+procedure ones_pairs(Ones?, Constant?, Sames).
+ones_pairs([], _, []).
+ones_pairs([ones(N, Ps)|_], Nm, Ps?) :- N? =?= Nm? | true.
+ones_pairs([_|Os], Nm, R?) :- otherwise | ones_pairs(Os?, Nm?, R).
 procedure unnamed_c(WContract?, QContract).
 unnamed_c([], []).
 unnamed_c([S|Ss], [S1?|Ss1?]) :- ground(S?), ground(Ss?) |
@@ -163,7 +352,22 @@ Fault     ::= no_introductory_act
             ; constraint_not_conjunction(Constant, Constraint)
             ; signing_not_agent(Constant, Arg)
             ; signing_not_speech_act(Constant, Arg)
-            ; obstructed_jointly(Constant).
+            ; obstructed_jointly(Constant)
+            ; not_in_vars(Constant, Constant)
+            ; not_holder(Constant, Constant)
+            ; unsupplied(Constant, Constant)
+            ; deleted_not_required(Constant, Integer, Atom)
+            ; multiplicity(Constant, Integer, Atom)
+            ; listed_reading(Constant, Integer)
+            ; no_signature_atom(Constant)
+            ; multiplicity_wildcard(Constant, Integer, Atom)
+            ; condition_holder(Constant, Constant)
+            ; head_formula(Constant)
+            ; quantified_condition(Constant, Constant)
+            ; listed_agent_role(Constant, Constant)
+            ; guard_not_role(Constant, Constant)
+            ; value_type(Constant, Constant)
+            ; item_argument(Constant, Constant).
 Faults    ::= [] ; [Fault | Faults].
 %% An introduction with wards (GSC, Section 8, "Contracts with Wards", 070c5d1): guardianship(M, V, U) is the guardianship (m, v, u) of Definition "Guardianship", as programs/gsc/self.glp writes it, and the last argument of a verdict is [Iota, F] of the kinds (iota, f, M), where the leaving marks stood until GSC 7e00aba (mirrored from programs/gsc on branch GSC-wards8); a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
 Guardianship  ::= guardianship(Constant, Constant, Constant).
@@ -193,15 +397,20 @@ Strings   ::= [] ; [String | Strings].
 PList     ::= list(String, Strings).
 PLists    ::= [] ; [PList | PLists].
 %% An act whose schema types a speech-act variable a field names, typed(T, x) (programs/self.glp, SArg), carries a seventh argument, the types of its fields, ft(K, T) for its K-th field (pragmas.sh; vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one, as an email address or a person's name, which constrains nothing and which the field's widget is told"); the compiler reads every act as one with that argument, [] for an act with none (cvac.glp, norm_acts).
-FType     ::= ft(Integer, Constant).
+%% consents(I): the person in the guarding role I of the act's schema must consent to it and is not asked (vGLP, Section 5.4, "The contract's words"; pragmas.sh).
+FType     ::= ft(Integer, Constant) ; consents(Integer).
 FTypes    ::= [] ; [FType | FTypes].
 PAct      ::= act(Constant, String, Strings, Said, String, Proposer)
             ; act(Constant, String, Strings, Said, String, Proposer, FTypes).
 TAct      ::= act(Constant, String, Strings, Said, String, Proposer, FTypes).
 TActs     ::= [] ; [TAct | TActs].
 Proposer  ::= any ; by(Ints) ; by(Ints, Sames).
-Same      ::= same(Integer, Integer).
+%% mark(M) and gship(M, V, U): a mark and a guardianship (m, v, u) of the contract, by which the local check reads its states under GSC's Lemma Wards and guardians (vGLP b798a06, Section 5.4).
+Same      ::= same(Integer, Integer) ; mark(Constant) ; gship(Constant, Constant, Constant).
 Sames     ::= [] ; [Same | Sames].
+%% The pairs of a schema's roles that its clause names possibly one person, ones(Schema, Pairs), each same(J, I), J the role of Other and I the role written one(Name, Other) (GSC, Definition "Binding": "but for two the schema marks as possibly one"; programs/gsc/self.glp: "the schema's head writes the second name as one('Bob', 'Alice')"); a schema read with no names has none.
+OnePairs  ::= ones(Constant, Sames).
+Ones      ::= [] ; [OnePairs | Ones].
 PActs     ::= [] ; [PAct | PActs].
 %% A standing declaration, standing(Schema, Start, Stop): the acts of the guarded schema Schema standing, the person's request of the act Start making their standing request of every class of Schema's acts that they propose, and their request of the act Stop withdrawing it (vGLP 7c631b1, Section 5.4, "The contract's words": "An implementation pragma may make the acts of a clause standing, as `Encounter: Alice stands on [Open place] until [Close place]' does ...: the person's request of the act of the first button is also their standing request (Definition Local) of every class of the clause's acts that they propose, and their request of the act of the second withdraws it; a standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals").  pragmas.sh reads it from a contract's implementation pragmas, "<Clause>: <Name> stands on [<Start>] until [<Stop>]", for each schema of the clause (GSC 1a8e31c, Section 2), and vGLP's own contracts give the term (contracts.glp, pragmas_named/2).
 PStand    ::= standing(Constant, Constant, Constant).
@@ -212,22 +421,51 @@ PVersion  ::= version(Integer, Integer).
 %% The pragmas the platform exports in contract(Text, Schemas), the text apart (cvac.glp, export_lines).
 RPragmas  ::= pragmas(PLists, TActs, PStands, PLook, PVersion).
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
-            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String).
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String)
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts)
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts, PFns).
+%% The functions of the contract's value types that their owner gives as typed GLP procedures, fn(Name, Kinds, Kind), the kinds of its arguments and of its value, its last argument, and the lines of the owner's file, which the platform carries; or none (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
+PFns       ::= nofns ; fns(FnDecls, List(String)).
+%% The kind of a function's place, by its declared type: a number (Integer, Number), a constant (Constant, String), or other, which the compiler does not take.
+FnKind     ::= num ; const ; other.
+FnKinds    ::= [] ; [FnKind | FnKinds].
+FnDecl     ::= fn(Constant, FnKinds, FnKind).
+FnDecls    ::= [] ; [FnDecl | FnDecls].
+%% What the phone does for the contract, from its implementation pragmas (vGLP, Section 5.4): an environment predicate it finds, found(P), and a standing schema whose standing request opens the phone to persons it does not know, trust(S).
+PhoneFact  ::= found(Constant) ; trust(Constant).
+PhoneFacts ::= [] ; [PhoneFact | PhoneFacts].
 %% What a schema does to the atom a standing declaration stands on (cvac.glp, standing_lines): makes the standing request, withdraws it, or neither.
 StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
-exported procedure compile(Constant?, WDeclared?, Verdict?).
-compile(Nm, D, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
+exported procedure compile(Constant?, WOffered?, Verdict?).
+compile(Nm, O, V) :- wdeclared_of(O?, R), compile_w3(R?, Nm?, V?).
+procedure compile_w3(WDeclOpt?, Constant?, Verdict?).
+compile_w3(wparam, Nm, _) :- not_instantiated(Nm?).
+compile_w3(wdecl(D), Nm, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
-compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?).
+compile(Nm, O, V, I) :- wdeclared_of(O?, R), compile_w4(R?, Nm?, V?, I?).
+procedure compile_w4(WDeclOpt?, Constant?, Verdict?, Intro?).
+compile_w4(wparam, Nm, _, _) :- not_instantiated(Nm?).
+compile_w4(wdecl(D), Nm, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
 %% The contract's environment predicates, environment(Preds, Body) (programs/gsc/self.glp, WDeclared), go to the compiler beside the contract: "An environment predicate is the day, by the calendar, or a value the contract declares and does not fix ...: given when the platform is deployed, held from startup" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 %% The contract as read, with its names, goes to the compiler whole besides, which prints it in the platform's contract(Text, Schemas) (cvac.glp, export_lines).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
-compile(Nm, D, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?).
+compile(Nm, O, V, I, P) :- wdeclared_of(O?, R), compile_w5(R?, Nm?, V?, I?, P?).
+procedure compile_w5(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?).
+compile_w5(wparam, Nm, _, _, _) :- not_instantiated(Nm?).
+compile_w5(wdecl(D), Nm, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
+%% compile(Name, Contract, Verdict, Intro, Pragmas, Values): the same, with the values the developer gives, dev(Text), Text the list of their atoms, or nodev (cvac.glp, dev_lines; vGLP 922ac53, Section 5.4).
+DevValues ::= nodev ; dev(String).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?, DevValues?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?, DevValues?).
+compile(Nm, O, V, I, P, Vl) :- wdeclared_of(O?, R), compile_w6(R?, Nm?, V?, I?, P?, Vl?).
+procedure compile_w6(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?, DevValues?).
+compile_w6(wparam, Nm, _, _, _, _) :- not_instantiated(Nm?).
+compile_w6(wdecl(D), Nm, V, I, P, Vl) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?, Vl?).
 procedure env_of(WDeclared?, Preds).
 env_of(environment(Ps, _), Ps?).
 env_of(_, []) :- otherwise | true.
@@ -253,6 +491,14 @@ uncleared([A|As], R?) :- ground(A?) |
 procedure keep_atom(YesNo?, Atom?, Atoms?, Atoms).
 keep_atom(yes, _, R, R?).
 keep_atom(no, A, R, [A?|R?]).
+%% A role's cleared atoms.
+procedure only_cleared(Atoms?, Atoms).
+only_cleared([], []).
+only_cleared([A|As], R?) :- ground(A?) |
+    cleared(A?, C),
+    only_cleared(As?, R1),
+    neg(C?, U),
+    keep_atom(U?, A?, R1?, R).
 %% Whether an atom is cleared: the wildcard among its arguments, or as the speech act of a name term among them.
 procedure cleared(Atom?, YesNo).
 cleared(atom(_, As), C?) :- args_wild(As?, C).
@@ -341,11 +587,16 @@ procedure is_nvar(Arg?, YesNo).
 is_nvar(num(X), no) :- number(X?) | true.
 is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
 is_nvar(real(_), yes).
+%% A variable over the constants is num(X) to the checks (cvac.glp, reals_off, consts_off); the clause covers the type.
+is_nvar(const(_), yes).
+%% A set variable likewise (GSC, def:numbers, the set variable).
+is_nvar(set(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
 is_nvar(item_of(_), no).
 is_nvar(val(_), no).
+is_nvar(cmp(_, _), no).
 is_nvar(nterm(_), no).
 is_nvar(sgn(_, _), no).
 is_nvar(any, no).
@@ -379,6 +630,9 @@ expr_args(minus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(mul(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(num(X), [num(X?)]).
 expr_args(real(X), [num(X?)]).
+%% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
+expr_args(const(X), [num(X?)]).
+expr_args(set(X), [num(X?)]).
 expr_args(role(I), [role(I?)]).
 expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
@@ -397,6 +651,11 @@ expr_args(author_of(Y), A?) :- expr_args(Y?, A).
 expr_args(item_of(Y), A?) :- expr_args(Y?, A).
 %% A constant the contract names, val(C), names no variable.
 expr_args(val(_), []).
+%% A compound value names the variables of its arguments.
+expr_args(cmp(_, As), A?) :- args_args(As?, A).
+procedure args_args(Args?, Args).
+args_args([], []).
+args_args([X|Xs], A?) :- expr_args(X?, A1), args_args(Xs?, A2), app(A1?, A2?, A).
 procedure exprl_args(Exprs?, Args).
 exprl_args([], []).
 exprl_args([E|Es], A?) :- expr_args(E?, A1), exprl_args(Es?, A2), app(A1?, A2?, A).
@@ -416,10 +675,14 @@ TSchemas  ::= [] ; [TSchema | TSchemas].
 %% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
 %% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
 %% And each real variable X of a schema S, rl(S, X) (cvac.glp, real_lx).
+%% And each variable X over the constants of a schema S, cn(S, X) (cvac.glp, real_lx).
+%% And each set variable X of a schema S, st(S, X) (cvac.glp, real_lx).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
             ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
             ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults)
-            ; rl(Constant, Constant).
+            ; rl(Constant, Constant)
+            ; cn(Constant, Constant)
+            ; st(Constant, Constant).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).

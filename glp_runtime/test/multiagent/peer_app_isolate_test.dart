@@ -28,17 +28,21 @@
 @Timeout.none
 library;
 
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
+
+import 'boot_program.dart';
 
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _), ch(_?, _))@carol, say(carol, ch(_?, _))@carol, agent(ch(_?, _), ch(_?, _))@dave, say(dave, ch(_?, _))@dave, agent(ch(_?, _), ch(_?, _))@erin, say(erin, ch(_?, _))@erin.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
 
+/// The agents' program, a program directory's self.glp (boot_program.dart).
+const _program = '''
 PaMsg ::= poke.
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(PaMsg)), Stream(NetMsg(PaMsg)))?).
@@ -46,8 +50,6 @@ agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure start(Stream(Constant)?, Stream(NetMsg(PaMsg))?).
 start([P | _], N) :- agent_init(P?, N?).
 start([], _).
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
 procedure agent_init(Constant?, Stream(NetMsg(PaMsg))?).
 agent_init(alice, In) :- declare(trust(pan, open)), probe(In?).
@@ -60,8 +62,6 @@ probe([_ | In]) :- otherwise | probe(In?).
 probe([]).
 ''';
 
-String get _rootSelf => File('../programs/self.glp').absolute.path;
-
 void main() {
   late IsolateManager manager;
 
@@ -72,8 +72,7 @@ void main() {
   /// alice's three answers to [connected], none and [connected]: connected,
   /// cut, restored.
   Future<void> phases(Application? application, String connected) async {
-    final config = BootLoader().load(_boot);
-    config.rootSelfGlpPath = _rootSelf;
+    final config = bootWithProgram(_boot, _program);
 
     await manager.boot(config, application: application);
     for (final poker in ['carol', 'dave', 'erin']) {

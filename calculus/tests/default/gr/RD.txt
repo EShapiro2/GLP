@@ -1,0 +1,3 @@
+RD: Ruled at its default
+RD extends R.
+Carol is a ward.

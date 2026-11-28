@@ -53,7 +53,7 @@
 %% self.glp).
 
 imported procedure denominated#sovereign(Key?, PersonChannel(denominated#Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
-imported procedure denominated#person(Key?, _?, PersonIn(denominated#Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#person(Key?, PersonOut(denominated#Drawn)?, PersonIn(denominated#Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 exported procedure sovereign_ui(Key?, SovereignPeers?, PersonIn(denominated#Drawn)?, SovereignNet?).
 sovereign_ui(Cb, [Diana, Frank], Grants, _) :-

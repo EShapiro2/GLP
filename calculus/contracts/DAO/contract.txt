@@ -1,0 +1,9 @@
+DAO
+DAO inherits from Knowledge.
+Alice and Bob are persons.
+1. ■ Found: Alice may found a DAO under a new name of hers; Alice is then its steward and first member.
+2. ■ Join: Alice, the steward of a DAO, may admit Bob, whom she knows and who is not yet a member, with the consent of Bob.
+3. ■ Proposing. Propose: A member of a DAO may make a proposal to it, each proposal once; its steward records it. Deliver proposal: The steward delivers it to every member but the steward, the proposer included.
+4. ■ Voting. Vote for, Vote against: A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote. Deliver vote: The steward delivers the vote to every member but the steward.
+5. ■ Deciding. Pass, Reject: The steward may decide a proposal, passed or rejected, once. Deliver decision: The steward delivers the decision to every member but the steward.
+6. ■ Majority. The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.

@@ -6,9 +6,10 @@
 %% "The scope a boot source is checked in";
 %% glp_runtime/test/multiagent/boot_source_scope_test.dart).
 %%
-%% Its one entry point is serve/2, forwarded to worker.glp; its signature
-%% carries Req.  worker.glp's helper/2 is exported by worker.glp and not by
-%% this program, and Secret, which helper/2 carries, by no export of it.
+%% Its entry points are serve/2, forwarded to worker.glp, whose signature
+%% carries Req, and agent/2, every agent's initial goal, which carries Report.
+%% worker.glp's helper/2 is exported by worker.glp and not by this program, and
+%% Secret, which helper/2 carries, by no export of it.
 
 Req ::= req(Integer).
 Secret ::= secret(Integer).
@@ -17,3 +18,16 @@ imported procedure worker#serve(Stream(Req)?, Integer).
 
 exported procedure serve(Stream(Req)?, Integer).
 serve(Rs, N?) :- worker # serve(Rs?, N).
+
+%% Every agent's initial goal, agent(ch(_?,_),ch(_?,_)), is the program's, a
+%% boot defining none (IGLP, Implementation Notes, "Boot"; TGLP 6ce148a,
+%% modules.tex, "Entry and the absence of a boot module"): the agent shows its
+%% person what the person tells it.
+Report ::= total(Integer).
+
+exported procedure agent(Channel(Stream(Report), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- show(In?).
+
+procedure show(Stream(Report)?).
+show([R | Rs]) :- ground(R?) | send_to_user([R?]), show(Rs?).
+show([]).

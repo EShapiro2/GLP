@@ -2,7 +2,7 @@
 
 GLP is a concurrent logic programming language for grassroots systems: a program is a set of guarded clauses over single-reader single-writer variables, and a goal reduces by tentative head unification, then pure three-valued guards, then a body that binds writers.  A goal whose reader is unbound suspends and reactivates when the writer is bound, so a program is a network of processes communicating through shared variables rather than a sequence of calls.  Agents run in separate Dart isolates and reach one another by message-passing over the same variables, which is what makes a grassroots platform — no server, no global state — expressible as one typed program.
 
-The language is defined by the papers, not by this tree; the implementation here follows them.  Ownership of each directory is Coordination Appendix B.
+The language is defined by the papers, not by this tree; the implementation here follows them.  Who answers for each directory is `servers/peoplesweb/tools/directories.py`, which peoplesweb.org prints under Directories.
 
 ## Directory map
 

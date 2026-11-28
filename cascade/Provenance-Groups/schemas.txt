@@ -1,0 +1,19 @@
+Provenance Groups
+Provenance Groups unites Groups and a strengthening of AI Agents, and extends and augments the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+After x sends t to y: y has the message t from x and y holds the item t.
+After y delivers t as its author in g to z, which requires y has not delivered the message t of y in g to z and z does not have the message t of y in g delivered by y: y has delivered the message t of y in g to z, z has the message t of y in g delivered by y and z holds the item t.
+After x forwards t to the group g of y, adding x's signature to the signatures t carries: y has the post t signed by x of x in g.
+Provenance Groups:0 - | Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, Item an item, Proof an attestation.
+Provenance Groups:1 ■ Message: Groups:1 + item(Bob,Text) <- person(Alice), item(Alice,Text), author(Alice,Text).
+Provenance Groups:1 ■ Post: Groups:4 Post <- person(Bob), item(Bob,Text), author(Bob,Text).
+Provenance Groups:1 ■ Post own: Groups:4 Post own <- person(Alice), item(Alice,Text), author(Alice,Text).
+Provenance Groups:1 ■ Agent message: message(Bob,Alf,Text), item(Bob,Text) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+Provenance Groups:1 ■ Create: Groups:2 Create <- person(Alice).
+Provenance Groups:1 ■ Close: Groups:2 Close <- person(Alice).
+Provenance Groups:1 ■ Join: Groups:3 Join <- person(Alice), person(Bob).
+Provenance Groups:1 ■ Remove: Groups:3 Remove <- person(Alice).
+Provenance Groups:1 ■ Leave: Groups:3 Leave <- person(Bob).
+Provenance Groups:1 ■ Deliver: Groups:4 Deliver + item(Carol,Text@Alice) <- ~author(Alice,Text).
+Provenance Groups:1 ■ Deliver leader: Groups:4 Deliver leader + item(Alice,Text@Alice) <- ~author(Alice,Text).
+Provenance Groups:1 ■ Deliver own: group_delivered(Alice,Alice,Text,Grupo,Carol), group_message(Carol,Alice,Text,Grupo,Alice), item(Carol,Text) <- leader(Alice,Grupo), posted(Alice,Text,Alice,Grupo), listed(Alice,Carol,Grupo), author(Alice,Text), ~group_delivered(Alice,Alice,Text,Grupo,Carol), ~group_message(Carol,Alice,Text,Grupo,Alice).
+Provenance Groups:2 ■ Post forward: posted(Alice,Item@Bob,Bob,Grupo) <- person(Bob), member(Bob,Grupo,Alice), ~leader(Bob,Grupo), item(Bob,Item) guarded by Bob.

@@ -1,0 +1,13 @@
+Encounters
+Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
+Alice and Bob are persons.
+1. ■ Open place: Alice may declare her place open. Close place: Alice may close her place.
+2. ■ Encounter: Alice and Bob come to know each other, and Alice and Bob must consent, provided Alice does not know Bob, Bob does not know Alice, Alice and Bob are nearby each other, Alice has declared the place open and Bob has declared the place open.
+Logic pragmas.
+Vocabulary: x is nearby y = nearby(x,y); x has declared the place open = open_place(x).
+After x and y come to know each other: x and y know each other.
+x and y are nearby each other: x is nearby y and y is nearby x.
+After x declares x's place open, which requires x has not declared the place open: x has declared the place open.
+After x closes x's place: no longer x has declared the place open.
+Environment: x is nearby y.

@@ -8,9 +8,3 @@ procedure minimum(Nat?, Nat?, Nat).
 minimum(0, _, 0).
 minimum(s(_), 0, 0).
 minimum(s(X), s(Y), s(Z?)) :- minimum(X?, Y?, Z).
-
-%% reduce clauses for metainterpreter
-procedure reduce(_?, _).
-reduce(minimum(0, _, 0), true).
-reduce(minimum(s(_), 0, 0), true).
-reduce(minimum(s(X), s(Y), s(Z?)), minimum(X?, Y?, Z)).

@@ -1,3 +1,5 @@
+import 'dart:async' show Timer;
+
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
@@ -29,6 +31,17 @@ class GoalRecord {
   int budgetSeq = 0;
   HeapCell? waitReader;
   int waitSeq = 0;
+
+  /// The timer of the wait the goal began ([waitReader]), while it has not
+  /// fired; null once it has, where the goal began none, and for a wait
+  /// restored from a saved state, whose timer did not survive.
+  Timer? waitTimer;
+
+  /// The time on the machine's clock at which the wait the goal began ends,
+  /// and what its timer does when it fires; both null where [waitTimer] is.
+  /// set_clock/1 arms the timer again by them ([GlpRuntime.setClock]).
+  int? waitDeadline;
+  void Function()? waitFire;
 
   GoalRecord(this.id);
 
@@ -184,6 +197,21 @@ class GlpRuntime {
   /// at its instantiation (IGLP, "Boot" and "Persistence").
   AgentSigner? identity;
 
+  /// The name by which the runtime gives a program the key [hex], 64
+  /// lowercase hex characters: the key itself over a real network, and in a
+  /// simulation the readable name standing for it, so that one person is one
+  /// name everywhere a program meets them, by self_key/1, signature/2,
+  /// decompose_module/4, a presence and a message's sender alike (IGLP,
+  /// Implementation Notes, "Simulation realisation"; Remark "Agent Names").
+  /// Set by the host that binds a simulation's layer ([MadContext.network]).
+  String Function(String hex) keyName = _keyItself;
+
+  /// The key, 64 lowercase hex characters, a name the runtime gave a program
+  /// stands for ([keyName]); the name itself where it names no key.
+  String Function(String name) keyNamed = _keyItself;
+
+  static String _keyItself(String k) => k;
+
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends
   /// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(
   /// Stream) "emits each element of Stream to the person operating the
@@ -200,6 +228,84 @@ class GlpRuntime {
   /// Clear wait state for a goal (after timer completes)
   void clearWaitState(int goalId) {
     _goals[goalId]?.waitReader = null;
+  }
+
+  /// The machine's clock (GLP-Spec appendix-guards.tex, "Clock access
+  /// (now/1, set_clock/1)"): the system clock until set_clock(T) sets it to
+  /// T, from which it runs on.  Kept as what the machine's clock is ahead of
+  /// the system clock, in milliseconds; now/1 and the time guards read
+  /// [machineNow].
+  int _clockAhead = 0;
+
+  /// Whether set_clock/1 may set this machine's clock: "the host that starts
+  /// a machine says whether its clock may be set, and the application on a
+  /// smartphone says it may not; there set_clock aborts" (the same
+  /// paragraph).  A test and the REPL leave it so; [AgentRuntime], the
+  /// machine of an agent on a smartphone, says it may not.
+  bool clockSettable = true;
+  int get machineNow => DateTime.now().millisecondsSinceEpoch + _clockAhead;
+
+  /// set_clock(T): the machine's clock reads [t], Unix milliseconds, and runs
+  /// on from it.  A goal that waits by wait/1 or wait_until/1 waits for a
+  /// time on this clock, so its timer is armed again for what is left of its
+  /// wait, and fires at once where its time has come.
+  void setClock(int t) {
+    _clockAhead = t - DateTime.now().millisecondsSinceEpoch;
+    for (final rec in _goals.values) {
+      final timer = rec.waitTimer;
+      if (timer == null) continue;
+      timer.cancel();
+      rec.waitTimer = _waitTimer(rec.waitDeadline!, rec.waitFire!);
+    }
+  }
+
+  Timer _waitTimer(int deadline, void Function() fire) {
+    final left = deadline - machineNow;
+    return Timer(Duration(milliseconds: left > 0 ? left : 0), fire);
+  }
+
+  /// The goal [goalId] began a wait ([Runtime.setWaitReader]) that ends when
+  /// the machine's clock reads [deadline]; [fire] is run then.
+  void startWaitTimer(int goalId, int deadline, void Function() fire) {
+    final rec = _goal(goalId);
+    rec.waitDeadline = deadline;
+    rec.waitFire = fire;
+    rec.waitTimer = _waitTimer(deadline, fire);
+  }
+
+  /// The timer of [goalId]'s wait fired.
+  void waitTimerFired(int goalId) {
+    final rec = _goals[goalId];
+    if (rec == null) return;
+    rec.waitTimer = null;
+    rec.waitDeadline = null;
+    rec.waitFire = null;
+  }
+
+  /// The wait of the goal [goalId] is over though its timer has not fired:
+  /// the goal was reduced with a clause that does not wait on it, or ended.
+  /// The timer is cancelled and no longer pending, and the wait's reader is
+  /// forgotten.  wait(D) "suspends for D milliseconds then succeeds" and
+  /// wait_until(T) "suspends until the current time is at or past timestamp
+  /// T" (GLP-Spec appendix-guards.tex, the time guards): each is a guard of
+  /// one clause, and once the goal is reduced with another clause no goal
+  /// waits on the timer, so a run with no goal left ends.  Until 2026-11-12
+  /// the timer stayed pending, and the run waited for it: tick([], 0). and
+  /// tick(_, 1) :- wait(20000) | true., its stream closed after a second,
+  /// answered after twenty-one (GSA #5, Code_inbox 2026-11-12 09:46 UTC,
+  /// play_sovereign waiting on a wait_until of the next day).
+  void releaseWait(int goalId) {
+    final rec = _goals[goalId];
+    if (rec == null) return;
+    final timer = rec.waitTimer;
+    if (timer != null) {
+      timer.cancel();
+      rec.waitTimer = null;
+      rec.waitDeadline = null;
+      rec.waitFire = null;
+      decrementPendingTimers();
+    }
+    rec.waitReader = null;
   }
 
   /// Set wait state for a goal
@@ -416,6 +522,7 @@ class GlpRuntime {
   /// 2026-10-02 they were kept for the whole run, some 500 bytes a goal: 1.6
   /// of the 5 GB live at the end of a year of sGLP's 100-agent social graph.
   void goalEnded(GoalId g) {
+    releaseWait(g);
     _goals.remove(g);
   }
 

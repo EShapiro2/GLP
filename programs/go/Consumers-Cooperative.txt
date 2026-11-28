@@ -1,0 +1,33 @@
+% Consumers' Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as Consumers' Cooperative:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: Cooperative and Trading Company.
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
+% Schemas: Consumers-Cooperative.glp beside this file.
+Consumers' Cooperative
+Consumers' Cooperative inherits from Cooperative and Trading Company.
+A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
+Bob and Erin are persons, Orga a consumers' cooperative.
+1. ■ Fee. Set fee: The members may set the fee. Pay fee: Bob may pay Orga the fee. Join: Organisation:3, only if Bob has paid Orga the fee.
+2. ■ Sell: Trading Company:3, only if Erin is a member and pays the cost of the good.
+Logic pragmas
+Consumers' Cooperative unites Cooperative and an augmentation of Trading Company, and extends and augments the union.
+A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
+Bob, Dave and Erin are persons, Orga a consumers' cooperative, Ware a good, Dollar a fiat currency, Fee, Sum, Votes and Double numbers.
+1. ■ Fee. Set fee: Those who decide for Orga may set the fee of Orga at Fee, provided Orga is an organisation. Pay fee: Bob may pay Orga the fee in Fee Dave-coins, provided Orga has the fee at the number Fee, Orga accepts a Dollar-denominated Dave-coin in payment and Bob knows Orga. Join: Organisation:3 Join, only if Bob has paid Orga the fee.
+2. ■ Sell: Trading Company:3, only if Erin is a member of Orga and Orga has paid exactly Sum coins for Ware.
+Logic pragmas.
+Vocabulary: y has paid z the fee = paid_fee(z,y); z has the fee at the number n = fee(z,n).
+the earlier fee of z has ended: z has the fee at no number.
+After g sets the fee of z at n: the earlier fee of z has ended and z has the fee at the number n.
+After y pays z the fee in n w-coins, which requires y has not paid z the fee: no longer y holds n w-coins, z holds n w-coins and y has paid z the fee.
+Interface pragmas
+Look: 🧺, sharing
+Fee: Bob [Join] <organisation> <officer> <votes>
+  Decider: Bob asks to become a member of Orga.
+  Codecider: Bob asks to become a member of Orga.
+  Decider [Set fee] <fee>
+  Codecider: Decider asks to set the fee of Orga.
+  Bob [Pay fee]
+Sell: Carol [Sell] <issuer> <denomination> <good>
+  Erin: Carol asks that you pay Orga the cost of a good it holds.

@@ -1,0 +1,13 @@
+Stays
+Stays extends Coins.
+Vocabulary: x can host guests = hosts(x); x lists p = listed(x,p); the current date is e, for x = today(x,e); y has a stay at x's p on e for n x-coins = stay(y,x,p,e,n); x has p booked on e = booked(x,p,e); x keeps y's review of p on e = review(x,y,p,e).
+After x lists p under a new name of x's, which requires x does not list p: x lists p.
+After y books a stay at x's p on e for n x-coins, which requires x does not have p booked on e: y has a stay at x's p on e for n x-coins, x has p booked on e, no longer y holds n x-coins and x holds n x-coins.
+After x cancels y's stay at p on e for n x-coins: no longer y has a stay at x's p on e for n x-coins, no longer x has p booked on e, no longer x holds n x-coins and y holds n x-coins.
+After y reviews y's stay at x's p on e, which requires x does not keep y's review of p on e: x keeps y's review of p on e.
+Stays:0 - | Alice and Bob are persons, Place a place and Night a night, Today a date, Sum a number.
+Stays:0 - | Environment: x can host guests.
+Stays:1 ◆ List place: listed(Alice,Place) <- hosts(Alice), ~listed(Alice,Place) guarded by Alice.
+Stays:2 ■ Book: stay(Bob,Alice,Place,Night,Sum), booked(Alice,Place,Night), ~note(Bob,Alice,coin,*Sum), note(Alice,Alice,coin,*Sum) <- knows(Bob,Alice), listed(Alice,Place), today(Bob,Today), gt(Night,Today), ~booked(Alice,Place,Night), note(Bob,Alice,coin,*Sum) guarded by Bob, Alice.
+Stays:3 ■ Cancel: ~stay(Bob,Alice,Place,Night,Sum), ~booked(Alice,Place,Night), ~note(Alice,Alice,coin,*Sum), note(Bob,Alice,coin,*Sum) <- today(Alice,Today), gt(Night,Today), stay(Bob,Alice,Place,Night,Sum), booked(Alice,Place,Night), note(Alice,Alice,coin,*Sum) guarded by Alice.
+Stays:4 ■ Review: review(Alice,Bob,Place,Night) <- stay(Bob,Alice,Place,Night,Sum), today(Bob,Today), le(Night,Today), ~review(Alice,Bob,Place,Night) guarded by Bob.

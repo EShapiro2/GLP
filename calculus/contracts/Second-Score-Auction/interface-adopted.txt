@@ -1,0 +1,6 @@
+Interface pragmas
+Point transitive: Alice [Point transitive]
+Award: Alice [Award] [Close]
+Arrive: Alice [Arrive]
+  Bob [Driver arrive]
+Cancel: Alice [Cancel]

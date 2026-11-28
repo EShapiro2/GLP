@@ -1,0 +1,9 @@
+Central Bank
+Central Bank inherits from Bank.
+A *central bank* is a bank created by an organisation, Gov (Organisation:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*. The *policy rate* for each term is the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+Gov is an organisation, Bob a person, Orga a central bank.
+1. ■ Leave, Expel: Organisation:3, only with the consent of both Bob and the governors.
+2. ■ Set policy rate: The committee members may set the policy rate for a term.
+3. ■ Lend: Bob, a counterparty, and Orga may jointly swap Orga-coins for Bob-bonds of a term, as many bonds as the coins and the interest on them at the policy rate for that term.
+4. ■ Open market: Bob, a counterparty, and Orga may jointly swap coins and bonds they hold (Denominated Currencies:2).
+5. ○ Authority. Gov will create Orga and appoint and remove its officers as the law of the Dollar provides.

@@ -1,0 +1,6 @@
+Interface pragmas
+List place: Alice [List place] <place>
+Book: Bob [Book] <place> <night> <sum>
+  Alice: Bob asks for your consent to book.
+Cancel: Alice [Cancel] <bob>
+Review: Bob [Review]

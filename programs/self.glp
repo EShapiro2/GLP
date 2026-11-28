@@ -50,7 +50,7 @@ Hash ::= String.
 % signature verifies --- the signer's key, the identity of the module under
 % which the signature was made, and the term signed --- and unsigned otherwise.
 % The caller discriminates by matching.
-Signature ::= signed(Key, Hash, _) ; unsigned.
+Signature ::= signed(Key, Hash, Term) ; unsigned.
 
 % What peer_address/2 assigns (GLP-Spec appendix-guards, "Networking seam"):
 % address(S), S the address at which the networking layer observes the peer,
@@ -291,7 +291,12 @@ SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 % A schema sas(Name, Names, Vars, Head, Body, Constraint, Guards); a contract
 % the list of its schemas; a contract declared with its reflexive or its
 % environment predicates.
-RName     ::= Constant ; one(Constant, Constant).
+% one(Name, Others) marks a role that may be bound to the same person as
+% roles named before it in Names: Others is one such name, the list of them,
+% or '_' for any of them (vGLP, Section 5.4; GSC, Definition Binding; GSC #19,
+% Code_inbox 2026-11-17 11:31 UTC).
+RName     ::= Constant ; one(Constant, OneOf).
+OneOf     ::= Constant ; List(Constant).
 Names      ::= [] ; [RName | Names].
 SNT    ::= own(Constant) ; ext(SNT, Constant).
 % typed(T, X), the speech-act variable X of the type T, as typed(email, x)
@@ -301,10 +306,18 @@ SNT    ::= own(Constant) ; ext(SNT, Constant).
 % 5.4: "a text by the type its variable carries in the schema where it
 % carries one, as an email address or a person's name, which constrains
 % nothing and which the field's widget is told").
+% const(X) is the value variable X whose values are constants, as val(C) is a
+% constant value (GSC, the appendix "Values in Speech-Act Schemas": "a value
+% variable of a schema has a type, which the schema's term form writes").
+% set(X) is the value variable X of a type Set(A), the finite sets of values
+% of a type A, as an argument where the predicate takes a value of A: the
+% atom stands for one atom per element of X; size(X) is its size |X|, a whole
+% number, in a constraint (GSC, def:numbers, the set variable).
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant)
+         ; real(Constant) ; const(Constant) ; set(Constant)
+         ; sgn(Constant, Constant) ; item_of(Constant)
          ; typed(Constant, Constant)
-         ; val(Constant).
+         ; val(Constant) ; val(Constant, SArgs).
 SArgs  ::= [] ; [SArg | SArgs].
 SAtom  ::= atom(Constant, SArgs).
 SAtoms ::= [] ; [SAtom | SAtoms].
@@ -313,7 +326,8 @@ SQLit  ::= SMult ; not(SMult).
 SQLits ::= [] ; [SQLit | SQLits].
 SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
          ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
-         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
+         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant)
+         ; size(Constant).
 SExprs ::= [] ; [SExpr | SExprs].
 % A safe formula and a constraint are one type, a constraint being a safe
 % formula with no atom and no quantifier.
@@ -334,8 +348,13 @@ PNames ::= [] ; [Constant | PNames].
 Preds ::= [] ; [Constant | Preds].
 SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
 SContract  ::= [] ; [SSchema | SContract].
-SDeclared  ::= SContract ; reflexive(Preds, SContract)
-             ; environment(Preds, SContract)
+% A contract may declare reflexive predicates, environment predicates and
+% parameters together (GSC, Section 8, "Reflexive predicates"; the appendix
+% Values, "Environment predicates"; Definition Parametric contract), in one
+% order: the parameters outermost, then the environment predicates, then the
+% reflexive ones, as programs/gsc reads it (WDeclared).
+SBody      ::= SContract ; reflexive(Preds, SContract).
+SDeclared  ::= SBody ; environment(Preds, SBody)
              ; parametric(SParams, SDeclared).
 % A parametric contract and an instance of it (GSC, Definition Parametric
 % contract, "The term of a parametric contract names its parameters, and that
@@ -349,7 +368,14 @@ SDeclared  ::= SContract ; reflexive(Preds, SContract)
 % instance adds or replaces, a schema named as one of the base's replacing it.
 SParam    ::= Constant ; val(Constant).
 SParams   ::= [] ; [SParam | SParams].
-SBinding  ::= (Constant = Constant).
+% A binding extended(P, Q, Types) writes for the predicate parameter P, not
+% a mark, the predicate Q with further value arguments, Types the types of the
+% added arguments in order, as extended(guardian_of, officer_of, [num]) (GSC
+% 220151a, Definition Parametric contract: "or, for a predicate that is not
+% a mark, of the same kinds with further value arguments"; GSC #16, 2026-11-11).
+VType     ::= num ; real ; const.
+VTypes    ::= [] ; [VType | VTypes].
+SBinding  ::= (Constant = Constant) ; extended(Constant, Constant, VTypes).
 SBindings ::= [] ; [SBinding | SBindings].
 
 % =============================================================================
@@ -473,9 +499,12 @@ procedure '_tuple_to_list'(_?, Stream(_)).
 % Text (GLP-Spec appendix-guards, the Text kernel rows, ca3c8e5)
 procedure '_string_concat'(List(String)?, String).
 procedure '_term_to_string'(_?, String).
+procedure '_hash'(String?, Hash).
+procedure(X) '_string_to_term'(String?, X).
 
 % Time and random
 procedure '_now'(Integer).
+procedure '_set_clock'(Integer?).
 procedure '_random'(Integer?, Integer?, Integer, Integer).
 procedure '_split_random_seed'(Integer?, Integer, Integer).
 
@@ -575,22 +604,25 @@ send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
 % The super-app's entry template (GSG, 2026-10-13 11:57 UTC and 20:24 UTC;
-% the calendar, 20:59 UTC; Udi: approved): the person's key, the person
-% channel, the channel to the social graph, and the calendar, a stream of
-% dates the super-app writes from the device's clock, one a day, which a
-% mini-app that keeps no dates ignores (GSG paper, "What the super-app grants
-% a mini-app").  Two type parameters, one per channel (vGLP, 2026-10-14 13:21
-% UTC, S2; Udi: yes): D, what the mini-app draws for its person, formed by
-% vGLP's compiler from the wrapped drawn types and the grants' R types, and
-% T, the mini-app's own type, the messages of its root channels; neither
-% contains the other, and a hand-written mini-app chooses both.  One entry
-% name for every mini-app; never run here.
-procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?, Stream(Integer)?).
-miniapp(_, _, _, _).
+% Udi: approved): the person's key, the person channel and the channel to the
+% social graph.  A program is activated with these two channels and receives
+% no dates; one that keeps dates reads the day by now/1 (GLP paper c5c3dfb,
+% appendix-guards.tex, "Predefined types": "the entry templates miniapp/3
+% and miniapp_person/5"; GLP #13, 2026-11-07, Udi approving).  Until
+% 2026-11-11 the template was miniapp/4, its fourth argument a calendar, a
+% stream of dates the super-app wrote, one a day.  Two type parameters, one
+% per channel (vGLP, 2026-10-14 13:21 UTC, S2; Udi: yes): D, what the
+% mini-app draws for its person, formed by vGLP's compiler from the wrapped
+% drawn types and the grants' R types, and T, the mini-app's own type, the
+% messages of its root channels; neither contains the other, and a
+% hand-written mini-app chooses both.  One entry name for every mini-app;
+% never run here.
+procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?).
+miniapp(_, _, _).
 
 % The mini-app's scripted person (GSG, 2026-10-13 18:52 UTC, O5, and 20:22
 % UTC; Udi: approved): a mini-app exports it beside its entry, as this
-% template's instance at the D of its miniapp/4 instance (vGLP, 2026-10-14
+% template's instance at the D of its miniapp/3 instance (vGLP, 2026-10-14
 % 13:21 UTC, S2) and at S, the type of the screen it reports, chosen by the
 % mini-app (vGLP 2026-10-16 11:25 UTC, item 4; Udi: approved): the person's
 % key, a role choosing the script among the mini-app's own plays, the keys
@@ -862,6 +894,12 @@ Result? := ceil(X) :-
 procedure now(Integer).
 now(T?) :- '_now'(T).
 
+% set_clock(T) sets the machine's clock to T, Unix milliseconds; the clock runs on from it, and now/1 and the time guards read it.  For a test or a play (GLP-ICLP appendix-guards, "Clock access (now/1, set_clock/1)").
+procedure set_clock(Integer?).
+set_clock(T) :-
+  integer(T?) |
+  '_set_clock'(T?).
+
 % =============================================================================
 % SEEDED RANDOM (random/4)
 % =============================================================================
@@ -929,6 +967,26 @@ procedure term_to_string(_?, String).
 term_to_string(T, S?) :-
   ground(T?) |
   '_term_to_string'(T?, S).
+
+% hash(S, H): H is the SHA-256 of the UTF-8 bytes of the string S, lowercase
+% hex, a Hash; the same at every participant, so that the hash of a text naming
+% a value and a secret seals the value, and the value and the secret, stated
+% later, are checked against the seal (GLP-Spec appendix-guards,
+% "Text").
+procedure hash(String?, Hash).
+hash(S, H?) :-
+  ground(S?) |
+  '_hash'(S?, H).
+
+% string_to_term(S, T): T is the ground term the reader reads from the string
+% S, the converse of term_to_string: term_to_string(T, S), string_to_term(S?,
+% T1) gives T1 equal to T; the kernel aborts where S is not the text of one
+% ground term.  T is of the type its reader expects, as a message received is
+% (Udi, 2026-11-25 22:52 UTC, approving it; GLP-Spec appendix-guards, "Text").
+procedure(X) string_to_term(String?, X).
+string_to_term(S, T?) :-
+  string(S?) |
+  '_string_to_term'(S?, T).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)

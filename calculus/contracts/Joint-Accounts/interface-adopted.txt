@@ -1,0 +1,9 @@
+Interface pragmas
+Open account: Alice [Open account] <acct>
+  Bob: Alice asks for your consent to open account.
+Account deposit: Alice [Account deposit] <sum>
+  Bob [Partner deposit] <sum>
+Withdraw: Alice [Withdraw] <sum>
+  Bob: Alice asks for your consent to withdraw.
+  Alice [Partner withdraw] <sum>
+  Bob: Alice asks for your consent to partner withdraw.

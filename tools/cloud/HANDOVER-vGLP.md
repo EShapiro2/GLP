@@ -47,3 +47,18 @@ Branch `vGLP-compose`, off main 8a70e367 (Code #27, Cloud-vGLP_inbox.md, 2026-11
 ## vGLP-val (vGLP 0eeea71; GSC 22605d6): built, reported
 
 Branch `vGLP-val`, off main f998a415 (Code #27, Cloud-vGLP_inbox.md, 2026-11-11 04:14 UTC); source 88b271ef, prints 0e8fd174, the records after it.  `val(C)` is an Arg of the compiler, local.glp, cvac.glp and the printed text.glp: kind `const`, type `'Constant'`, image `v(C)` in the runtime's Val, no variable, no field, no place in a class term, `any` in a button's precondition as a number constant is.  vGLP's play `consts` (`programs/vglp/cva/consts/`, contract `consts` in contracts.glp) adopts and amends bylaws named by constants; Section VG checks it.  `programs/vglp/cva/compiler/term.sh <NAME.glp> <name>` prints a contract's term, contract_named's or an instance's formed from its base by GSC's instantiate/4; `programs/apps/compile.sh` and Section VG's GSNP check read it.  `pragmas.sh` reads an instance's bindings from instance_named/4 beside the top NAME.txt and reads a base's button by the instance's name (GnW's `[Ward acquaint]` as GAI's `[Agent acquaint]`); Section VG's instance-names block checks it on two fixtures.  The five sections: 2156, 2096 passed, 60 failed, all APPS gai (15), gsnp (31), gff (13) and compile.sh --check: GAI and GSNP stop at GnW's make_guardian, end_guardian and retire (vGLP Section 5.4, no opener; known red at main), GFF is not compiled, as recorded.  CSSN is not compiled, as before, on make_parent, end_parent and retire.
+
+## Merged, and what is open (Cloud #14's last word, 2026-11-11)
+
+Every branch above is on main: vGLP-typed, vGLP-readings, vGLP-guards and vGLP-compose before 947ecbc0, and vGLP-val as 947ecbc0 itself (Code #27, Cloud-vGLP_inbox.md, 2026-11-11 06:41 UTC).  Nothing of Cloud #14's is in flight.
+
+Open, waiting on vGLP's paper, not on code (Code #27, 06:41 UTC):
+- The opener for an act with a listed guarding role whose base is the ward.  vGLP's Section 5.4 has none, so the compiler refuses GnW's make_guardian, end_guardian and retire, CSSN's make_parent, end_parent and retire, and with them the platforms of GAI, GSNP and CSSN.  The APPS checks of gai and gsnp are known red until then (vGLP #25, 2026-11-10 20:36 UTC).
+- Composing a parametric contract: compose.sh takes the wrapper parametric(Params, D), but the paper does not yet say how two parametric contracts compose.
+
+How the work was done, which a successor needs:
+- Fetch main's tags before any record, `git fetch origin --tags`, or cascade.sh names a tag main already has.  Re-make records one at a time, never two cascade.sh at once.  Never re-make a record whose check is in KNOWN_RED_CHECKS: the suite fails a known-red check that turns green.
+- A Cloud's push of a tag is refused (HTTP 403); the branch is pushed, the tags stay local and are named in the report, and Code pushes them on merging.
+- Edit and commit nothing while a suite runs: its guard compares `git status --porcelain` before and after.
+- Lines added to test/ or a script run on BSD tools too: no `sed -i`, no `\b` in sed, no GNU-only flags.
+- `programs/vglp/cva/compiler/term.sh <NAME.glp> <name>` is where a contract's term is read, an instance's included; read it there, never by grepping contract_named.

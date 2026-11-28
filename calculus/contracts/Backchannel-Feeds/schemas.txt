@@ -1,0 +1,6 @@
+Backchannel Feeds
+Backchannel Feeds extends Resilient Feeds.
+Vocabulary: z has received the item t of w's feed back from x = received_back(z,t,w,x); x has forwarded the item t of w's feed to z = forwarded_item(x,t,w,z).
+After x forwards the item t of w's feed to z, which requires z does not hold the item t of w's feed and x has not forwarded the item t of w's feed to z: z holds the item t of w's feed, z has received the item t of w's feed back from x and x has forwarded the item t of w's feed to z.
+Backchannel Feeds:0 - | Alice, Bob, Carol and Dave are persons, Item an item, Bob and Dave possibly one person.
+Backchannel Feeds:1 ■ Back forward: item(Carol,Item,Dave), received_back(Carol,Item,Dave,Alice), forwarded_item(Alice,Item,Dave,Carol) <- pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave), item(Alice,Item,Dave), item_from(Alice,Item,Dave,Bob), ~item(Carol,Item,Dave), ~forwarded_item(Alice,Item,Dave,Carol) possibly Bob=Dave.

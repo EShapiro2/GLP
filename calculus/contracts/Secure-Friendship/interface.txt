@@ -1,0 +1,38 @@
+Secure Friendship
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Name custodian.  Alice may fix her identity record, once.
+7. ■ Identity record.  Alice may fix her identity record, once.
+8. ■ Tell.  Alice tells each of her friends when she becomes a friend of Bob (Friendship:1) and when she ends a friendship (Friendship:2), and the friend records it.
+9. ■ Tell end.  Alice tells each of her friends when she becomes a friend of Bob (Friendship:1) and when she ends a friendship (Friendship:2), and the friend records it.
+10. ■ Send record.  Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.
+11. ■ Send threshold.  Alice sends Bob the threshold Share, provided Alice and Bob are friends and Alice has the threshold Share.
+12. ■ Checkpoint.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
+13. ■ Restore.  After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.
+14. ■ Restore friend.  After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.
+15. ■ Restore replaced friend.  After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.
+16. ◆ Replace.  After an identity loss, Alice may establish a new identity, Alicia (Knowledge:1), and ask her identity custodians to vouch for it.
+17. ◆ Vouch.  Carol, an identity custodian of Alice, may vouch, once, that Alicia is Alice.
+18. ◆ Present.  Alicia may present to Bob the statement of Carol that Alicia is Alice, provided Alicia knows Bob, Alicia has received the vouch of Carol for Alice, Bob counts Alice as a friend and Bob records Carol as an identity custodian of Alice.
+19. ◆ Accept.  Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was.
+20. ◆ Accept custodian.  Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was.
+21. ◆ Replace custodian.  After an identity loss, Alice may establish a new identity, Alicia (Knowledge:1), and ask her identity custodians to vouch for it.
+22. ◆ Tell friends.  Bob passes Alicia the friendship of Alice and Dave, provided Bob has accepted Alicia in place of Alice and Bob records the friendship of Alice and Dave.
+23. ◆ Tell change.  Bob tells Carol of the replacement of Alice by Alicia, provided Bob has accepted Alicia in place of Alice and Bob and Carol are friends.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Name custodian: Alice [Name custodian]
+Identity record: Alice [Identity record] <share>
+Replace: Alicia [Replace] <alice>
+Vouch: Carol [Vouch]
+Present: Alicia [Present]

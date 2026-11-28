@@ -1,0 +1,1 @@
+A case of tools/relations.py on schemas gcsas.py prints: O has defaults; OB and OU instantiate O binding its parameters otherwise, OT instantiates it taking the defaults, OD extends it (Calculus #7, 2026-11-16).

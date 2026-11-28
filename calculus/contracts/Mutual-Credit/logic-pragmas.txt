@@ -1,0 +1,12 @@
+Mutual Credit
+Mutual Credit extends Bank, and weakens it.
+A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Alice and Bob are persons, Orga a mutual credit society.
+1. ■ Leave: Organisation:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: Organisation:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: Organisation:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: Organisation:3 Officer leave, only if Orga holds exactly 0 Bob-coins.
+2. ■ Redeem member's coin: Bob may redeem with Orga an Alice-coin against an Orga-coin, provided Bob is a member of Orga and Alice is a member of Orga.
+3. ■ Credit limit. Swap: Denominated Currencies:2, only if every member of Orga is then in the red by at most 1000 coins. Pay: Notes:3, only if every member of Orga is then in the red by at most 1000 coins. Pay issuer: Coins:1, only if every member of Orga is then in the red by at most 1000 coins. Pay: Denominated Currencies:4, only if every member of Orga is then in the red by at most 1000 coins.
+Logic pragmas.
+Vocabulary: every member of z is then in the red by at most 1000 coins, for x = credit_limit(x,z).
+y is a member of z: y is a participant of z.
+After y redeems with z an x-coin against a z-coin: no longer y holds an x-coin, z holds an x-coin, no longer z holds a z-coin and y holds a z-coin.
+Environment: every member of z is then in the red by at most 1000 coins, for x.

@@ -35,6 +35,8 @@ import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
+import 'boot_program.dart';
+
 /// A boot source whose one body atom is the seam predicate `send_to_net/1`,
 /// the root self.glp's.
 const _callsSendToNet = '''
@@ -76,17 +78,20 @@ exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channe
 agent(ch(_, []), ch(N, [])) :- agent_init(alice, N?).
 ''';
 
-const _bootClause = '''
+/// A boot whose person, the boot source on the multi-isolate path, calls
+/// [call] (TGLP 6ce148a, "Entry and the absence of a boot module": a boot
+/// file carries its clause and the persons it names, and nothing else).
+String _bootCalling(String call) => '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
-start([alice | _], N) :- agent_init(alice, N?).
-start(_, _) :- otherwise | true.
 exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
+say(P, ch(_, [P?])) :- $call.
+''';
 
+/// The agents' program under [_bootCalling], every agent's initial goal.
+const _quietAgent = '''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])).
 ''';
 
 String get _rootSelf => File('../programs/self.glp').absolute.path;
@@ -303,20 +308,20 @@ void main() {
     setUp(() => manager = IsolateManager());
     tearDown(() async => manager.shutdown());
 
-    test('IsolateManager boots an agent whose program calls send_to_net/1',
+    test('IsolateManager boots an agent whose person calls send_to_net/1',
         () async {
-      final config = BootLoader().load(_bootClause + _callsSendToNet);
-      config.rootSelfGlpPath = _rootSelf;
+      final config =
+          bootWithProgram(_bootCalling('send_to_net([])'), _quietAgent);
 
       await manager.boot(config);
       manager.start();
       await manager.settle();
     }, timeout: Timeout.none);
 
-    test('IsolateManager still refuses a program calling nothing that exists',
+    test('IsolateManager still refuses a person calling nothing that exists',
         () async {
-      final config = BootLoader().load(_bootClause + _callsNothing);
-      config.rootSelfGlpPath = _rootSelf;
+      final config =
+          bootWithProgram(_bootCalling('no_such_procedure(1)'), _quietAgent);
 
       await expectLater(
         manager.boot(config),

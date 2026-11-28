@@ -1,0 +1,7 @@
+Backchannel Feeds
+Backchannel Feeds extends Resilient Feeds.
+Alice, Bob, Carol and Dave are persons, Item an item, Bob and Dave possibly one person.
+1. ■ Back forward: Alice forwards the item Item of Dave's feed to Carol, provided Alice has a Dave-pointer to Bob, Alice has a Dave-pointer to Carol, Alice holds the item Item of Dave's feed and Alice has received the item Item of Dave's feed from Bob.
+Logic pragmas.
+Vocabulary: z has received the item t of w's feed back from x = received_back(z,t,w,x); x has forwarded the item t of w's feed to z = forwarded_item(x,t,w,z).
+After x forwards the item t of w's feed to z, which requires z does not hold the item t of w's feed and x has not forwarded the item t of w's feed to z: z holds the item t of w's feed, z has received the item t of w's feed back from x and x has forwarded the item t of w's feed to z.

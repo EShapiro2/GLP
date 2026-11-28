@@ -1,0 +1,34 @@
+Feeds
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Point friend.  Alice, who does not point to her friend Bob, may point to Bob.
+7. ■ Point transitive.  Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.
+8. ■ Unpoint.  Alice, who points to Bob, may cease pointing to Bob.
+9. ■ Labeled point friend.  Alice, who has no Dave-pointer to her friend Bob, may add one, if Bob has a Dave-pointer.
+10. ■ Labeled point transitive.  Alice, who knows Carol and either has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol, only if Carol knows Alice.
+11. ■ Labeled point transitive friend.  Alice, who knows Carol and either has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol, only if Carol knows Alice.
+12. ■ Labeled unpoint.  Alice, who has a Dave-pointer to Carol, may remove it, unless Carol is Dave and her friend.
+13. ■ Labeled unpoint self.  Alice, who has a Dave-pointer to Carol, may remove it, unless Carol is Dave and her friend.
+14. ■ Post.  Alice has a feed and may post to it an item, created or received.
+15. ■ Deliver.  Alice, who has a Carol-pointer to Bob who knows her, receives from Bob every item of Carol's feed that Bob holds.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Point friend: Alice [Point friend]
+Point transitive: Alice [Point transitive]
+Unpoint: Alice [Unpoint]
+Labeled point friend: Alice [Labeled point friend] <dave>
+Labeled point transitive: Alice [Labeled point transitive]
+Labeled point transitive friend: Alice [Labeled point transitive friend] <dave>
+Labeled unpoint: Alice [Labeled unpoint]
+Labeled unpoint self: Alice [Labeled unpoint self]
+Post: Alice [Post] <item>

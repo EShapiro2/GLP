@@ -1,0 +1,10 @@
+Funded DAO
+Funded DAO unites DAO and Coins, and extends the union.
+Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.
+1. ■ Fund: Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
+2. ■ Grant: Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.
+3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.
+Logic pragmas.
+Vocabulary: x keeps n z-coins for d = dao_coin(x,z,d,*n); x has granted p of d = granted(x,p,d).
+After y gives x's d n z-coins: no longer y holds n z-coins and x keeps n z-coins for d.
+After x grants y n z-coins of d for p, which requires x has not granted p of d: no longer x keeps n z-coins for d, y holds n z-coins and x has granted p of d.

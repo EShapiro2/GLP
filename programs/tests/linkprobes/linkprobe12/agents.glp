@@ -4,18 +4,10 @@
 %% cross.  The closing of the stream was therefore not it.  Expected, and what
 %% happens since the repair: [bob] saw(probe), [alice] got(hi).  See ../linkprobes.md.
 
-Inner ::= probe(String?) ; hello.
-InnerStream ::= [] ; [Inner | InnerStream].
-InnerChannel ::= ch(InnerStream, InnerStream?).
 
-Mid ::= root(InnerChannel) ; midping.
-MidStream ::= [] ; [Mid | MidStream].
-MidChannel ::= ch(MidStream, MidStream?).
 
-Outer ::= chan(MidChannel) ; ping.
-OuterStream ::= [] ; [Outer | OuterStream].
 
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(Keys?, Stream(NetMsg(Msg))?).
 alice_init(keys(_, [Bob]), _) :-
     send_to_net([msg(Bob?, stream(S?))]),
     new_channel(MidMine, MidTheirs),
@@ -24,6 +16,7 @@ alice_init(keys(_, [Bob]), _) :-
     send_root(MidMine?, RootTheirs?),
     write_end(RootMine?, W),
     wait_value(W?).
+alice_init(_, _) :- otherwise | true.
 
 procedure fill_outer(OuterStream, MidChannel?).
 fill_outer([ping, chan(T?) | []], T).
@@ -61,9 +54,10 @@ hold(V, V?, []) :- ground(V?) | true.
 procedure wait_value(String?).
 wait_value(V) :- ground(V?) | send_to_user([got(V?)]).
 
-exported procedure bob_init(_?, _?).
+exported procedure bob_init(Keys?, Stream(NetMsg(Msg))?).
 bob_init(_, [msg(_, stream(S)) | _]) :-
     read_outer(S?).
+bob_init(_, _) :- otherwise | true.
 
 procedure read_outer(OuterStream?).
 read_outer([ping | S]) :- send_to_user([saw(ping)]), read_outer(S?).

@@ -1,0 +1,10 @@
+Matching
+Matching extends Gossip.
+Vocabulary: p and q match, for x = match(x,p,q); x has forwarded p to y = forwarded_post(x,p,y).
+After x and y come to know each other: x and y know each other.
+After x forwards p to y, which requires y does not hold the post p from x and x has not forwarded p to y: x has forwarded p to y, y holds the post p from x and y holds the post p.
+Matching:0 - | Posts have a *test*, whether two *match*.
+Matching:0 - | Alice, Bob and Carol are persons, Post and Other posts.
+Matching:0 - | Environment: p and q match, for x.
+Matching:1 ■ Return: forwarded_post(Bob,Other,Alice), post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob), ~forwarded_post(Bob,Other,Alice).
+Matching:2 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.

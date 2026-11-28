@@ -1,0 +1,76 @@
+Agora
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Issue.  Alice may issue Alice-notes.
+5. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
+6. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+7. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+8. ○ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+9. ○ Release.  Carol and Bob may jointly release them to Bob.
+10. ○ Return.  Carol and Alice may jointly return them to Alice.
+11. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+12. ■ Redeem coin against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+13. ■ Redeem bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+14. ■ Redeem bond against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+15. ■ Make.  Alice may make an item, which she then holds.
+16. ■ Open.  Alice may open a market under a new name of hers; Alice is then its keeper and first member.
+17. ■ Join.  Alice, the keeper of a market, may admit Bob, whom she knows, with the consent of Bob.
+18. ■ Offer.  A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall.
+19. ■ Offer own.  A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall.
+20. ■ Want.  A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall.
+21. ■ Want own.  A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall.
+22. ■ Deliver.  The keeper delivers it to every member but the keeper, the poster included; each member then knows its poster.
+23. ■ Deliver to poster.  The keeper delivers it to every member but the keeper, the poster included; each member then knows its poster.
+24. ■ Withdraw.  A member may withdraw a post of theirs; the keeper removes it from their own wall and from the wall of every member it was delivered to, and the member may not post it to that market again.
+25. ■ Withdraw own.  A member may withdraw a post of theirs; the keeper removes it from their own wall and from the wall of every member it was delivered to, and the member may not post it to that market again.
+26. ○ Swap item for coin.  Alice and Bob may jointly swap the item Item for Sum Dave-coins, provided Alice and Bob know each other.
+27. ○ Swap item for bond.  Alice and Bob may jointly swap the item Item for Sum Dave-bonds due Day, provided Alice and Bob know each other.
+28. ○ Swap items.  Notes:2 and Notes:4 apply to items as to notes.
+29. ○ Deposit item.  Notes:2 and Notes:4 apply to items as to notes.
+30. ○ Release item.  Notes:2 and Notes:4 apply to items as to notes.
+31. ○ Return item.  Notes:2 and Notes:4 apply to items as to notes.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Issue: Alice [Issue] <type> <sum>
+Swap: Alice [Swap] <sum> <dave> <other> <total>
+  Bob: Alice asks for your consent to swap.
+Pay: Alice [Pay] <sum>
+  Bob: Alice asks for your consent to pay.
+Pay issuer: Alice [Pay issuer] <sum>
+Deposit: Alice [Deposit] <sum> <cond>
+  Carol: Alice asks for your consent to deposit.
+Release: Carol [Release] <sum>
+  Bob: Carol asks for your consent to release.
+Return: Carol [Return] <sum>
+  Alice: Carol asks for your consent to return.
+Redeem: Alice [Redeem] <carol>
+Redeem coin against bond: Alice [Redeem coin against bond] <carol> <day>
+Redeem bond: Alice [Redeem bond] <carol>
+Redeem bond against bond: Alice [Redeem bond against bond] <carol> <term>
+Make: Alice [Make] <item>
+Open: Alice [Open] <mart>
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Offer: Carol [Offer]
+Offer own: Alice [Offer own]
+Want: Carol [Want] <wish>
+Want own: Alice [Want own] <wish>
+Withdraw: Carol [Withdraw]
+Withdraw own: Alice [Withdraw own]
+Swap item for coin: Alice [Swap item for coin] <dave> <sum>
+  Bob: Alice asks for your consent to swap item for coin.
+Swap item for bond: Alice [Swap item for bond] <dave> <day> <sum>
+  Bob: Alice asks for your consent to swap item for bond.
+Swap items: Alice [Swap items] <thing>
+  Bob: Alice asks for your consent to swap items.
+Deposit item: Alice [Deposit item] <cond>
+  Carol: Alice asks for your consent to deposit item.
+Release item: Carol [Release item]
+  Bob: Carol asks for your consent to release item.
+Return item: Carol [Return item]
+  Alice: Carol asks for your consent to return item.

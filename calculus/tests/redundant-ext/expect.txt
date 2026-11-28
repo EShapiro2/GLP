@@ -1,0 +1,14 @@
+B          commute yes; return yes; recover same
+X          removed X:1 Pay twice, made redundant by B:1 Pay
+X          commute yes; return yes; recover equivalent
+Y          ERROR Y:1: the act X:1 Pay twice was removed as redundant; B:1 Pay took its place
+names: 0 names of two kinds neither of which is under the other
+3 contracts, 1 with a fault
+--- sasx/B.txt
+B: Base (expanded schemas)
+B:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob.
+--- sasx/X.txt
+X: Written out (expanded schemas)
+X:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob.

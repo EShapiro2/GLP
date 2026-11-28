@@ -1,0 +1,79 @@
+%% encounters_nearby/boot.glp --- Encounters (cascade/Encounters/Encounters.txt) on two phones: alice and bob, each an agent in an isolate of its own of the boot harness, each running Encounters' canonical platform and its dispatcher (program/self.glp), with a scripted person at each.  glp_runtime/test/multiagent/encounters_nearby_test.dart boots it on top of the program directory it makes from program/ and cascade/Encounters/platform.vglp.
+%%
+%% Each person names the entry, encounters(K), K the agent's own key, as their first act (IGLP, Implementation Notes, "Boot"), establishes their identity by the agent's own key, which the view shows (GKK:1), and then opens their place (Encounters:1, Open place), which stands on the encounter until Close place (Encounters' Implementation pragma "Encounter: Alice stands on [Open place] until [Close place]"); the platform's Stand of the encounter opens the trust of Bluetooth and of the local network (its pragma "Open place: while the place is open Alice's app sets the trust of Bluetooth and of the local network open").  The person declares no trust and no peer.  The harness's adjacency is total, so once both have opened their place each agent's nearby declarations are given the other (IGLP, Implementation Notes, "Simulation realisation"), the platform holds nearby of the other (Encounters' Implementation pragma "Nearby: an environment predicate"), and the standing encounter (Encounters:2) commits between them, each person answering yes to each approval asked of them ("Alice and Bob must consent").
+%%
+%% Each person tells their own person stream, one line each: stood(S), the atoms of the last view when they open their place, which hold no knows and no nearby of anyone; and knows(Q), once the view holds knows(Q).
+
+EnStart ::= encounters(Key).
+EnPIns  ::= [EnStart | PersonIn(Drawn)].
+EnSess  ::= nosess ; sess(Integer, Path).
+EnView  ::= noview ; pview(Key, YesNo, List(Atom)).
+EnStep  ::= establish ; open ; await ; done.
+EnState ::= pst(EnSess, EnView, EnStep).
+EnFound ::= found(Key) ; none.
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    en_person(alice, ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    en_person(bob, ch(_?, _))@bob.
+
+%% The person: the entry first, with the agent's own key, which the person knows, a ground argument of the person goal, the readable name standing for the key in the simulation (IGLP, Implementation Notes, "Boot"; Remark "Agent Names"), then what the dispatcher draws read and answered.
+exported procedure en_person(Key?, Channel(PersonOut(Drawn), EnPIns)?).
+en_person(Me, ch(Ds, [encounters(Me?) | Gs?])) :-
+    see(Ds?, Gs, pst(nosess, noview, establish)).
+
+%% What the dispatcher draws: the agent's outputs on construct 0, its views; a request question, request_r(input(P)); an approval question, answered yes; and anything else, passed over.
+procedure see(PersonOut(Drawn)?, PersonIn(Drawn), EnState?).
+see([draw(0, _, output(T)) | Ds], Gs?, pst(Se, _, St)) :-
+    ground(T?) |
+    last_view(T?, noview, V),
+    act(pst(Se?, V?, St?), Gs, Gs1?, S1),
+    see(Ds?, Gs1, S1?).
+see([draw(Id, _, request_r(input(P))) | Ds], Gs?, pst(_, V, St)) :-
+    ground(Id?), ground(P?) |
+    act(pst(sess(Id?, P?), V?, St?), Gs, Gs1?, S1),
+    see(Ds?, Gs1, S1?).
+see([draw(Id, _, approval_w(approval(_, _, input(P)))) | Ds], [input(Id?, P?, yes) | Gs?], S) :-
+    ground(Id?), ground(P?) |
+    see(Ds?, Gs, S?).
+see([_ | Ds], Gs?, S) :-
+    otherwise | see(Ds?, Gs, S?).
+
+%% The person's next act, once a request question is open and a view is drawn: establish their identity by the agent's own key; once the view holds the identity, open their place, telling the atoms the view holds; then, once the view holds knows of someone, tell it.
+procedure act(EnState?, PersonIn(Drawn), PersonIn(Drawn)?, EnState).
+act(pst(sess(Id, P), pview(Me, I, S), establish), [input(Id?, P?, propose(establish(Me?))) | Gs1?], Gs1, pst(nosess, pview(Me?, I?, S?), open)) :-
+    ground(Me?) | true.
+act(pst(sess(Id, P), pview(Me, yes, S), open), [input(Id?, P?, propose(open_place(Me?))) | Gs1?], Gs1, pst(nosess, pview(Me?, yes, S?), await)) :-
+    ground(Me?), ground(S?) | send_to_user([stood(S?)]).
+act(pst(Se, pview(Me, I, S), await), Gs?, Gs1, S1?) :-
+    ground(Me?), ground(S?) |
+    known_peer(Me?, S?, F),
+    awaited(F?, pst(Se?, pview(Me?, I?, S?), await), Gs, Gs1?, S1).
+act(S, Gs1?, Gs1, S?) :- otherwise | true.
+
+procedure awaited(EnFound?, EnState?, PersonIn(Drawn), PersonIn(Drawn)?, EnState).
+awaited(found(Q), pst(Se, V, _), Gs1?, Gs1, pst(Se?, V?, done)) :-
+    send_to_user([knows(Q?)]).
+awaited(none, S, Gs1?, Gs1, S?).
+
+%% The last view the agent wrote: the agent's own key, whether its machine state holds the identity, and the state.
+procedure last_view(List(Output)?, EnView?, EnView).
+last_view([], V, V?).
+last_view([view(Me, S, _, _, _) | Xs], _, V?) :-
+    ground(S?) |
+    has_atom(identity, S?, I),
+    last_view(Xs?, pview(Me?, I?, S?), V).
+last_view([_ | Xs], V0, V?) :- otherwise | last_view(Xs?, V0?, V).
+
+procedure has_atom(Atom?, List(Atom)?, YesNo).
+has_atom(_, [], no).
+has_atom(A, [B | _], yes) :- A? =?= B? | true.
+has_atom(A, [_ | Bs], R?) :- otherwise | has_atom(A?, Bs?, R).
+
+%% A person other than the agent's own whom the state knows, knows being reflexive in Encounters (it extends GKK, whose adopted contract declares knows reflexive).
+procedure known_peer(Key?, List(Atom)?, EnFound).
+known_peer(_, [], none).
+known_peer(Me, [knows(Q) | _], found(Q?)) :- ground(Q?), Me? =?\= Q? | true.
+known_peer(Me, [_ | As], F?) :- otherwise | known_peer(Me?, As?, F).

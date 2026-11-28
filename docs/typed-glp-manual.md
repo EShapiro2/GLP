@@ -1005,7 +1005,7 @@ Two categories of code may retain `_` and `_?`:
 
 1. **System builtins** in the root `self.glp`, declared there with no clauses, the guards and body kernels the runtime implements, which accept any term: `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`, `compound(_?)`, etc.  A system predicate defined by GLP clauses, as `=..` is (GLP-Spec, "System predicates and body kernels"), is not a builtin and follows the discipline.
 
-2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations), and only those on section TY's list today.  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` stay until they are typed; a new meta-interpreter is written without `_`.  Whether TGLP gives a meta-program's arbitrary term a type other than `_` is the GLP paper's question.
+2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations), and only those on section TY's list today.  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` stay until they are typed; a new meta-interpreter is written without `_`.  A term of any functor held as data is of the built-in type `Term`, consumed as `Term?` (TGLP, Typed GLP, "Type Declarations"; Udi, 2026-11-11), and a meta-program over a module's goals is parameterised by their type, `Goal(M#Procedure)` (TGLP, Module System, "Procedure declarations").
 
 ### 18.4 `-mode(system)` Does Not Exempt From Type Checking
 

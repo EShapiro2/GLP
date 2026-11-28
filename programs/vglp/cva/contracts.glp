@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% vGLP's contracts for the compiler from an act-schema contract to its
 %% canonical CVA platform (compiler/, compile.sh), beside the social graph's
-%% and the currency's, which their owners hold (programs/gsc/GSG.glp,
+%% and the currency's, which their owners hold (programs/gsc/Friendship.glp,
 %% programs/currencies/coins/GC.glp).  Each is a contract in the term
 %% form programs/gsc reads (its README, "Writing a contract"), and compile.sh
 %% has GSC's checker, check/2, certify it before it compiles it, as it does
@@ -58,7 +58,7 @@
 %%   acquaint(p?, q?)      :  at p  +knows(q)
 %%                             at q  +knows(p)
 %%
-%% acquaint is GKK's Acquaintance (programs/gsc/GKK.glp) without its identity atoms, which childsafe has not, adding no friend atom, so that the proposer of cbefriend, the child in its first role, which its pragma names before its button and so its base (vGLP 0b51a60, Section 5.4), comes to know the other child and the other parent before it proposes: "Propose ... is taken only where p knows every agent it sends a message to" (vGLP, Definition "Proposing"), and befriending them would add the friend atom cbefriend forbids (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, Red 1).  childsafe/self.glp plays it.
+%% acquaint is GKK's Acquaintance (programs/gsc/Knowledge.glp) without its identity atoms, which childsafe has not, adding no friend atom, so that the proposer of cbefriend, the child in its first role, which its pragma names before its button and so its base (vGLP 0b51a60, Section 5.4), comes to know the other child and the other parent before it proposes: "Propose ... is taken only where p knows every agent it sends a message to" (vGLP, Definition "Proposing"), and befriending them would add the friend atom cbefriend forbids (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, Red 1).  childsafe/self.glp plays it.
 %%
 %% link is a three-party act guarded at its initiator alone, so that two
 %% initiators can propose attempts whose participants meet in two agents
@@ -90,11 +90,11 @@
 %%                       at q  +greeting
 %%   cheer(p?)        :  at p  -greeted, +cheered
 %%
-%% greeted, greeting and cheered are of arity zero, so a state holds a count
-%% of each; greet(p, p) sends its two roles to one person, neither adding or
+%% greeted, greeting and cheered are of arity zero, and a local state is a set,
+%% so a state holds each once (Audit #128); greet names its two roles possibly one person, schema(greet, ['Alice', one('Bob', 'Alice')], ...), so greet(p, p) sends them to one person, neither adding or
 %% deleting an atom naming the other, so they act together there, friend(p)
 %% holding at p, friend being reflexive, and greeted and greeting both added;
-%% and each cheer deletes one greeted (vGLP, Section 5.4, the paragraph on act
+%% and a cheer deletes greeted (vGLP, Section 5.4, the paragraph on act
 %% schemas; vGLP 2026-10-16 13:53 UTC, C.4).
 %%
 %% friends/self.glp plays it.
@@ -150,14 +150,28 @@
 %%
 %% A schema-binding of close determines a part for each list L of the people of its listed role, the persons q with listed(q, n) in the state of the person in a, and the base person requires that it list exactly the people of L (ibid.).  Its request name is close(a, n), and the base agent, on its person's request, completes L from its listed atoms.  The base, a, is close's only guarding role, as Section 5.4 asks of a schema with a listed role.  groups/self.glp plays it.
 %%
-%% counter is befriend with a counter, an unguarded class always open to its agent once its person has begun counting, so that a contract compiled here has an agent that takes an own transaction on every own trigger it reads, without end, and still reads its other triggers between them: "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions" (vGLP 6c8c663, Section 5.4, "The compilation"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC).  The contract language has no integers and no arithmetic, an argument of an atom being a role, a variable or a name term, so a counter is not written n(k) to n(k+1); a state is a multiset, holding a count of each atom of arity zero, as friends' greeted, so count adds one tick:
+%% counter is befriend with a counter, an unguarded class always open to its agent once its person has begun counting, so that a contract compiled here has an agent that takes an own transaction on every own trigger it reads, without end, and still reads its other triggers between them: "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions" (vGLP 6c8c663, Section 5.4, "The compilation"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC).  A local state is a set (the Calculus, Definition "Local state, configuration"; Audit #128), so count raises a number, tick(t) to tick(t1), t1 = t + 1, as numbers' step raises a level:
 %%
 %%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
 %%                       at q  not friend(p), +friend(p)
-%%   begin(a?)        :  at a  not counting, +counting
-%%   count(a)         :  at a  counting, +tick
+%%   begin(a?)        :  at a  not counting, +counting, +tick(0)
+%%   count(a)         :  at a  counting, tick(t), -tick(t), +tick(t1)  | t1 = t + 1
 %%
-%% count is guarded at no role and has one role and no variable, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
+%% count is guarded at no role and has one role, its variables t and t1 local to it, bound by tick(t) and by the constraint, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
+%%
+%% pokes is counter with a second unguarded class, of two participants, opened by the other person, so that a contract compiled here has an agent that always has an own transaction to take while it must also read the starts of another's, and neither may wait for ever while the other holds (vGLP, Section 5.4, "The compilation": "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger"; the audit's Finding 1; Udi, 2026-11-16):
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%   begin(a?)        :  at a  not counting, +counting, +tick(0)
+%%   count(a)         :  at a  counting, tick(t), -tick(t), +tick(t1)  | t1 = t + 1
+%%   arm(b?)          :  at b  not armed, +armed
+%%   poke(b, a)       :  at b  armed, friend(a), not poked(a), +poked(a)
+%%                       at a  friend(b), not poked_by(b), +poked_by(b)
+%%   unpoke(b, a)     :  at b  armed, friend(a), -poked(a)
+%%                       at a  friend(b), -poked_by(b)
+%%
+%% A local state is a set, so poke and unpoke take turns, each changing the state of both.  poke and unpoke are guarded at no role, and the atoms each role requires name the other role, so the contract is effective; the schema-bindings at b and a determine two unguarded parts opened by b, one of them in its domain wherever b holds armed and the two are friends, which no act deletes, so that b's agent proposes one after each commit.  The person who begins counts, and the person who arms pokes.  pokes/self.glp plays it.
 %%
 %% merges is befriend with groups, a leader merging two of their groups in one act of the leader and of every member the leader lists in either, so that a contract compiled here has a schema with two listed roles of one base, a[listed(*, n1)] and a[listed(*, n2)] (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC); a group is named by its leader and a speech act, and its leader does not list themself:
 %%
@@ -184,7 +198,7 @@
 %%
 %% A state is a multiset, so a person may mint and hold several coins of one person.  coins/self.glp plays it.
 %%
-%% wardclose is a group whose child leader's parent closes it, CSSN's child_close (programs/cssn/CSSN.glp) with no identity, so that a contract compiled here has a schema with a listed role whose base is not a guarding role: its guarded part is opened by the person in its first role, the child, on its guard's request, the parent's (vGLP f0acbc1, Section 5.4, "Act schemas as local specifications": "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part"; Definition "Local Specification, Part, Guard Set, Opener, Request"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 6):
+%% wardclose is a group whose child leader's parent closes it, CSSN's child_close (programs/cssn/Children.glp) with no identity, so that a contract compiled here has a schema with a listed role whose base is not a guarding role: its guarded part is opened by the person in its first role, the child, on its guard's request, the parent's (vGLP f0acbc1, Section 5.4, "Act schemas as local specifications": "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part"; Definition "Local Specification, Part, Guard Set, Opener, Request"; vGLP #18 Cowork to Code, 2026-10-20 10:44 UTC, item 6):
 %%
 %%   befriend(p?, q?)   :  at p  not friend(q), +friend(q)
 %%                         at q  not friend(p), +friend(p)
@@ -201,21 +215,41 @@
 %%
 %% child_close's one guarding role is p, its listed role's base r its first role, and no other schema determines a transaction of its class, so the contract is a local specification (ibid.).  Its request name is child_close(r, p, n), whose parts, one for each list of the people r lists, have the opener r; the parent's Request of rho_N goes to the child's machine, which completes the list from its own listed atoms and proposes the part, naming the request.  wardclose/self.glp plays it.
 %%
-%% days is a contract that requires the day, so that a contract compiled here has an agent that reads a calendar, a stream of dates the device writes, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema requires and constrains a numeric variable by (vGLP, Section 5.4, "Act schemas as local specifications": "as GB's advance requires date(t) and today(d) with t<d ..., so that it is proposed once a day; what the first date is, the contract says"):
+%% wards is a ward's guardians acting jointly, GnW's make_guardian and wards_acquaint (programs/gsc/Guardians.glp; CSSN's make_parent and children_acquaint) with no identity, so that a contract compiled here has a schema whose base is neither its first role nor a guarding role, with three guarding roles, one of them listed, and a schema of four guarding roles (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part, as the ward whose state lists her guardians opens the acts they take jointly"; Definition "Local Specification, Part, Guard Set, Opener, Request"; Definition "Attempt": "the members of G_alpha \ {i} other than its requester are asked"; CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC):
+%%
+%%   befriend(p?, q?)   :  at p  not friend(q), +friend(q)
+%%                         at q  not friend(p), +friend(p)
+%%   adopt(p?, r?)      :  at p  not parenting(r), +parenting(r)
+%%                         at r  not parent(p), +parent(p)
+%%   coparent(q?, r, p?, r[parent(*)]?) :
+%%                         at q             not parenting(r), +parenting(r)
+%%                         at r             parent(p), not parent(q), not parenting(r), +parent(q)
+%%                         at p             parenting(r)
+%%                         at r[parent(*)]  parenting(r)
+%%   pair(c?, d?, a?, b?) :  at c  parent(a), not met(d), +met(d)
+%%                         at d  parent(b), not met(c), +met(c)
+%%                         at a  parenting(c), friend(b)
+%%                         at b  parenting(d), friend(a)
+%%
+%% coparent's base is r, its second role, the ward, who guards nothing; its guards are the person made a parent, q, the parent who decides, p, and every parent r lists; r is no parent of itself, so r is in no list of a part and guards none.  Its request name is coparent(q, r, p), whose parts, one for each list of r's parents, have the opener r: the Request of rho_N of the parent who decides goes to the ward's machine, which completes the list from its own parent atoms and proposes the part, naming the request, and q and the other parents are asked.  pair's four roles all guard, its base a, the parent its pragma names before its button, who proposes it, the other three asked.  wards/self.glp plays both.
+%%
+%% days is a contract that requires the day, so that a contract compiled here has an agent that reads the date from its phone whenever it reads a trigger, and holds today(d), d that date, beside its app state, which no schema adds or deletes and which a schema requires and constrains a numeric variable by (vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition"; "while the day does not allow it the machine refuses it as unable"):
 %%
 %%   dawn(p?)      :  at p  not dated, +dated, +date(0)
-%%   advance(p)    :  at p  today(d), -date(t), +date(d), d > t
+%%   advance(p?)   :  at p  today(d), -date(t), +date(d), d > t
 %%
-%% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  days/self.glp plays it.
+%% The first date is 0.  advance is guarded by p, t local to p's role and d bound by the today(d) p's machine reads, so p's request of it commits on a date past the date p holds and is refused as unable on that date itself.  today is an environment predicate of the contract, environment([today], ...), an atom an act requires and no act adds.  days/self.glp plays it, its person setting the machine's clock.
 %%
 %% linear is a contract whose constraints are in GSC's form, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"; programs/gsc/self.glp at GSC-unob3 62fb0342), so that a contract compiled here has an unguarded schema whose added atom names a variable an equality gives once the atoms its first role requires bind the others (vGLP, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"):
 %%
 %%   start(p?)             :  at p  not started, +started, +level(0)
-%%   refuel(p? ; k)        :  at p  started, +k fuel
-%%   climb(p ; t, t1)      :  at p  -fuel, -level(t), +level(t1)         t1 = t + 2 and t < 6
+%%   refuel(p? ; f)        :  at p  started, not fuel(f), +fuel(f)
+%%   climb(p ; t, t1, f)   :  at p  -fuel(f), -level(t), +level(t1)     t1 = t + 2 and t < 6
 %%   mark(p ; t, m)        :  at p  level(t), not marked(m), +marked(m)  3m = t + 3
+%%   split(p? ; s)         :  at p  started, +halve(s)
+%%   double(p ; s, d)      :  at p  halve(s), not doubled(s), +doubled(s)  d = s * 2
 %%
-%% climb and mark are unguarded, opened by p; t is local to p's role in each, bound by the level p holds; climb's t1 is the one value its equality gives, and its inequality holds below 6; mark's m is the whole number its equality gives, where there is one, at the levels 0 and 6 and at no level between.  linear/self.glp plays it.
+%% climb and mark are unguarded, opened by p; t is local to p's role in each, bound by the level p holds; climb's t1 is the one value its equality gives, and its inequality holds below 6; mark's m is the whole number its equality gives, where there is one, at the levels 0 and 6 and at no level between.  linear/self.glp plays it.  double's d is named by its constraint alone, not by any atom, and is local to no role, so a schema-binding of its class gets it from the equality once the atoms bind s, as identity_record's Double in SPM's Secure Friendship (programs/social/spm/Secure-Friendship.glp); the play never requests split, so its machine never takes double, and Section VG calls the platform's procedures on it.
 %%
 %% forms is a contract with a safe formula in a schema's body, local to the role holding its atoms, which "the machine of the person in that role evaluates in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), in GSC's term form, qschema(Name, Vars, Bound, Constraint, Roles, Conjuncts, Forms) (programs/gsc/self.glp):
 %%
@@ -230,12 +264,12 @@
 %% counts is a contract with a count and a sum of a quantifier's instances in a constraint, local to the role holding the anchor, the functions min and floor, and environment predicates, cap and wt, values the contract declares and does not fix, given when the platform is deployed and held from startup (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3 and 4):
 %%
 %%   start(p?)             :  at p  not started, +started
-%%   fill(p)               :  at p  cap(d), +tok
-%%                            | #{tok at p} < d
+%%   fill(p)               :  at p  cap(d), not tok(k), +tok(k)
+%%                            | #{tok(x) at p} < d, k = #{tok(x) at p}
 %%   heavy(p)              :  at p  cap(d), not heavy, +heavy
 %%                            | sum of w over wt(w) at p >= min(2 floor(d), 100)
 %%
-%% start is its introductory act; fill and heavy are unguarded, opened by p, d local to p's role and bound by the cap(d) p's state holds from startup; the count of tok counts each copy, so p's machine takes fill until it holds d copies, and the sum of the weights given at deployment decides heavy.  Section VG runs its agent with no person.
+%% start is its introductory act; fill and heavy are unguarded, opened by p, d local to p's role and bound by the cap(d) p's state holds from startup; k local to p's role, the constraint determining it from the count of tok(x), the instances p's state holds, so p's machine takes fill until it holds d of them, tok(0) to tok(d-1), a local state being a set (the Calculus, Definition "Local state, configuration"; Audit #128), and the sum of the weights given at deployment decides heavy.  Section VG runs its agent with no person.
 %%
 %% shares is a contract with a quantified conjunct whose instances the attempt names, binding no listed role and with a conditional literal at a role other than the one holding its anchor, as GCC's appoint's "every person Alice lists as appointed, Bob lists too" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction"):
 %%
@@ -267,8 +301,12 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 %% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
 %% any the wildcard of a cleared atom, as programs/gsc/self.glp writes it (GSC 327e035).
+%% set(X) a set variable, its atoms one for each element, as programs/gsc/self.glp writes it (GSC 0daa1b8).
+%% cmp(F, As) a compound value f(t1, ..., tk), as programs/gsc/self.glp writes it (GSC c28d1c7).
+%% const(X) a value variable over the constants, among a schema's variables and where it occurs (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"; compiler/README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; num(Constant) ; real(Constant) ; any ; val(Constant).
+            ; num(Constant) ; real(Constant) ; any ; val(Constant) ; const(Constant)
+            ; set(Constant) ; cmp(Constant, Args).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -296,7 +334,11 @@ Exprs      ::= [] ; [Expr | Exprs].
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs)
-            ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms).
+            ; schema(Constant, Names, Args, RoleSpecs)
+            ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms)
+            ; SSchema.
+%% A schema whose head names its roles, schema(Name, Names, Vars, Roles), as its owner writes it and as the compiler reads it (compiler/self.glp, WSchema and RName): a role written one(Name, Other) is possibly one person with the role named Other (vGLP, Section 5.4, "Speech-act schemas as local specifications": "distinct agent roles to distinct persons but for two the clause names as possibly one person"); friends' greet is written so.  Names and RName are the root programs/self.glp's.
+%% SSchema is a schema of the clause syntax, sas/7, the root programs/self.glp's, which GSC's reader, as_read/2, takes to the term form (programs/gsc/self.glp): wild is written in it.
 %% A safe formula and a quantified conjunct, as programs/gsc/self.glp writes them.
 Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
              ; fexists(Args, Arg, Atom, Form)
@@ -325,13 +367,14 @@ contract_named(parts, C?) :- parts(C).
 contract_named(opens, C?) :- opens(C).
 contract_named(groups, C?) :- groups(C).
 contract_named(counter, C?) :- counter(C).
+contract_named(pokes, C?) :- pokes(C).
 contract_named(merges, C?) :- merges(C).
 contract_named(coins, C?) :- coins(C).
 contract_named(wardclose, C?) :- wardclose(C).
 contract_named(numbers, C?) :- numbers(C).
 contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
-contract_named(days, C?) :- days(C).
+contract_named(days, environment([today], C?)) :- days(C).
 contract_named(linear, C?) :- linear(C).
 contract_named(forms, C?) :- forms(C).
 contract_named(counts, environment([cap, wt], C?)) :- counts(C).
@@ -341,6 +384,12 @@ contract_named(leaves, C?) :- leaves(C).
 contract_named(consts, C?) :- consts(C).
 contract_named(readings, C?) :- readings(C).
 contract_named(backed, C?) :- backed(C).
+contract_named(wild, C?) :- wild(C).
+contract_named(roles, C?) :- roles(C).
+contract_named(wards, C?) :- wards(C).
+contract_named(feeds, C?) :- feeds(C).
+contract_named(cvalues, C?) :- cvalues(C).
+contract_named(holds, C?) :- holds(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -358,6 +407,7 @@ introduction_named(parts, no_introduction).
 introduction_named(opens, no_introduction).
 introduction_named(groups, no_introduction).
 introduction_named(counter, no_introduction).
+introduction_named(pokes, no_introduction).
 introduction_named(merges, no_introduction).
 introduction_named(coins, no_introduction).
 introduction_named(wardclose, no_introduction).
@@ -374,6 +424,12 @@ introduction_named(leaves, no_introduction).
 introduction_named(consts, no_introduction).
 introduction_named(readings, no_introduction).
 introduction_named(backed, no_introduction).
+introduction_named(wild, no_introduction).
+introduction_named(roles, no_introduction).
+introduction_named(wards, no_introduction).
+introduction_named(feeds, no_introduction).
+introduction_named(cvalues, no_introduction).
+introduction_named(holds, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -437,6 +493,10 @@ pragmas_named(groups, pragmas([list('"Friends"', [friend])],
 pragmas_named(counter, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(begin, '"Begin"', [], none, '"Friends"', by([1]))])).
+pragmas_named(pokes, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(begin, '"Begin"', [], none, '"Friends"', by([1])),
+     act(arm, '"Arm"', [], none, '"Friends"', by([1]))])).
 pragmas_named(merges, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(create, '"Create"', [], none, '"Friends"', by([1])),
@@ -452,22 +512,39 @@ pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
      act(create, '"Create"', [], none, '"Friends"', by([1])),
      act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(child_close, '"Child close"', ['""', '""', '"Group"'], none, '"Friends"', by([2]))])).
+pragmas_named(holds, pragmas([list('"Notes"', [note])],
+    [act(establish, '"Establish"', [], none, '"Notes"', by([1])),
+     act(issue, '"Issue"', ['""', '"Note"'], none, '"Notes"', by([1])),
+     act(stake, '"Stake"', ['""', '"Stake"'], none, '"Notes"', by([1])),
+     act(provide, '"Provide"', [], none, '"Notes"', by([1]))])).
+pragmas_named(cvalues, pragmas([list('"Contacts"', [knows]), list('"Notes"', [note])],
+    [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
+     act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(issue, '"Issue"', ['""', '"Type"', '"Note"'], none, '"Notes"', by([1])),
+     act(pay, '"Pay"', ['""', '""', '"Type"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
+     act(redeem, '"Redeem"', ['""', '""', '"Day"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
+     act(bonded, '"Bonded"', [], none, '"Notes"', by([1]))])).
+pragmas_named(feeds, pragmas([list('"Friends"', [friend]), list('"Feed"', [item])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(post, '"Post"', ['""', '"text"'], none, '"Feed"', by([1]))])).
+pragmas_named(wards, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(adopt, '"Adopt"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(coparent, '"Coparent"', [], said([[person(3), text('" asks."')], [], [person(3), text('" asks."')]]), '"Friends"', by([3])),
+     act(pair, '"Pair"', [], said([[person(3), text('" asks."')], [person(3), text('" asks."')], [], [person(3), text('" asks."')]]), '"Friends"', by([3]))])).
 pragmas_named(numbers, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(start, '"Start"', [], none, '"Friends"', by([1])),
      act(refuel, '"Refuel"', [], none, '"Friends"', by([1])),
-     act(claim, '"Claim"', ['""', '""', '"Amount"'], none, '"Friends"', by([1])),
-     act(mint, '"Mint"', ['""', '"Amount"'], none, '"Friends"', by([1])),
-     act(spend, '"Spend"', ['""', '"Amount"'], none, '"Friends"', by([1])),
-     act(burn, '"Burn"', ['""', '"Held"', '"Amount"'], none, '"Friends"', by([1]))])).
+     act(claim, '"Claim"', ['""', '""', '"Amount"'], none, '"Friends"', by([1]))])).
 pragmas_named(bonds, pragmas([list('"Contacts"', [knows])],
     [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
      act(dawn, '"Dawn"', [], none, '"Contacts"', by([1])),
      act(mint, '"Mint"', [], none, '"Contacts"', by([1])),
-     act(mint_bond, '"Mint bond"', ['""', '"Date"', '"Amount"'], none, '"Contacts"', by([1])),
-     act(swap_cb, '"Swap cb"', ['""', '""', '"Issuer"', '"Amount"', '"Bond issuer"', '"Date"', '"Bonds"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
-     act(redeem_bc, '"Redeem bc"', ['""', '""', '"Date"', '"Redeemer"'], none, '"Contacts"', by([1]))])).
+     act(mint_bond, '"Mint bond"', ['""', '"Date"', '"Bond"'], none, '"Contacts"', by([1])),
+     act(swap_cb, '"Swap cb"', ['""', '""', '"Issuer"', '"Coin"', '"Bond issuer"', '"Date"', '"Bond"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(redeem_bc, '"Redeem bc"', ['""', '""', '"Date"', '"Bond"', '"Redeemer"', '"Coin"'], none, '"Contacts"', by([1]))])).
 pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
     [act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
      act(introduce, '"Introduce"', ['""', '""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
@@ -478,10 +555,12 @@ pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
      act(leave, '"Leave"', [], none, '"Contacts"', by([1]))],
     [standing(greet, arrive, leave)])).
 pragmas_named(days, pragmas([list('"Dates"', [date])],
-    [act(dawn, '"Dawn"', [], none, '"Dates"', by([1]))])).
+    [act(dawn, '"Dawn"', [], none, '"Dates"', by([1])),
+     act(advance, '"Advance"', ['""', '"Day"'], none, '"Dates"', by([1]))])).
 pragmas_named(linear, pragmas([list('"Levels"', [level])],
     [act(start, '"Start"', [], none, '"Levels"', by([1])),
-     act(refuel, '"Refuel"', [], none, '"Levels"', by([1]))])).
+     act(refuel, '"Refuel"', [], none, '"Levels"', by([1])),
+     act(split, '"Split"', [], none, '"Levels"', by([1]))])).
 pragmas_named(forms, pragmas([list('"Blocks"', [blocked])],
     [act(start, '"Start"', [], none, '"Blocks"', by([1])),
      act(block, '"Block"', ['""', '"level"'], none, '"Blocks"', by([1])),
@@ -531,6 +610,31 @@ pragmas_named(backed, pragmas([list('"Treasurers"', [officer]), list('"Reserve"'
      act(owe, '"Owe"', ['""', '""', '"Amount"'], none, '"Treasurers"', by([1])),
      act(repay, '"Repay"', [], none, '"Treasurers"', by([1])),
      act(join, '"Join"', [], said([[], [person(1), text('" asks you to join its treasurers."')]]), '"Treasurers"', by([1]))])).
+pragmas_named(wild, pragmas([list('"Bonds"', [bond]), list('"Accepted"', [accepted]), list('"Roles"', [role]), list('"Titles"', [title])],
+    [act(issue, '"Issue"', ['""', '"alice"', '"maturity"'], said([[], [person(1), text('" issues you a bond."')]]), '"Bonds"', by([1])),
+     act(accept, '"Accept"', [], said([[], [person(1), text('" asks you to accept her by a bond."')]]), '"Bonds"', by([1])),
+     act(appoint, '"Appoint"', ['""', '"bob"', '"role"'], said([[], [person(1), text('" appoints you."')]]), '"Bonds"', by([1])),
+     act(boast, '"Boast"', [], none, '"Bonds"', by([1])),
+     act(report, '"Report"', ['""', '"alice"'], said([[], [person(1), text('" reports her roles to you."')]]), '"Bonds"', by([1])),
+     act(vow, '"Vow"', [], none, '"Bonds"', by([1])),
+     act(rest, '"Rest"', [], none, '"Bonds"', by([1])),
+     act(point, '"Point"', ['""', '""', '"label"'], none, '"Bonds"', by([1])),
+     act(unpoint, '"Unpoint"', [], none, '"Bonds"', by([1])),
+     act(office, '"Office"', ['""', '"bob"', '"title"'], said([[], [person(1), text('" gives you an office."')]]), '"Bonds"', by([1])),
+     act(serve, '"Serve"', [], said([[], [person(1), text('" asks to serve you."')]]), '"Bonds"', by([1])),
+     act(enrol, '"Enrol"', ['""', '"alice"', '"group"'], said([[], [person(1), text('" enrols with you."')]]), '"Bonds"', by([1])),
+     act(arrive, '"Arrive"', [], none, '"Bonds"', by([1])),
+     act(leave, '"Leave"', [], none, '"Bonds"', by([1])),
+     act(greet, '"Greet"', ['""', '"carol"'], said([[], [person(1), text('" greets you."')]]), '"Bonds"', by([1])),
+     act(idle, '"Idle"', [], none, '"Bonds"', by([1])),
+     act(dissolve, '"Dissolve"', [], none, '"Bonds"', by([1])),
+     act(retire, '"Retire"', [], none, '"Bonds"', by([1]))])).
+pragmas_named(roles, pragmas([list('"Roles"', [role]), list('"Contacts"', [knows])],
+    [act(acquaint, '"Acquaint"', ['""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(appoint, '"Appoint"', ['""', '""', '"Role"'], none, '"Contacts"', by([1])),
+     act(arbitrate, '"Arbitrate"', [], none, '"Roles"', by([1])),
+     act(resign, '"Resign"', [], none, '"Roles"', by([1])),
+     act(concur, '"Concur"', [], none, '"Contacts"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -601,7 +705,7 @@ procedure friends(Contract).
 friends([schema(befriend, [],
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
             rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
-         schema(greet, [],
+         schema(greet, ['Alice', one('Bob', 'Alice')], [],
            [rs(guarded, [atom(greeted, [])], [], [atom(friend, [role(2)])], []),
             rs(unguarded, [atom(greeting, [])], [], [], [])]),
          schema(cheer, [],
@@ -670,9 +774,26 @@ counter([schema(befriend, [],
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
             rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
          schema(begin, [],
-           [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
-         schema(count, [],
-           [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])])]).
+           [rs(guarded, [atom(counting, []), atom(tick, [num(0)])], [], [], [atom(counting, [])])]),
+         nschema(count, [num(t), num(t1)], succ(num(t), num(t1)),
+           [rs(unguarded, [atom(tick, [num(t1)])], [atom(tick, [num(t)])], [atom(counting, [])], [])])]).
+
+procedure pokes(Contract).
+pokes([schema(befriend, [],
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(begin, [],
+         [rs(guarded, [atom(counting, []), atom(tick, [num(0)])], [], [], [atom(counting, [])])]),
+       nschema(count, [num(t), num(t1)], succ(num(t), num(t1)),
+         [rs(unguarded, [atom(tick, [num(t1)])], [atom(tick, [num(t)])], [atom(counting, [])], [])]),
+       schema(arm, [],
+         [rs(guarded, [atom(armed, [])], [], [], [atom(armed, [])])]),
+       schema(poke, [],
+         [rs(unguarded, [atom(poked, [role(2)])], [], [atom(armed, []), atom(friend, [role(2)])], [atom(poked, [role(2)])]),
+          rs(unguarded, [atom(poked_by, [role(1)])], [], [atom(friend, [role(1)])], [atom(poked_by, [role(1)])])]),
+       schema(unpoke, [],
+         [rs(unguarded, [], [atom(poked, [role(2)])], [atom(armed, []), atom(friend, [role(2)])], []),
+          rs(unguarded, [], [atom(poked_by, [role(1)])], [atom(friend, [role(1)])], [])])]).
 
 procedure merges(Contract).
 merges([schema(befriend, [],
@@ -725,26 +846,37 @@ wardclose([schema(befriend, [],
               crs(listed(1, listed, [svar(n)]), unguarded,
                   [], [atom(member, [role(1), svar(n)])], [], [])])]).
 
+procedure wards(Contract).
+wards([schema(befriend, [],
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(adopt, [],
+         [rs(guarded, [atom(parenting, [role(2)])], [], [], [atom(parenting, [role(2)])]),
+          rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]),
+       cschema(coparent, [], [],
+         [rs(guarded, [atom(parenting, [role(2)])], [], [], [atom(parenting, [role(2)])]),
+          rs(unguarded, [atom(parent, [role(1)])], [], [atom(parent, [role(3)])], [atom(parent, [role(1)]), atom(parenting, [role(2)])]),
+          rs(guarded, [], [], [atom(parenting, [role(2)])], []),
+          crs(listed(2, parent, []), guarded, [], [], [atom(parenting, [role(2)])], [])]),
+       schema(pair, [],
+         [rs(guarded, [atom(met, [role(2)])], [], [atom(parent, [role(3)])], [atom(met, [role(2)])]),
+          rs(guarded, [atom(met, [role(1)])], [], [atom(parent, [role(4)])], [atom(met, [role(1)])]),
+          rs(guarded, [], [], [atom(parenting, [role(1)]), atom(friend, [role(4)])], []),
+          rs(guarded, [], [], [atom(parenting, [role(2)]), atom(friend, [role(3)])], [])])]).
+
 procedure numbers(Contract).
 numbers([schema(befriend, [],
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
             rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
          schema(start, [],
            [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]),
-         schema(refuel, [num(k)],
-           [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]),
-         nschema(step, [num(t), num(t1)], succ(num(t), num(t1)),
-           [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]),
+         schema(refuel, [const(f)],
+           [rs(guarded, [atom(fuel, [num(f)])], [], [atom(started, [])], [atom(fuel, [num(f)])])]),
+         nschema(step, [num(t), num(t1), const(x)], succ(num(t), num(t1)),
+           [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, [num(x)]), atom(level, [num(t)])], [], [])]),
          nschema(claim, [num(d), num(t)], le(num(d), num(t)),
            [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []),
-            rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])]),
-%% A required atom with a multiplicity, deleted with none or with a multiplicity (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom required with a multiplicity k and deleted with none having k copies required and one deleted"; "a multiplicity k deleting or adding k copies"): spend requires k tokens and deletes one, burn requires k and deletes j, rest(K, J, A) among the atoms a role keeps being the copies beyond those it deletes, as GSC's reader writes it.
-         schema(mint, [num(k)],
-           [rs(guarded, [times(num(k), atom(token, []))], [], [atom(started, [])], [])]),
-         schema(spend, [num(k)],
-           [rs(guarded, [atom(spent, [num(k)])], [atom(token, [])], [atom(started, []), rest(num(k), num(1), atom(token, []))], [])]),
-         nschema(burn, [num(k), num(j)], le(num(j), num(k)),
-           [rs(guarded, [atom(burnt, [num(k), num(j)])], [times(num(j), atom(token, []))], [atom(started, []), rest(num(k), num(j), atom(token, []))], [])])]).
+            rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])])]).
 
 procedure bonds(Contract).
 bonds([schema(establish, [],
@@ -754,18 +886,18 @@ bonds([schema(establish, [],
           rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
        schema(dawn, [],
          [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [atom(identity, [])], [atom(dated, [])])]),
-       schema(mint, [num(k)],
-         [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
-       nschema(mint_bond, [num(d), num(k), num(t)], gt(num(d), num(t)),
-         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]),
+       schema(mint, [num(n)],
+         [rs(guarded, [atom(coin, [role(1), num(n)])], [], [atom(identity, [])], [atom(coin, [role(1), num(n)])])]),
+       nschema(mint_bond, [num(d), num(n), num(t)], gt(num(d), num(t)),
+         [rs(guarded, [atom(bond, [role(1), num(d), num(n)])], [], [atom(identity, []), atom(date, [num(t)])], [atom(bond, [role(1), num(d), num(n)])])]),
        nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
          [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]),
-       schema(swap_cb, [pvar(u), num(k), pvar(v), num(d1), num(k1)],
-         [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-          rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
-       nschema(redeem_bc, [num(d), pvar(r), num(t)], le(num(d), num(t)),
-         [rs(guarded,   [atom(coin, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
-          rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])])]).
+       schema(swap_cb, [pvar(u), num(n), pvar(v), num(d1), num(n1)],
+         [rs(guarded, [atom(bond, [pvar(v), num(d1), num(n1)])], [atom(coin, [pvar(u), num(n)])], [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(guarded, [atom(coin, [pvar(u), num(n)])], [atom(bond, [pvar(v), num(d1), num(n1)])], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       nschema(redeem_bc, [num(d), num(n), pvar(r), num(m), num(t)], le(num(d), num(t)),
+         [rs(guarded,   [atom(coin, [pvar(r), num(m)])], [atom(bond, [role(2), num(d), num(n)])], [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(unguarded, [atom(bond, [role(2), num(d), num(n)])], [atom(coin, [pvar(r), num(m)])], [atom(identity, []), atom(date, [num(t)])], [])])]).
 
 procedure intros(Contract).
 intros([schema(acquaint, [],
@@ -802,23 +934,27 @@ procedure days(Contract).
 days([schema(dawn, [],
         [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [], [atom(dated, [])])]),
       nschema(advance, [num(t), num(d)], gt(num(d), num(t)),
-        [rs(unguarded, [atom(date, [num(d)])], [atom(date, [num(t)])], [atom(today, [num(d)])], [])])]).
+        [rs(guarded, [atom(date, [num(d)])], [atom(date, [num(t)])], [atom(today, [num(d)])], [])])]).
 
 procedure linear(Contract).
 linear([schema(start, [],
           [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]),
-        schema(refuel, [num(k)],
-          [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]),
-        nschema(climb, [num(t), num(t1)], and(eq(num(t1), plus(num(t), num(2))), lt(num(t), num(6))),
-          [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]),
+        schema(refuel, [const(f)],
+          [rs(guarded, [atom(fuel, [num(f)])], [], [atom(started, [])], [atom(fuel, [num(f)])])]),
+        schema(split, [num(s)],
+          [rs(guarded, [atom(halve, [num(s)])], [], [atom(started, [])], [])]),
+        nschema(climb, [num(t), num(t1), const(x)], and(eq(num(t1), plus(num(t), num(2))), lt(num(t), num(6))),
+          [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, [num(x)]), atom(level, [num(t)])], [], [])]),
         nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))),
-          [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])]).
+          [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])]),
+        nschema(double, [num(s), num(d)], eq(num(d), mul(num(s), num(2))),
+          [rs(unguarded, [atom(doubled, [num(s)])], [], [atom(halve, [num(s)])], [atom(doubled, [num(s)])])])]).
 
 procedure counts(Contract).
 counts([schema(start, [],
           [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
-        qschema(fill, [num(d)], [], lt(cardinality([], role(1), atom(tok, []), fcons(true)), num(d)),
-          [rs(unguarded, [atom(tok, [])], [], [atom(cap, [num(d)])], [])],
+        qschema(fill, [num(d), num(k)], [num(x)], and(lt(cardinality([num(x)], role(1), atom(tok, [num(x)]), fcons(true)), num(d)), eq(num(k), cardinality([num(x)], role(1), atom(tok, [num(x)]), fcons(true)))),
+          [rs(unguarded, [atom(tok, [num(k)])], [], [atom(cap, [num(d)])], [atom(tok, [num(k)])])],
           [], []),
         qschema(heavy, [num(d)], [num(w)],
           ge(sum([num(w)], role(1), atom(wt, [num(w)]), fcons(true), num(w)), fn(min, [mul(fn(floor, [num(d)]), num(2)), num(100)])),
@@ -887,7 +1023,7 @@ published([nschema(publish, [svar(x)], program(item_of(svar(x))),
         schema(note, [svar(x)],
           [rs(guarded, [atom(item, [svar(x)])], [], [], [atom(item, [svar(x)])])])]).
 
-%% leaves: a listed role at the third argument of its anchor (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications": "a listed role is an agent variable bound by a quantifier whose anchor an agent role, its base, holds, the variable at any of the anchor's arguments"), as GPD's leave lists Bob by participant(Alice, p, Bob) (programs/social/graph/GPD.glp), written as GSC's reader writes it, qlisted(Base, Rho, Args, Bound), the role among the anchor's arguments: install(p? ; x) adds installed(x) at p; invite(p?, q? ; x), p holding installed(x), adds participant(x, q) at p and installed(x) and participant(x, p) at q; leave(p?, q[participant(p, x, *)] ; x) deletes installed(x) and clears participant(x, _) at p, and deletes participant(x, p) at each q that p lists.
+%% leaves: a listed role at the third argument of its anchor (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications": "a listed role is an agent variable bound by a quantifier whose anchor an agent role, its base, holds, the variable at any of the anchor's arguments"), as GPD's leave lists Bob by participant(Alice, p, Bob) (programs/social/graph/Programs.glp), written as GSC's reader writes it, qlisted(Base, Rho, Args, Bound), the role among the anchor's arguments: install(p? ; x) adds installed(x) at p; invite(p?, q? ; x), p holding installed(x), adds participant(x, q) at p and installed(x) and participant(x, p) at q; leave(p?, q[participant(p, x, *)] ; x) deletes installed(x) and clears participant(x, _) at p, and deletes participant(x, p) at each q that p lists.
 procedure leaves(Contract).
 leaves([schema(install, [svar(x)],
           [rs(guarded, [atom(installed, [svar(x)])], [], [], [atom(installed, [svar(x)])])]),
@@ -934,7 +1070,7 @@ readings([schema(start, [],
             [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]),
              rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])])]).
 
-%% backed: a safe formula across roles (vGLP 5f55cf3, Section 5.4, "Speech-act schemas as local specifications": "A safe formula of B that is local to no role, its atoms held by two roles or more, each a role of the schema or a listed role its quantifier binds, is of the part's condition ...: the reading of a participant's state then holds, beside the values of the variables read at its role, the atoms of that state that the atoms of the formula held by its role match, a variable local to another role and a variable the formula's quantifiers bind matching any value, and the initiator evaluates the formula on the readings, each atom, anchor, count and sum taken in the reading of the person who holds it"), as GBCC:1's cc_join (programs/go/GBCC.glp): acquaint(o?, b?) adds knows at both; appoint(o?, c?) makes c a treasurer of o, officer(c) at o and officer_of(o) at c; deposit(c? ; k) adds k reserve at c; owe(o?, c ; k) adds k owes(c) at o, c an officer of it; repay(o? ; c) deletes one owes(c) at o and adds repaid(c); and join(o?, b?, c[officer(o, c)]), o and b knowing each other, makes b a treasurer, each treasurer c recording cotreasurer(b), only if every treasurer c of o stays backed, the owes(c) o holds at most the reserve c holds, a formula held by o and by c.
+%% backed: a safe formula across roles (vGLP 5f55cf3, Section 5.4, "Speech-act schemas as local specifications": "A safe formula of B that is local to no role, its atoms held by two roles or more, each a role of the schema or a listed role its quantifier binds, is of the part's condition ...: the reading of a participant's state then holds, beside the values of the variables read at its role, the atoms of that state that the atoms of the formula held by its role match, a variable local to another role and a variable the formula's quantifiers bind matching any value, and the initiator evaluates the formula on the readings, each atom, anchor, count and sum taken in the reading of the person who holds it"), as GBCC:1's cc_join (programs/go/Backed-Community.glp): acquaint(o?, b?) adds knows at both; appoint(o?, c?) makes c a treasurer of o, officer(c) at o and officer_of(o) at c; deposit(c? ; r) adds reserve(r) at c, r a whole number naming the deposit; owe(o?, c ; k) adds owes(c, k) at o, c an officer of it, k naming the debt; repay(o? ; c, k) deletes owes(c, k) at o and adds repaid(c, k); and join(o?, b?, c[officer(o, c)]), o and b knowing each other, makes b a treasurer, each treasurer c recording cotreasurer(b), only if every treasurer c of o stays backed, the number of the debts owes(c, y) o holds at most the number of the deposits reserve(z) c holds, a formula held by o and by c, y and z bound by its counts.  A local state is a set (GSC 4a9175a), so a deposit and a debt are each an atom of its own, and the counts count them.
 procedure backed(Contract).
 backed([schema(acquaint, [],
           [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]),
@@ -942,17 +1078,192 @@ backed([schema(acquaint, [],
         schema(appoint, [],
           [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]),
            rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]),
-        schema(deposit, [num(k)],
-          [rs(guarded, [times(num(k), atom(reserve, []))], [], [], [])]),
+        schema(deposit, [num(r)],
+          [rs(guarded, [atom(reserve, [num(r)])], [], [], [atom(reserve, [num(r)])])]),
         schema(owe, [num(k)],
-          [rs(guarded, [times(num(k), atom(owes, [role(2)]))], [], [atom(officer, [role(2)])], []),
+          [rs(guarded, [atom(owes, [role(2), num(k)])], [], [atom(officer, [role(2)])], [atom(owes, [role(2), num(k)])]),
            rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]),
-        schema(repay, [pvar(c)],
-          [rs(guarded, [atom(repaid, [pvar(c)])], [atom(owes, [pvar(c)])], [], [])]),
-        qschema(join, [], [role(3)], true,
+        schema(repay, [pvar(c), num(k)],
+          [rs(guarded, [atom(repaid, [pvar(c), num(k)])], [atom(owes, [pvar(c), num(k)])], [], [])]),
+        qschema(join, [], [role(3), num(y), num(z)], true,
           [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]),
            rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]),
            crs(qlisted(1, officer, [role(3)], [role(3)]), unguarded, [atom(cotreasurer, [role(2)])], [], [], [])],
           [conjunct([role(3)], 1, atom(officer, [role(3)]), fcons(true), [], [], [fa(role(3), atom(cotreasurer, [role(2)]))])],
           [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true),
-             [fcons(le(cardinality([], role(1), atom(owes, [role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, []), fcons(true))))])])]).
+             [fcons(le(cardinality([num(y)], role(1), atom(owes, [role(3), num(y)]), fcons(true)), cardinality([num(z)], role(3), atom(reserve, [num(z)]), fcons(true))))])])]).
+
+%% wild: a wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"), written in the clause syntax, sas/7, as an owner writes a contract, which compile.sh has GSC's reader read, as_read/2, and GSC's checker certify, check/2, syntactically grassroots:  And enrol, arrive and leave: leave(Carol) lists the leaders of Carol's groups by the anchor member(Carol, _, E), the wildcard at the group's place before the listed role, clears listed(E, Carol, _) at each, and requires here(E) of each, a condition across roles (GSNW's and CSSN's Retire, Calculus #6, vGLP_inbox, 2026-11-15 21:44 UTC); wild/self.glp's play_leave and play_absent play it.
+%%
+%%   issue(c?, a? ; d)   :  at c  not issued(a, d), +issued(a, d)       at a  not bond(c, d), +bond(c, d)
+%%   accept(a?, c?)      :  at a  bond(c, _), not accepted(c), +accepted(c)
+%%                          at c  not accepted_by(a), +accepted_by(a)
+%%   appoint(c?, b? ; r) :  at c  not has_role(b, r), +has_role(b, r)   at b  not role(c, r), +role(c, r)
+%%   boast(b?)           :  at b  not officer, +officer, and exists r (role(_, r) at b)
+%%   report(c?, a?)      :  at c  not reported(a), +reported(a), and forall r (has_role(_, r) at c -> +title(c, r) at a)
+%%   vow(b?)             :  at b  not vowed, +vowed, and not exists g (accepted(g) at b)
+%%   rest(b?)            :  at b  not rested, +rested, and (not role(_, _) at b) or (retired at b)
+%%   point(a? ; c, l)    :  at a  issued(c, _), not pointer(c, l), +pointer(c, l)
+%%   unpoint(a? ; c, l)  :  at a  -pointer(c, l)
+%%   office(c?, b? ; const t) :  at c  not has_office(b, t), +has_office(b, t)   at b  not office(c, t), +office(c, t)
+%%   serve(b?, c?)       :  at b  office(c, _), not serving(c), +serving(c)   at c  not served_by(b), +served_by(b)
+%%   dissolve(c?, e[has_office(c, *, _)]) :  at c  not dissolved, +dissolved, -has_office(_, _)
+%%                          at each e  office(c, _), -office(c, _)
+%%   retire(c?, e[has_role(c, *, _)]) :  at c  not retired, +retired, -has_role(_, _)
+%%                          at each e  role(c, _), -role(c, _)
+%%
+%% accept requires at Alice a bond of Carol of some maturity, bond(c, _), a wildcard in an atom a role requires: her machine finds a maturity in her state, and the act neither names nor records it, as DGC's Accept by bond.  boast's exists has the wildcard in its anchor, at the place of the person in whom Bob holds a role.  report's conjunct has it in its anchor likewise, its instances the roles Carol has given, each once whoever holds it, "restricted to the variables the conjunct's literals name and without repetition".  vow has no wildcard: its exists binds g at a person's place of its anchor, accepted(g), which GSC's reader writes a speech-act variable, and the compiler an agent variable, of the kind of its place (vGLP, Section 5.4: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor"; compiler/cvac.glp, bound_kinds), so that "Bob has accepted no one" is false of a person who has accepted someone.  rest has a negated atom with wildcards inside a safe formula, not role(_, _), which holds exactly where the state has no atom it matches, "a wildcard in a negated atom is universally quantified, the atom forbidding ... every atom of the state that it matches": the compiler writes the atom the quantifier exists w1 w2 role(w1, w2) (compiler/cvac.glp, wild_fa).  unpoint, as GFF's labeled_unpoint, deletes pointer(c, l) at its base, Alice, c and l in no other atom: they are no local variables, "but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers", its request unpoint(Peer, Peer, Speech) and its pragma line naming no field, the pointer she holds binding both.  office, serve and dissolve are accept and retire at a constant's place, an office's title being a variable over the constants, const(t), as the name of a role in GO: serve's office(c, _) is a variable over the constants local to its role, and dissolve's listed role has the wildcard in its anchor, has_office(c, e, _).  retire's listed role has it in its anchor, has_role(c, e, _), the people Carol has in some role, each once, as GO's retire; each of them is required to hold a role in Carol, role(c, _), a wildcard in an atom a listed role requires, as the Calculus's GSN close required member(e, g, _) of every listed member, and loses every role in her, the cleared role(c, _), a wildcard in a negated atom, as it was.
+%% feeds: an unguarded act whose opener's state it does not change (GFF's Deliver): befriend, post(Alice ; Text), adding item(Alice, Text, Alice), the item with its author, and deliver(Bob, Alice ; Text, Carol), Carol, the item's author, possibly Bob, unguarded, opened by Bob, requiring item(Bob, Text, Carol) and friend(Bob, Alice), forbidding item(Alice, Text, Carol) and adding it with received(Alice, Text, Carol, Bob), which names its sender.  After it commits Bob is ready for it still, and Alice refuses his next attempt as unable; he proposes it again only once her ready has come (vGLP 76db5e0, Definition "Proposing", Propose).  feeds/self.glp plays it.
+procedure feeds(Contract).
+feeds([sas(befriend, ['Alice', 'Bob'], [],
+           [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+           [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+           true, ['Alice', 'Bob']),
+       sas(post, ['Alice'], ['Text'],
+           [atom(item, ['Alice', 'Text', 'Alice'])],
+           [not(atom(item, ['Alice', 'Text', 'Alice']))],
+           true, ['Alice']),
+       sas(deliver, ['Bob', 'Alice', one('Carol', 'Bob')], ['Text', 'Carol'],
+           [atom(item, ['Alice', 'Text', 'Carol']), atom(received, ['Alice', 'Text', 'Carol', 'Bob'])],
+           [atom(item, ['Bob', 'Text', 'Carol']), atom(friend, ['Bob', 'Alice']), not(atom(item, ['Alice', 'Text', 'Carol']))],
+           true, [])]).
+
+procedure wild(Contract).
+wild([sas(issue, ['Carol', 'Alice'], ['D'],
+          [atom(bond, ['Alice', 'Carol', num('D')]), atom(issued, ['Carol', 'Alice', num('D')])],
+          [not(atom(bond, ['Alice', 'Carol', num('D')])), not(atom(issued, ['Carol', 'Alice', num('D')]))],
+          true, ['Carol', 'Alice']),
+      sas(accept, ['Alice', 'Carol'], [],
+          [atom(accepted, ['Alice', 'Carol']), atom(accepted_by, ['Carol', 'Alice'])],
+          [atom(bond, ['Alice', 'Carol', '_']), not(atom(accepted, ['Alice', 'Carol'])), not(atom(accepted_by, ['Carol', 'Alice']))],
+          true, ['Alice', 'Carol']),
+      sas(appoint, ['Carol', 'Bob'], ['Role'],
+          [atom(has_role, ['Carol', 'Bob', 'Role']), atom(role, ['Bob', 'Carol', 'Role'])],
+          [not(atom(has_role, ['Carol', 'Bob', 'Role'])), not(atom(role, ['Bob', 'Carol', 'Role']))],
+          true, ['Carol', 'Bob']),
+      sas(boast, ['Bob'], [],
+          [atom(officer, ['Bob'])],
+          [not(atom(officer, ['Bob'])), exists(['Role'], atom(role, ['Bob', '_', 'Role']), true)],
+          true, ['Bob']),
+      sas(report, ['Carol', 'Alice'], [],
+          [atom(reported, ['Carol', 'Alice']), forall(['Role'], atom(has_role, ['Carol', '_', 'Role']), true, [atom(title, ['Alice', 'Carol', 'Role'])])],
+          [not(atom(reported, ['Carol', 'Alice']))],
+          true, ['Carol', 'Alice']),
+      sas(vow, ['Bob'], [],
+          [atom(vowed, ['Bob'])],
+          [not(atom(vowed, ['Bob'])), not(exists(['G'], atom(accepted, ['Bob', 'G']), true))],
+          true, ['Bob']),
+      sas(rest, ['Bob'], [],
+          [atom(rested, ['Bob'])],
+          [not(atom(rested, ['Bob'])), or(not(atom(role, ['Bob', '_', '_'])), atom(retired, ['Bob']))],
+          true, ['Bob']),
+      sas(point, ['Alice', 'Carol'], ['Carol', 'Label'],
+          [atom(pointer, ['Alice', 'Carol', 'Label'])],
+          [atom(issued, ['Alice', 'Carol', '_']), not(atom(pointer, ['Alice', 'Carol', 'Label']))],
+          true, ['Alice']),
+      sas(unpoint, ['Alice', 'Carol'], ['Carol', 'Label'],
+          [not(atom(pointer, ['Alice', 'Carol', 'Label']))],
+          [atom(pointer, ['Alice', 'Carol', 'Label'])],
+          true, ['Alice']),
+      sas(office, ['Carol', 'Bob'], ['Title'],
+          [atom(has_office, ['Carol', 'Bob', const('Title')]), atom(office, ['Bob', 'Carol', const('Title')])],
+          [not(atom(has_office, ['Carol', 'Bob', const('Title')])), not(atom(office, ['Bob', 'Carol', const('Title')]))],
+          true, ['Carol', 'Bob']),
+      sas(serve, ['Bob', 'Carol'], [],
+          [atom(serving, ['Bob', 'Carol']), atom(served_by, ['Carol', 'Bob'])],
+          [atom(office, ['Bob', 'Carol', '_']), not(atom(serving, ['Bob', 'Carol'])), not(atom(served_by, ['Carol', 'Bob']))],
+          true, ['Bob', 'Carol']),
+      sas(enrol, ['Carol', 'Alice'], ['Grupo'],
+          [atom(member, ['Carol', 'Grupo', 'Alice']), atom(listed, ['Alice', 'Carol', 'Grupo'])],
+          [not(atom(member, ['Carol', 'Grupo', 'Alice'])), not(atom(listed, ['Alice', 'Carol', 'Grupo']))],
+          true, ['Carol', 'Alice']),
+      sas(arrive, ['Alice'], [],
+          [atom(here, ['Alice'])],
+          [not(atom(here, ['Alice']))],
+          true, ['Alice']),
+      sas(leave, ['Carol'], [],
+          [atom(left, ['Carol']), forall(['E'], atom(member, ['Carol', '_', 'E']), true, [not(atom(listed, ['E', 'Carol', '_']))]), not(atom(member, ['Carol', '_', '_']))],
+          [not(atom(left, ['Carol'])), forall(['E'], atom(member, ['Carol', '_', 'E']), true, [atom(here, ['E'])])],
+          true, ['Carol']),
+      sas(greet, ['Alice', 'Carol'], [],
+          [atom(greeting, ['Alice', 'Carol']), atom(greeted, ['Carol', 'Alice'])],
+          [not(atom(greeting, ['Alice', 'Carol'])), not(atom(greeted, ['Carol', 'Alice'])), not(atom(member, ['Carol', '_', 'Alice']))],
+          true, ['Alice', 'Carol']),
+      sas(idle, ['Carol'], [],
+          [atom(idle, ['Carol'])],
+          [not(atom(idle, ['Carol'])), not(atom(member, ['Carol', '_', '_']))],
+          true, ['Carol']),
+      sas(dissolve, ['Carol'], [],
+          [atom(dissolved, ['Carol']), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [not(atom(office, ['E', 'Carol', '_']))]), not(atom(has_office, ['Carol', '_', '_']))],
+          [not(atom(dissolved, ['Carol'])), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [atom(office, ['E', 'Carol', '_'])])],
+          true, ['Carol']),
+      sas(retire, ['Carol'], [],
+          [atom(retired, ['Carol']), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [not(atom(role, ['E', 'Carol', '_']))]), not(atom(has_role, ['Carol', '_', '_']))],
+          [not(atom(retired, ['Carol'])), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [atom(role, ['E', 'Carol', '_'])])],
+          true, ['Carol'])]).
+%% roles: a value variable over the constants, const(X) (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, ..., and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), as GO's appoint and the acts of GBCC and GNO that require a role by its name: acquaint(a?, b?) adds knows at both; appoint(a?, b ; r), a knowing b, adds role(a, r) at b, r the name a types; arbitrate(b? ; o) requires role(o, arbiter) at b, o local to b's role, arbiter a constant the contract names, and adds done, which it forbids; and resign(b? ; o, r) deletes role(o, r) at b, its base, so o and r are bound by the schema-binding and its request names them, resign(Peer, Peer, Constant), b choosing which role he resigns (vGLP, Section 5.4: "but for a variable of an atom the schema deletes at the base of the schema").  The place of role's second argument is of the type Constant in appoint, in arbitrate and in resign, and the constant alice types in appoint is the one arbitrate requires.  concur(a?, b ; r, s) requires one constant at two roles, as Rides's award and Gigs's pass require one currency of the fare and of the deposit: role(b, r) at a and role(a, s) at b, r and s each local to its role, and eq(r, s) of the part's condition, which the initiator checks on the readings (vGLP, Section 5.4: "a constraint, and a safe formula, is over the relations and functions the value types provide --- comparison and arithmetic"; "a conjunct that names variables local to two roles or more is of the part's condition"); it adds concurs(b) at a and concurred(a) at b.
+procedure roles(Contract).
+roles([schema(acquaint, [],
+         [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]),
+          rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]),
+       schema(appoint, [const(r)],
+         [rs(guarded, [], [], [atom(knows, [role(2)])], []),
+          rs(unguarded, [atom(role, [role(1), num(r)])], [], [atom(knows, [role(1)])], [])]),
+       schema(arbitrate, [pvar(o)],
+         [rs(guarded, [atom(done, [])], [], [atom(role, [pvar(o), val(arbiter)])], [atom(done, [])])]),
+       schema(resign, [pvar(o), const(r)],
+         [rs(guarded, [], [atom(role, [pvar(o), num(r)])], [], [])]),
+       nschema(concur, [const(r), const(s)], eq(num(r), num(s)),
+         [rs(guarded, [atom(concurs, [role(2)])], [], [atom(knows, [role(2)]), atom(role, [role(2), num(r)])], [atom(concurs, [role(2)])]),
+          rs(unguarded, [atom(concurred, [role(1)])], [], [atom(knows, [role(1)]), atom(role, [role(1), num(s)])], [])])]).
+
+%% cvalues: a compound value, bond(Day), as a note's type, so that a contract compiled here names a compound value (GSC compound values, Definition "Schema with values": f(v1, ..., vk) in V; Calculus #11, 2026-11-25 02:45 UTC: Bonds' note type bond(Day)).  A note is note(Type, N), Type a constant or a compound value; issue and pay move a note of any type; redeem moves only a bond due by day 10, its Day named by the request:
+%%
+%%   establish(p?)          :  at p  +identity
+%%   acquaint(p?, q?)       :  at p  identity, +knows(q)
+%%                             at q  identity, +knows(p)
+%%   issue(p? ; t, n)       :  at p  identity, not note(t, n), +note(t, n)
+%%   pay(p?, q? ; t, n)     :  at p  knows(q), -note(t, n)
+%%                             at q  knows(p), +note(t, n)
+%%   redeem(p?, q? ; d, n)  :  at p  knows(q), -note(bond(d), n)
+%%                             at q  knows(p), +note(bond(d), n)                d =< 10
+%%   bonded(p?)             :  at p  note(bond(_), _), not bonded, +bonded
+%%
+%% bonded requires a bond of any maturity, bond(_), its wildcard a variable of the kind of Day, as redeem writes bond(d).
+%% cvalues/self.glp plays it.
+procedure cvalues(Contract).
+cvalues([schema(establish, [],
+           [rs(guarded, [atom(identity, [])], [], [], [])]),
+         schema(acquaint, [],
+           [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+            rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+         schema(issue, [const(t), const(n)],
+           [rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(identity, [])], [atom(note, [num(t), num(n)])])]),
+         schema(pay, [const(t), const(n)],
+           [rs(guarded, [], [atom(note, [num(t), num(n)])], [atom(knows, [role(2)])], []),
+            rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]),
+         nschema(redeem, [num(d), const(n)], le(num(d), num(10)),
+           [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []),
+            rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]),
+         schema(bonded, [],
+           [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [any]), any])], [atom(bonded, [])])])]).
+
+%% holds: a set read at one role for its size, so that a contract compiled here has a set variable that the schema requires at one role and neither deletes nor adds, local to that role and read there, as Community Market's provider, who holds Held Gov-coins, Held at least the stake (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24: "and so is a set variable of atoms the schema requires at one role and neither deletes nor adds, read there"; GO #15, vGLP_inbox.md, 2026-11-25 17:08 UTC):
+%%
+%%   establish(p?)            :  at p  +identity
+%%   issue(p? ; n)            :  at p  identity, not note(n), +note(n)
+%%   stake(p? ; s)            :  at p  identity, not stake(_), +stake(s)
+%%   provide(p? ; H, held, s) :  at p  note(H), stake(s), not provider, +provider
+%%                               | |H| = held, held >= s
+%%
+%% H, held and s are local to p's role: p's machine reads H, every note it holds, held its size, and s its stake, so the request provide(p) names none of them.
+%% holds/self.glp plays it.
+procedure holds(Contract).
+holds([schema(establish, [],
+         [rs(guarded, [atom(identity, [])], [], [], [])]),
+       schema(issue, [const(n)],
+         [rs(guarded, [atom(note, [num(n)])], [], [atom(identity, [])], [atom(note, [num(n)])])]),
+       schema(stake, [num(s)],
+         [rs(guarded, [atom(stake, [num(s)])], [], [atom(identity, [])], [atom(stake, [any])])]),
+       nschema(provide, [set(h), num(held), num(s)], and(eq(fn(size, [num(h)]), num(held)), ge(num(held), num(s))),
+         [rs(guarded, [atom(provider, [])], [], [atom(stake, [num(s)]), atom(note, [num(h)])], [atom(provider, [])])])]).

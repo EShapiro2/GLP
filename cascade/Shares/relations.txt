@@ -1,0 +1,2 @@
+Shares extends Organisation and Notes: holds
+Shares extends it (Organisation and Notes): holds

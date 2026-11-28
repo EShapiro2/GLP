@@ -1,0 +1,6 @@
+%% A Term is not a String: its argument X is of type Term, and no guard
+%% narrows it (TGLP well-typing.tex, Definition "Subtyping").  Refused.
+
+procedure name_of(Term?, String).
+name_of(var(X), X?).
+name_of(_, none) :- otherwise | true.

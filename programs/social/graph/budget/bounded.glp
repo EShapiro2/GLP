@@ -10,8 +10,12 @@
 %% executes the system goals itself, within the one reduction charged for the
 %% clause; the meta-interpreter counts reductions of the mini-app's clauses and
 %% nothing else.  Arithmetic assignment (:=) is a body predicate, not a guard,
-%% so budgets are compared in guards and decremented in bodies.  Meta-interpreter typing is deferred (typed-glp-manual 18.3):
-%% bounded/3 and reduce/2 range over any goal term, hence `_`.
+%% so budgets are compared in guards and decremented in bodies.  The goals the
+%% meta-interpreters reduce are of the type Goal(CountGoal): true, a conjunction,
+%% and a goal of the mini-app's count/3 held as a term, each argument at the
+%% dual of its declared type; reduce/2 has the entries for true and for a
+%% conjunction beside the mini-app's own, an otherwise guard narrowing no type
+%% (TGLP, Module System, "Procedure declarations").
 
 %% =============================================================================
 %% THE META-INTERPRETER: bounded(Goal, Budget, Requests)
@@ -21,7 +25,10 @@
 %% whatever budget the super-app assigns to N1.  A conjunction splits its budget
 %% between its conjuncts and merges their request streams.
 
-procedure bounded(_?, Integer?, Stream(BudgetRequest)).
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+CountGoal ::= count(Stream(Integer), Integer, Stream(Integer)?).
+
+procedure bounded(Goal(CountGoal)?, Integer?, Stream(BudgetRequest)).
 bounded(true, _, []).
 bounded((A, B), N, Rs?) :-
     N1 := N? // 2, N2 := N? - N1?,
@@ -52,7 +59,9 @@ count([_|Xs], N, [N1?|Out?]) :- N1 := N? + 1, count(Xs?, N1?, Out).
 count([], _, []).
 
 %% (b) As the meta-interpreter runs it: one reduce clause per clause of (a).
-procedure reduce(_?, _).
+procedure reduce(Goal(CountGoal)?, Goal(CountGoal)).
+reduce(true, true).
+reduce((A, B), (A?, B?)).
 reduce(count([_|Xs], N, [N1?|Out?]), count(Xs?, N2?, Out)) :- integer(N?) | N1 := N? + 1, N2 := N? + 1.
 reduce(count([], _, []), true).
 
@@ -136,7 +145,7 @@ last([], 0).
 %% (play_abort_waiting succeeds).  Logix could put clause/2 in the guard; GLP
 %% cannot.
 
-procedure execute(_?, Integer?, Stream(BudgetRequest), Stream(Constant)?).
+procedure execute(Goal(CountGoal)?, Integer?, Stream(BudgetRequest), Stream(Constant)?).
 execute(true, _, [], _).
 execute((A, B), N, Rs?, Cs) :-
     N1 := N? // 2, N2 := N? - N1?,

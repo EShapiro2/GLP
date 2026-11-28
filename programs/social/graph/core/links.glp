@@ -131,16 +131,21 @@ registered(rejected, [msg(agent, person, rejected(invite_link))]).
 
 %% open(Id, Link, Sig, T, Out, Net, Cmds): the link Link, which signature/2 reports as Sig, opened at T.  Signed by the inviter it names and not expired: the inviter declared a peer, the server the link names declared, and the link redeemed under the person's key.
 procedure open(Key?, SignedTerm?, Signature?, Integer?, AgentToUserStream, NetOutStream, UserInStream).
-open(Id, Link, signed(K, _, invitation(I, Rv, RvAddr, _, E)), T, Out?, [msg(Rv?, redeem(Id?, Signed?, Reply))], Cmds?) :-
-    ground(Id?), ground(Link?), ground(K?), K? =?= I?, ground(Rv?), ground(RvAddr?), integer(E?), integer(T?), T? < E? |
+open(Id, Link, signed(K, _, invitation(I, Rv, RvAddr, _, E)), T, Out?, Net?, Cmds?) :-
+    ground(Id?), ground(Link?), ground(K?), K? =?= I?, string(Rv?), string(RvAddr?), integer(E?), integer(T?), T? < E? |
     declare(peer(K?)),
     declare(rendezvous(Rv?, RvAddr?)),
     self_key(Me),
     sign(redeem(Id?, Link?), Me?, Signed),
+    redeem_at(Rv?, Id?, Signed?, Reply, Net),
     redeemed(Id?, K?, Reply?, Out, Cmds).
 %% unsigned, signed by another than the inviter it names, another term, or expired: refused, and told.
 open(_, _, _, _, [msg(agent, person, rejected(open_link))], [], []) :-
     otherwise | true.
+
+%% redeem_at(Rv, Id, Signed, Reply, Net): the redemption sent to the server Rv, a key read from inside the signed link and typed by its guard in open/7, so handed on in the body (TGLP, Type checking of guards).
+procedure redeem_at(Key?, Key?, SignedTerm?, RvReply, NetOutStream).
+redeem_at(Rv, Id, Signed, Reply?, [msg(Rv?, redeem(Id?, Signed?, Reply))]).
 
 %% redeemed(Id, I, Reply, Out, Cmds): the server's answer to the redemption.  The inviter's key and address: the address declared, punched towards, and the cold call made, the person's connect(I).  Another key, or rejected: told the person.
 procedure redeemed(Key?, Key?, RvReply?, AgentToUserStream, UserInStream).

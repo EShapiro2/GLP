@@ -1,0 +1,12 @@
+Interface pragmas
+Issue: Alice [Issue] <type> <sum>
+Swap: Alice [Swap] <sum> <dave> <other> <total>
+  Bob: Alice asks for your consent to swap.
+Pay: Alice [Pay] <sum>
+  Bob: Alice asks for your consent to pay.
+Escrow: Alice [Deposit] <sum> <cond>
+  Carol: Alice asks for your consent to deposit.
+  Carol [Release] <sum>
+  Bob: Carol asks for your consent to release.
+  Carol [Return] <sum>
+  Alice: Carol asks for your consent to return.

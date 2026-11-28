@@ -9,8 +9,12 @@
 # passes on as it comes, the response having no length.
 peoplesweb.org {
 	root * /var/www/peoplesweb.org
+	# The pages and their data are text, and compress to a tenth: data.js was
+	# sent whole, 3.2 MB (Website #2, 2026-11-16).
+	encode zstd gzip
 	reverse_proxy /api/* 127.0.0.1:8080
 	reverse_proxy /directory* 127.0.0.1:8090
 	reverse_proxy /log* 127.0.0.1:8095
+	header /.well-known/apple-app-site-association Content-Type application/json
 	file_server
 }

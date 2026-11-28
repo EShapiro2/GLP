@@ -1,0 +1,18 @@
+Mutual Credit
+Mutual Credit extends Bank, and weakens it.
+Vocabulary: every member of z is then in the red by at most 1000 coins, for x = credit_limit(x,z).
+y is a member of z: y is a participant of z.
+After y redeems with z an x-coin against a z-coin: no longer y holds an x-coin, z holds an x-coin, no longer z holds a z-coin and y holds a z-coin.
+Mutual Credit:0 - | A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Mutual Credit:0 - | Alice and Bob are persons, Orga a mutual credit society.
+Mutual Credit:0 - | Environment: every member of z is then in the red by at most 1000 coins, for x.
+Mutual Credit:1 ■ Leave: Organisation:3 Leave <- note(Bob,Orga,coin,#0).
+Mutual Credit:1 ■ Leave owed nothing: Organisation:3 Leave <- note(Orga,Bob,coin,#0).
+Mutual Credit:1 ■ Officer leave: Organisation:3 Officer leave <- note(Bob,Orga,coin,#0).
+Mutual Credit:1 ■ Officer leave owed nothing: Organisation:3 Officer leave <- note(Orga,Bob,coin,#0).
+Mutual Credit:2 ■ Redeem member's coin: ~note(Bob,Alice,coin,*1), note(Orga,Alice,coin,*1), ~note(Orga,Orga,coin,*1), note(Bob,Orga,coin,*1) <- participant(Bob,Orga), participant(Alice,Orga), note(Bob,Alice,coin,*1), note(Orga,Orga,coin,*1) guarded by Bob.
+Mutual Credit:3 ■ | Credit limit.
+Mutual Credit:3 ■ Swap: Denominated Currencies:2 <- credit_limit(Actor,Orga).
+Mutual Credit:3 ■ Pay: Notes:3 <- credit_limit(Actor,Orga).
+Mutual Credit:3 ■ Pay issuer: Coins:1 <- credit_limit(Actor,Orga).
+Mutual Credit:3 ■ Pay: Denominated Currencies:4 <- credit_limit(Actor,Orga).

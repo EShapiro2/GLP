@@ -1,0 +1,7 @@
+Constitution
+Constitution inherits from Organisation.
+A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
+Alice and Bob are persons, Orga a constitutional democratic community.
+1. ■ Join: Organisation:3, only if the members decide it.
+2. ■ Leave, Expel: Organisation:3, only if Bob or the members decide it.
+3. ■ Amend: Organisation:5, only if the members decide it, and the amended bylaws are egalitarian.

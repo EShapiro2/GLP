@@ -10,7 +10,8 @@
 import 'type_ast.dart';
 import 'root_scope.dart';
 import 'param_expansion.dart';
-import 'program_dfa.dart' show primitiveClosure, constantLabel;
+import 'program_dfa.dart'
+    show primitiveClosure, constantLabel, termAlternativeOf;
 import '../../compiler/ast.dart' as ast;
 
 /// Error for circular alias chain
@@ -555,6 +556,17 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
       hasWildcard = true;
 
     } else if (alt is TypeRef) {
+      // `Term` has an alternative for every functor (TGLP typed-glp.tex,
+      // "Type Declarations"), so an alternative that is `Term`, or reaches
+      // it, shares a top-level functor with every other alternative, and
+      // stands as the definition's one alternative.
+      if (def.alternatives.length > 1 && _reachesTerm(alt, scope)) {
+        throw NonDeterministicTypeError(
+            'Term, reached through ${alt.name}, overlaps with the other '
+            'alternatives of ${def.name}',
+            def.line,
+            def.column);
+      }
       // A bare type-name alternative stands for everything the named type
       // accepts.  Two such alternatives clash when the primitives they reach
       // intersect — `Number` and `Integer` clash because `Number` reaches
@@ -627,11 +639,26 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
   return (functors: functors, constants: constants);
 }
 
+/// Whether the bare type-name alternative [alt] is `Term` or reaches it
+/// through the bare type-name alternatives of the type it names.
+bool _reachesTerm(TypeRef alt, Map<String, TypeDef> scope) {
+  if (alt.isParameterized) return false;
+  final def = scope[alt.name];
+  if (def == null) return alt.name == TypeRef.termType;
+  return termAlternativeOf(def, scope) != null;
+}
+
 /// The primitive types a bare type-name alternative accepts, following its
 /// definition transitively.  Empty when the name is not a type reference this
 /// scope can resolve.
 Set<String> _reachedPrimitives(TypeRef alt, Map<String, TypeDef> scope) {
   if (alt.isParameterized) return const {};
+  if (alt.name == TypeRef.termType) {
+    final own = scope[alt.name];
+    return own == null
+        ? TypeRef.constantPrimitives
+        : primitiveClosure(own, scope);
+  }
   if (TypeRef.builtins.contains(alt.name)) return {alt.name};
   final def = scope[alt.name];
   if (def == null) return const {};

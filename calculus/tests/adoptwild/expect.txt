@@ -1,0 +1,16 @@
+C          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/C.txt
+C: Wildcard deletion (expanded schemas)
+C:0 - | Alice is a person.
+C:1 ■ Forget: ~knows(Alice,_) <- knows(Alice,_) guarded by Alice.
+--- expand.py: exit 0; --check: exit 0
+--- exp/C.txt
+% Written by tools/expand.py from rev/; do not edit.
+C: Wildcard deletion
+Alice is a person.
+C:1. ■ Forget: Alice may forget, provided Alice knows someone.
+--- adopt.py --tree C: exit 0
+C: compiled; printed flat.txt, full-contract.txt, full-pragmas.txt, full-schemas.txt, relations.txt, schemas.txt, term.glp.txt
+C.glp: contract_named(c, ...

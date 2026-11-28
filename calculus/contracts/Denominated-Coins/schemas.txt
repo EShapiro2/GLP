@@ -1,0 +1,13 @@
+Denominated Coins
+Denominated Coins lifts Coins, and extends and weakens it.
+Vocabulary: x has issued coins of the denomination f = issued_in(x,f); x holds n f-denominated y-notes of type t = note(x,y,t,f,*n); z holds n f-denominated w-notes of type t in escrow from x for y on k = escrow_note(z,w,t,f,x,y,k,*n); x holds an f-denominated y-coin = note(x,y,coin,f,*1); x holds n f-denominated y-coins = note(x,y,coin,f,*n); x holds exactly n f-denominated y-coins = note(x,y,coin,f,#n); z holds n f-denominated w-coins in escrow from x for y on k = escrow_note(z,w,coin,f,x,y,k,*n).
+After x issues n f-denominated x-coins for the first time: x holds n f-denominated x-coins and x has issued coins of the denomination f.
+Denominated Coins:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+Denominated Coins:0 - | Alice and Bob are parties, Dollar a fiat currency, Sum a number.
+Denominated Coins:0 - | Kind of note: note, Dollar-denominated y-notes of type t for y-notes of type t.
+Denominated Coins:1 ■ First issue: note(Alice,Alice,coin,Dollar,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
+Denominated Coins:1 ■ Issue: Notes:1 Issue <- issued_in(Alice,Dollar).
+Denominated Coins:2 ○ | Denomination.
+Denominated Coins:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+Denominated Coins:3 ○ | Pricing.
+Denominated Coins:3 ○ | Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

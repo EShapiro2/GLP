@@ -1,0 +1,36 @@
+Backchannel Feeds (flat text)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Backchannel Feeds:0 - | Alice, Bob, Carol, Dave and Erin are persons, Item an item.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1+Labelled Overlay:4 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has a Bob-pointer to Bob and Bob has an Alice-pointer to Alice, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Labelled Overlay:4 ■ Unfriend: Alice may no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, no longer Alice has a Bob-pointer to Bob and no longer Bob has an Alice-pointer to Alice, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Overlay:1 ■ Point friend: Alice may Alice points to Bob, provided Alice counts Bob as a friend, Bob counts Alice as a friend and not Alice points to Bob.
+Overlay:2 ■ Point transitive: Alice may Alice points to Carol, provided Alice knows Carol, Alice points to Bob, Bob points to Carol and not Alice points to Carol.
+Overlay:3 ■ Unpoint: Alice may no longer Alice points to Bob.
+Labelled Overlay:0 - | A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
+Labelled Overlay:0 - | Erin is possibly any of the others. In clause 2 Carol is possibly Dave.
+Labelled Overlay:1 ■ Labeled point friend: Alice may Alice has a Dave-pointer to Bob, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Bob has a Dave-pointer to Erin and not Alice has a Dave-pointer to Bob. Possibly one: Alice=Erin, Bob=Erin, Dave=Erin.
+Labelled Overlay:2+Feeds:3 ■ Labeled point transitive: Alice may Alice has a Dave-pointer to Carol, provided Alice knows Carol, Alice has a Dave-pointer to Bob, Bob has a Dave-pointer to Carol, not Alice has a Dave-pointer to Carol and Carol knows Alice. Possibly one: Carol=Dave.
+Labelled Overlay:2+Feeds:3 ■ Labeled point transitive friend: Alice may Alice has a Dave-pointer to Carol, provided Alice knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, Bob has a Dave-pointer to Carol, not Alice has a Dave-pointer to Carol and Carol knows Alice. Possibly one: Carol=Dave.
+Labelled Overlay:3 ■ Labeled unpoint: Alice may no longer Alice has a Dave-pointer to Carol.
+Labelled Overlay:3 ■ Labeled unpoint self: Alice may no longer Alice has a Dave-pointer to Dave, provided not Alice counts Dave as a friend.
+Labelled Overlay:4 ■ | Friend pointers.
+Feeds:0 - | A *feed* is named by its author.
+Feeds:0 - | Bob and Carol are possibly one person.
+Feeds:1 ■ Post: Alice may Alice holds the item Item of Alice's feed, provided not Alice holds the item Item of Alice's feed.
+Feeds:1 ■ | Alice has a feed, and the item is created or received.
+Feeds:2 ■ Deliver: Alice holds the item Item of Carol's feed, Alice has received the item Item of Carol's feed from Bob and Bob has delivered the item Item of Carol's feed to Alice, provided Alice has a Carol-pointer to Bob, Bob knows Alice, Bob holds the item Item of Carol's feed, not Alice holds the item Item of Carol's feed and not Bob has delivered the item Item of Carol's feed to Alice. Possibly one: Bob=Carol.
+Resilient Feeds:0 - | d > 1 is an integer.
+Resilient Feeds:0 - | Dave and Erin are possibly any of the others.
+Resilient Feeds:1 ■ Redundant point: Alice has a Carol-pointer to Bob and Bob has been pointed to by Alice with a Carol-pointer, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than D persons, Alice counts Bob as a friend, Bob counts Alice as a friend, Bob has a Carol-pointer to Erin, not Alice has a Carol-pointer to Bob and not Bob has been pointed to by Alice with a Carol-pointer. Possibly one: Alice=Dave, Alice=Erin, Bob=Dave, Bob=Erin, Carol=Dave, Carol=Erin, Dave=Erin.
+Backchannel Feeds:0 - | Bob and Dave are possibly one person.
+Backchannel Feeds:1 ■ Back forward: Carol holds the item Item of Dave's feed, Carol has received the item Item of Dave's feed back from Alice and Alice has forwarded the item Item of Dave's feed to Carol, provided Alice has a Dave-pointer to Bob, Alice has a Dave-pointer to Carol, Alice holds the item Item of Dave's feed, Alice has received the item Item of Dave's feed from Bob, not Carol holds the item Item of Dave's feed and not Alice has forwarded the item Item of Dave's feed to Carol. Possibly one: Bob=Dave.

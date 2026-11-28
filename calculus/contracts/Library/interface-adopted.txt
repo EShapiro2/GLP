@@ -1,0 +1,5 @@
+Interface pragmas
+Shelve: Alice [Shelve] <tome>
+Lend: Alice [Lend] <day>
+  Bob: Alice asks for your consent to lend.
+Return: Bob [Return]

@@ -79,7 +79,7 @@ procedure bob_consumer(Channel(Stream(Carried), Constant)?).
 bob_consumer(ch([wrapped(Y?)|In], Out?)) :- send_to_user([bob_ch_matched]), fill(Y), drop(ch(In?, Out)).
 bob_consumer(_) :- otherwise | send_to_user([bob_ch_otherwise]).
 
-procedure drop(_?).
+procedure drop(Channel(Stream(Carried), Constant)?).
 drop(_).
 
 procedure fill(Done).

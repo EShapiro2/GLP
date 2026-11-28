@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the clause of Definition Speech-act schema, tau: H <- B guarded by G, printed from a contract's term (notation.glp, GSC 859a007); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable; then equalities and inequalities of two speech-act variables or two name terms, as of two agent variables (def:numbers, GSC 6f0bda1), in a schema's constraint and in a count's, a sum's and a quantifier's phi; and the clause syntax, sas(Name, Names, Vars, Head, Body, Constraint, Guards) (GSC 859a007, Sections 3.1 and 3.2): GKK, GSG and GSN so written by their owner, each read from its file, each fault of the reading, and a required k.A with one copy deleted, read and compiled deleting one copy (Definition Denotation), and with j copies deleted, j a number or a variable, read where the constraint implies j <= k and refused otherwise (def:numbers); then traceable provenance through a safe formula of the body (def:grounded, GSC cd0f73e), a positive and a negative for each way a safe formula names a base or a speech-act variable: an atom of Phi_E held by an agent role, a conjunction, u = v beside a conjunct naming v, a disjunction, and exists Xs (A and phi), Xs not binding it; then the author author(y), the item item(y) and a condition on that utterance in a constraint (def:numbers, GSC 6df39d4), taken as true, read, printed and compiled, and refused elsewhere; then the item item(y) as an argument of an atom (def:numbers, GSC 4401dd6), admitted where y is a speech-act variable an agent role requires, naming no agent, read, printed and compiled, an utterance that def:unobstructed matches against an item and not against a speech act, and refused where no agent role requires y or y is no speech-act variable; then environment predicates over agents (GSC a380dab, def:grounded and def:syntactically-grassroots, the appendix "Values in Speech-Act Schemas"), which have no traceable provenance: an atom added by a schema whose reading role is named only by an environment atom its guarding role requires is untraceable, and traceable where an atom of another predicate names it or where the predicate is not an environment predicate, and an environment predicate is never itself reported untraceable.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects GSC's contracts, GKK, GSG and GSN, the checker's fixtures, and, for as_read/2's wrapped forms, GAI's GSNP.glp and Currencies' DGC.glp read unchanged (Code #23, 2026-11-05); every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the clause of Definition Speech-act schema, tau: H <- B guarded by G, printed from a contract's term (notation.glp, GSC 859a007); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity, refused, a local state being a set --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable; then equalities and inequalities of two speech-act variables or two name terms, as of two agent variables (def:numbers, GSC 6f0bda1), in a schema's constraint and in a count's, a sum's and a quantifier's phi; and the clause syntax, sas(Name, Names, Vars, Head, Body, Constraint, Guards) (GSC 859a007, Sections 3.1 and 3.2): GKK, GSG and GSN so written by their owner, each read from its file, each fault of the reading, and a required k.A with one copy or j copies deleted, read and refused for its multiplicities; then traceable provenance through a safe formula of the body (def:grounded, GSC cd0f73e), a positive and a negative for each way a safe formula names a base or a speech-act variable: an atom of Phi_E held by an agent role, a conjunction, u = v beside a conjunct naming v, a disjunction, and exists Xs (A and phi), Xs not binding it; then the author author(y), the item item(y) and a condition on that utterance in a constraint (def:numbers, GSC 6df39d4), taken as true, read, printed and compiled, and refused elsewhere; then the item item(y) as an argument of an atom (def:numbers, GSC 4401dd6), admitted where y is a speech-act variable an agent role requires, naming no agent, read, printed and compiled, an utterance that def:unobstructed matches against an item and not against a speech act, and refused where no agent role requires y or y is no speech-act variable; then environment predicates over agents (GSC a380dab, def:grounded and def:syntactically-grassroots, the appendix "Values in Speech-Act Schemas"), which have no traceable provenance: an atom added by a schema whose reading role is named only by an environment atom its guarding role requires is untraceable, and traceable where an atom of another predicate names it or where the predicate is not an environment predicate, and an environment predicate is never itself reported untraceable.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects GSC's contracts, GKK, GSG and GSN, the checker's fixtures, and, for as_read/2's wrapped forms, GAI's GSNP.glp and Currencies' DGC.glp read unchanged (Code #23, 2026-11-05); every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -66,6 +66,18 @@ term() {    # term <owner's file> <name> ; the contract's term, as it prints it
     | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //'
 }
 
+contract_term() {   # contract_term <owner's directory> <name on main> ; the contract's term, by its file and atom under either name of calculus/NAMES.txt: the new file name and the atom of contract_named, the file name in lower case, a hyphen as an underscore, where its file is there, and the name on main otherwise, so the checks hold before and after the renaming (Code #33's task, 2026-11-16 20:57 UTC)
+  local dir="$1" old="$2" new atom
+  new=$(awk -F' [|] ' -v o="$old" '$1 == o { print $3; exit }' "$GLP_DIR/calculus/NAMES.txt")
+  if [ -n "$new" ] && [ -f "$dir/$new.glp" ]; then
+    atom=$(printf '%s' "$new" | tr 'A-Z-' 'a-z_')
+    term "$dir/$new.glp" "$atom"
+  else
+    atom=$(printf '%s' "$old" | tr 'A-Z-' 'a-z_')
+    term "$dir/$old.glp" "$atom"
+  fi
+}
+
 instance() { # instance <owner's file> <name> <base's term> ; an instance's contract, instantiate/4 of the bindings and additions its file prints, instance_named(Name, Base, Bindings, Additions), on the base's term, as cascade.sh's read_contract makes it (GSC 22605d6, Definition Parametric contract)
   local out bs a
   out=$(cd "$GLP_DIR/glp_runtime" \
@@ -104,18 +116,19 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # in the checker's form with its roles' names, introduce's agent variable
 # Carol as GKK.glp writes it.
 asread() { run "as_read($1, R)." | sed -e 's/^\(GLP> \)*//' | grep -E '^R = ' | head -1 | sed -e 's/^R = //'; }
-GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
+GKKT=$(term "$GLP_DIR/programs/gsc/gkk_fixture.glp" gkk_fixture)   # the tests' fixture, a plain list of GKK's schemas; the adopted GKK.glp, which declares knows reflexive, is checked at the end of this script
 check "GKK's contract is read from programs/gsc/GKK.glp, in the clause syntax, establish first" \
-      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
+      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
 GKKV=$(asread "$GKKT")
 check "GKK as the checker reads it: establish forbidding the identity it adds, then acquaint and introduce, each naming its roles" \
-      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar('Carol')], " "$GKKV"
+      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], " "$GKKV"
 GKK_SCHEMAS="${GKKT%]}"
-GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
+GSGT=$(term "$GLP_DIR/programs/gsc/gsg_fixture.glp" gsg_fixture)   # the tests' fixture, as gkk_fixture.glp
 check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$GKK_SCHEMAS" "$GSGT"
-GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, GKK's schemas first" \
-      "$GKK_SCHEMAS" "$GSNT"
+GSNT=$(term "$GLP_DIR/programs/gsc/gsn_fixture.glp" gsn_fixture)   # GSN as GSC wrote it by hand until its adoption (2026-11-15), the tests' fixture; GSN.glp is printed from GSN.txt
+# The fixture gsn_fixture.glp writes GKK's schemas as GSC wrote them by hand, establish adding identity alone; the adopted GSN.glp, which begins with the adopted GKK's schemas, is checked at the end of this script.
+check "GSN's contract as GSC wrote it by hand, the network without provenance, is read from programs/gsc/gsn_fixture.glp, GKK's schemas first" \
+      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], " "$GSNT"
 GSGV=$(asread "$GSGT")
 GSNV=$(asread "$GSNT")
 # as_read takes a contract in either wrapped form, reflexive(Preds,
@@ -133,20 +146,29 @@ check_eq "as_read gives an environment contract its wrapper, each schema inside 
 check_eq "as_read descends an environment contract's reflexive body as unnamed/2 does" \
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
 # GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
-GNWI=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
-GSNPT=$(instance "$GLP_DIR/programs/gai/GSNP.glp" gsnp "$GNWI")
-check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
+GNWI=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
+# GSNP and GAI are adopted from the Calculus by GAI (2026-11-15): each file holds its full schemas, a term of its own and no instance of GnW, knows reflexive.
+GSNPT=$(contract_term "$GLP_DIR/programs/gai" GSNP)
+check "GSNP's contract is reflexive, in the clause syntax" "reflexive([knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
-check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
-check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
+check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([knows], [schema(" "$GSNPV"
+check "and reads the author of its message, author(Text) = a role" "eq(author_of(svar('Text')), role(" "$GSNPV"
 # A ward role has at most one guardian role (GSC a885275, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
-GAIT=$(instance "$GLP_DIR/programs/gai/GAI.glp" gai "$GNWI")
+GAIT=$(contract_term "$GLP_DIR/programs/gai" GAI)
 check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
-      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, operator_of, operated_by)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [identity, person])" \
+      "V = syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
-DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
-check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
-check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
+DGCT=$(contract_term "$GLP_DIR/programs/currencies/sovereign" DGC)
+# DGC is adopted from the Calculus by Currencies (2026-11-15), its environment today alone since the batch const (the coin carries its denomination): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
+check "DGC's contract is an environment contract, knows reflexive within it" "environment([today], reflexive([knows], [sas(" "$DGCT"
+DGCV=$(asread "$DGCT")
+check "as_read gives DGC its wrappers, each schema in the checker's form" "environment([today], reflexive([knows], [schema(" "$DGCV"
+check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCV" "$(asread "$DGCV")"
+# as_read keeps the mark one(Name, Other) of an agent variable that is no role, in the read names after the roles' (Definition Binding, GSC 8af7b7c: distinct agent variables to distinct agents but for two the schema marks as possibly one; vGLP #30's question, 2026-11-17)
+out=$(run "as_read([sas(lu, ['Alice', 'Carol', one('Dave', 'Carol')], ['Carol', 'Dave'], [not(atom(pointer, ['Alice', 'Carol', 'Dave']))], [atom(pointer, ['Alice', 'Carol', 'Dave'])], true, ['Alice'])], R).")
+check "as_read keeps a variable's mark of possibly one after the roles' names" "schema(lu, ['Alice', one('Dave', 'Carol')], [pvar('Carol'), pvar('Dave')]" "$out"
+out=$(run "as_read([sas(lu, ['Alice', 'Carol', 'Dave'], ['Carol', 'Dave'], [not(atom(pointer, ['Alice', 'Carol', 'Dave']))], [atom(pointer, ['Alice', 'Carol', 'Dave'])], true, ['Alice'])], R).")
+check "and adds no mark where the variables are not marked" "schema(lu, ['Alice'], [pvar('Carol'), pvar('Dave')]" "$out"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
       "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
 # A listed role is named by the variable its quantifier binds, the clause's
@@ -368,8 +390,8 @@ check "cs18's predicates of traceable provenance" \
 # Appendix B.3.
 send_cs18=$(cat <<'EOF' | squash
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(x,a,\Alice)\},\\
-& \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \cup \{\mathit{\detokenize{sent}}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \cup \{\mathit{\detokenize{item}}(x,a,\Alice)\},\\
+& \text{provided } \mathit{\detokenize{item}}(x,a,f) \in c_{\Alice} \text{ and } \mathit{\detokenize{friend}}(\Alice) \in c_{\Bob},\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
 EOF
@@ -383,8 +405,8 @@ check "cs18 declares friend reflexive" \
       "C = reflexive([friend], [schema(parent_child," "$out"
 parent_child_cs18=$(cat <<'EOF' | squash
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{parenting}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{parent}(\Alice),\mathit{child}\},\\
-& \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \cup \{\mathit{\detokenize{parenting}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \cup \{\mathit{\detokenize{parent}}(\Alice),\mathit{\detokenize{child}}\},\\
+& \text{provided } \mathit{\detokenize{parent}}(\Bob) \notin c_{\Alice} \text{ and } \mathit{\detokenize{parent}}(\Alice) \notin c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
@@ -406,32 +428,32 @@ check_eq "and deliver's is the one guarded by the empty set" "1" \
 
 IFS= read -r -d '' unfriend_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{friend}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{friend}}(\Alice)\},\\
+& \text{provided } \mathit{\detokenize{friend}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{friend}}(\Alice) \in c_{\Bob},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' child_unfriend_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{friend}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{friend}}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \cup \{\mathit{\detokenize{withdrawal}}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \cup \{\mathit{\detokenize{withdrawal}}\},\\
+& \text{provided } \mathit{\detokenize{parent}}(\mathit{Carol}),\mathit{\detokenize{friend}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{parent}}(\mathit{Dave}),\mathit{\detokenize{friend}}(\Alice) \in c_{\Bob} \text{ and } \mathit{\detokenize{parenting}}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{\detokenize{parenting}}(\Bob) \in c_{\mathit{Dave}},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' leave_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{member}}(\Alice,n)\},\\
+& \text{provided } \mathit{\detokenize{listed}}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{\detokenize{member}}(\Alice,n) \in c_{\Bob},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' child_leave_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Carol}},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{member}}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \cup \{\mathit{\detokenize{withdrawal}}\},\\
+& \text{provided } \mathit{\detokenize{listed}}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{\detokenize{member}}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{\detokenize{parenting}}(\Bob) \in c_{\mathit{Carol}},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' child_leave_2_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{member}}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \cup \{\mathit{\detokenize{withdrawal}}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \cup \{\mathit{\detokenize{withdrawal}}\},\\
+& \text{provided } \mathit{\detokenize{listed}}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{\detokenize{member}}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{\detokenize{parenting}}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{\detokenize{parenting}}(\Bob) \in c_{\mathit{Dave}},\\
 & \text{guarded by }
 EOF
 
@@ -530,8 +552,8 @@ check "a reading role the guarding role records, Alice pointing to Carol through
       "V = syntactically_grassroots" "$out"
 read -r -d '' point_tex <<'EOF'
 \begin{align*}
-&c'_{\Alice} := c_{\Alice} \uplus \{\mathit{points}(c)\}, \qquad c'_{\Bob} := c_{\Bob},\\
-&\text{provided } \mathit{identity},\mathit{points}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{points}(c) \in c_{\Bob},\\
+&c'_{\Alice} := c_{\Alice} \cup \{\mathit{\detokenize{points}}(c)\}, \qquad c'_{\Bob} := c_{\Bob},\\
+&\text{provided } \mathit{\detokenize{identity}},\mathit{\detokenize{points}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}},\mathit{\detokenize{points}}(c) \in c_{\Bob},\\
 &\text{guarded by } \{\Alice\}
 \end{align*}
 EOF
@@ -621,9 +643,9 @@ check_not "and neither is one adding and deleting an atom at one role refused" \
 # \in).
 befriend_paper=$(cat <<'EOF' | squash
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{identity}, \mathit{knows}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice) \in c_{\Bob},\\
-& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \cup \{\mathit{\detokenize{friend}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \cup \{\mathit{\detokenize{friend}}(\Alice)\},\\
+& \text{provided } \mathit{\detokenize{identity}}, \mathit{\detokenize{knows}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}}, \mathit{\detokenize{knows}}(\Alice) \in c_{\Bob},\\
+& \text{provided } \mathit{\detokenize{friend}}(\Bob) \notin c_{\Alice} \text{ and } \mathit{\detokenize{friend}}(\Alice) \notin c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
@@ -632,12 +654,26 @@ check_eq "GSG's befriend compiles to the display of Section 5.1" \
          "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
 
 # A contract compiles schema by schema (Section 5.1), and only after it is
-# checked: GSN's fourteen schemas, GKK's establish, acquaint and introduce,
-# GSG's befriend and unfriend, message, and the eight of a group, to
-# fourteen displays (GSN.glp at GLP 51b72a13).
+# checked: GSN's fifteen schemas, GKK's establish, acquaint and introduce,
+# GSG's befriend and unfriend, message, and the nine of a group, deliver_leader
+# among them (the leader's own receipt, the audit's finding of 2026-11-12), to
+# fifteen displays.
 out=$(run "compile_contract(gsn, $GSNT).")
-check_eq "GSN compiles to fourteen displays" "14" \
+check_eq "GSN compiles to fifteen displays" "15" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
+
+# compile_contract/3 checks the contract once, compiles it on that verdict and
+# gives the verdict back, as cascade.sh takes it: the same displays as
+# compile_contract/2 and the same verdict as check/2, of the one term.
+out3=$(run "compile_contract(gsn, $GSNT, V).")
+check_eq "compile_contract/3 prints the displays compile_contract/2 prints" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')" "$(printf '%s' "$out3" | grep -c 'begin{align')"
+check_eq "and prints them the same" \
+         "$(printf '%s' "$out" | sed -e 's/^\(GLP> \)*//' | grep -v '^V = ')" \
+         "$(printf '%s' "$out3" | sed -e 's/^\(GLP> \)*//' | grep -v '^V = ')"
+check_eq "compile_contract/3 gives the verdict check/2 gives" \
+         "$(run "check($GSNT, V)." | sed -e 's/^\(GLP> \)*//' | grep '^V = ')" \
+         "$(printf '%s' "$out3" | sed -e 's/^\(GLP> \)*//' | grep '^V = ')"
 
 # sg_chain_cut on GSG, which fails volition (above): sg_gossip certifies on
 # GSG and on GSN, both extending GKK, whose acquaint stays unobstructed.
@@ -743,9 +779,9 @@ check_not "and no display is printed for it" "begin{align" "$out"
 # quote to the shell's scan of the substitution)
 IFS= read -r -d '' create_tex <<'TEX'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{member}(\langle\Alice\rangle\cdot n),\mathit{listed}(\Alice,n)\},\\
-& \text{provided } \mathit{identity} \in c_{\Alice},\\
-& \text{provided } \{\mathit{member}(\langle\Alice\rangle\cdot n),\mathit{closed}(n)\} \cap c_{\Alice} = \emptyset,\\
+& c'_{\Alice} := c_{\Alice} \cup \{\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n),\mathit{\detokenize{listed}}(\Alice,n)\},\\
+& \text{provided } \mathit{\detokenize{identity}} \in c_{\Alice},\\
+& \text{provided } \{\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n),\mathit{\detokenize{closed}}(n)\} \cap c_{\Alice} = \emptyset,\\
 & \text{provided } \langle\Alice\rangle\cdot n \text{ is an argument of no atom of } c,\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
@@ -769,9 +805,9 @@ check_not "join, requiring member(<a>.n), asks no freshness of it" \
 # required; and the guard, the leader.
 close_gsn=$(cat <<'TEX' | squash
 \begin{align*}
-& c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{listed}(\Alice,n),\mathit{member}(\langle\Alice\rangle\cdot n)\}) \uplus \{\mathit{closed}(n)\},\\
-& c'_q := c_q \setminus \{\mathit{member}(\langle\Alice\rangle\cdot n)\} \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]),\ q \neq \Alice),\\
-& \text{provided } \mathit{identity},\mathit{listed}(\Alice,n),\mathit{member}(\langle\Alice\rangle\cdot n) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{member}(\langle\Alice\rangle\cdot n) \in c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
+& c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Alice,n),\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n)\}) \cup \{\mathit{\detokenize{closed}}(n)\},\\
+& c'_q := c_q \setminus \{\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n)\} \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{\detokenize{listed}}(\ast,n)]),\ q \neq \Alice),\\
+& \text{provided } \mathit{\detokenize{identity}},\mathit{\detokenize{listed}}(\Alice,n),\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}},\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n) \in c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{\detokenize{listed}}(\ast,n)])),\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
@@ -1183,7 +1219,7 @@ out=$(run "check_variant(sn_listed_unguarded, $GSNV, V).")
 check "a listed reading role in a schema with no guarding role is refused, though idled(n) is a signature atom (def:volition)" \
       "V = not_grassroots([listed_reading(idle, 2)])" "$out"
 read -r -d '' idle_tex <<'EOF'
-&c'_q := c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]),\ q \neq \Alice),\\
+&c'_q := c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{\detokenize{listed}}(\ast,n)]),\ q \neq \Alice),\\
 EOF
 check "and each member's line of its compiled form leaves the member's state unchanged (def:compile)" \
       "$(printf '%s' "$idle_tex" | squash)" \
@@ -1237,14 +1273,14 @@ one_schema() { # one_schema <name> ; from the notation on stdin, the lines of th
   awk -v s="$1: " 'index($0, s) == 1 { on = 1 } on && /^$/ { exit } on'
 }
 gsg_notation=$(cat <<'EOF'
-establish: identity(Alice) <-
+establish: identity(Alice), knows(Alice, Alice) <-
     not identity(Alice) guarded by Alice
 
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
     identity(Alice), identity(Bob) guarded by Alice, Bob
 
 introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+    identity(Bob), knows(Bob, Alice), identity(Alice), knows(Alice, Bob), knows(Alice, Carol) guarded by Bob, Alice
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
     identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
@@ -1280,6 +1316,12 @@ check_eq "a contract declaring friend reflexive prints the declaration first" \
 # and an introduction chooses its own values (def:binding-numbers; the
 # appendix "Values in Speech-Act Schemas"), and whether some choice meets the
 # clauses is decided exactly, the constraints being linear (linear.glp).
+# A local state is a finite set of ground atoms (GSC, branch sets-2026-11-24,
+# Calculus record items 49, 56 and 57): an atom carries no multiplicity, an
+# amount is a set variable, and the checker refuses every multiplicity,
+# multiplicity(Schema, Role, Atom).  The fixtures below that write one stay,
+# each refused; the comments above them tell what they tested when the domain
+# was multisets.
 echo "--- numbers (GSC, Section 3.2 and its appendix) ---"
 
 # The checker's fixtures with values (contracts.glp, "Values").  nm_bonds
@@ -1337,19 +1379,19 @@ check "the introductory acts of that contract name meet obstructed by advance" \
       "A = [intro_act(meet, obstructed([obstructed(meet, 1, atom(date, [num(0)]), blocked_by(advance, 1, atom(date, [num(t1)])))]))]" "$(run "intro_acts($NMBL, A).")"
 out=$(run "check_named(nm_mult_unsat, V)." "check_named(nm_mult_sat, V)." "check_named(nm_mult_zero, V)." "compile_named(nm_mult_zero).")
 mmv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
-check_eq "a schema adding a forbidden atom k times, the constraint no positive whole number satisfies, k <= 0, unread: obstructed" \
-         "V = not_grassroots([obstructed(meet, 1, atom(flag, []), blocked_by(raise, 1, atom(flag, [])))])" "$(mmv 1)"
-check_eq "under k <= 1 too, the other party in no role: obstructed" \
-         "V = not_grassroots([obstructed(meet, 1, atom(flag, []), blocked_by(raise, 1, atom(flag, [])))])" "$(mmv 2)"
+check_eq "a schema adding a forbidden atom k times is refused, a local state being a set" \
+         "V = malformed([multiplicity(raise, 1, atom(flag, []))])" "$(mmv 1)"
+check_eq "under k <= 1 too: refused" \
+         "V = malformed([multiplicity(raise, 1, atom(flag, []))])" "$(mmv 2)"
 check_eq "a multiplicity written as 0 is refused" \
-         "V = malformed([multiplicity_not_whole(mint, 1, atom(coin, [role(1)]))])" "$(mmv 3)"
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)]))])" "$(mmv 3)"
 check "and the message names the fault" \
-      "mint at role 1 carries a multiplicity that is not a positive whole number;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
-nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{bond}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t\landd\let+30,\\&\text{guardedby}\{\Alice\}\end{align*}'
+      "mint at role 1 carries a multiplicity, and a local state is a set;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
+nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\cup\{\mathit{\detokenize{bond}}(\Alice,d)\},\\&\text{provided}\mathit{\detokenize{identity}},\mathit{\detokenize{date}}(t)\inc_{\Alice},\\&\text{provided}d>t\landd\let+30,\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "nm_bonds's mint compiles its constraint, a conjunction, and as \\land and a sum as +" \
          "$nm_mint_display" "$(compiled nm_bonds mint)"
 nm_mint_notation=$(cat <<'EOF'
-mint: k.bond(Alice, Alice, d) <-
+mint: bond(Alice, Alice, d) <-
     identity(Alice), date(Alice, t), d > t, d <= t + 30 guarded by Alice
 EOF
 )
@@ -1378,12 +1420,12 @@ check_eq "a value forbidden at the introductory act, added by one schema below 5
          "V = not_grassroots([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))])" "$(lnv 2)"
 check_eq "added below 5 and above 6, the constraints unread: obstructed" \
          "V = not_grassroots([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))])" "$(lnv 3)"
-check_eq "a multiplicity of the act forbidden as a date, added at the even whole numbers, the constraint unread: obstructed" \
-         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(k)]), blocked_by(count, 1, atom(date, [num(t)])))])" "$(lnv 4)"
-check_eq "added at every whole number: obstructed at every introduction" \
-         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(k)]), blocked_by(count, 1, atom(date, [num(t)])))])" "$(lnv 5)"
-check_eq "a multiplicity with 2k = 3, which no whole number satisfies: no introduction" \
-         "V = not_grassroots([no_introductory_act])" "$(lnv 6)"
+check_eq "a multiplicity of the act forbidden as a date, and one of count, refused, a local state being a set" \
+         "V = malformed([multiplicity(meet, 1, atom(badge, [])), multiplicity(count, 1, atom(tally, []))])" "$(lnv 4)"
+check_eq "the same, count adding date(t) at every whole number: refused" \
+         "V = malformed([multiplicity(meet, 1, atom(badge, [])), multiplicity(count, 1, atom(tally, []))])" "$(lnv 5)"
+check_eq "a multiplicity with 2k = 3: refused" \
+         "V = malformed([multiplicity(meet, 1, atom(badge, []))])" "$(lnv 6)"
 check_eq "neither clause met, the constraints unread" \
          "V = not_grassroots([obstructed(meet, 1, atom(score, [num(x)]), unobtainable), obstructed(meet, 1, atom(date, [num(x)]), blocked_by(set_date, 1, atom(date, [num(t)])))])" "$(lnv 7)"
 check_eq "a constraint with a disjunction is admitted" \
@@ -1400,29 +1442,29 @@ check "and it is compiled, the product printed" \
 # verdicts"): a multiplicity that is not a number; a constraint on an agent,
 # the passage admitting one on the value variables; and a head that lists a
 # number and a value variable twice and leaves out the value variables
-# the atoms and the constraint carry.  A multiplicity on an atom required, and
-# on one forbidden, is admitted (def:numbers), and so is an atom added with a
-# multiplicity and deleted at one role (GSC f5b3f06).
+# the atoms and the constraint carry.  A multiplicity on an atom required, on
+# one forbidden, and on an atom added and deleted at one role is refused, a
+# local state being a set.
 out=$(run "check_named(nm_reading_role, V).")
 check "a reading role that reads a number, the guarding role requiring knows of it, is admitted" \
       "V = syntactically_grassroots" "$out"
 out=$(run "check_named(nm_tally, V).")
-check "a schema with no guarding role whose signature atom holds its variable k as its multiplicity is admitted (def:signature)" \
-      "V = syntactically_grassroots" "$out"
+check "a schema with no guarding role whose signature atom carries a multiplicity is refused, a local state being a set" \
+      "V = malformed([multiplicity(tally, 2, atom(tallied, [role(1)]))])" "$out"
 out=$(run "check_named(nm_mult_kept, V)." \
           "check_named(nm_mult_forbidden, V)." "check_named(nm_mult_agent, V)." \
           "check_named(nm_constraint_agent, V)." "check_named(nm_added_deleted, V)." \
           "check_named(nm_head, V)." "compile_named(nm_head).")
-check "a multiplicity on an atom required and not deleted is admitted, def:numbers requiring that many copies (GSC 859a007)" \
-      "V = syntactically_grassroots" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 1p)"
-check "a multiplicity on an atom forbidden is admitted (def:numbers: the machine then holding fewer than kappa)" \
-      "V = syntactically_grassroots" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 2p)"
+check "a multiplicity on an atom required and not deleted is refused, a local state being a set" \
+      "V = malformed([multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 1p)"
+check "a multiplicity on an atom forbidden is refused" \
+      "V = malformed([multiplicity(hoard, 1, atom(coin, [role(1)]))])" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 2p)"
 check "a multiplicity that is not a number is refused" \
-      "V = malformed([multiplicity_not_numeric(mint, 1, atom(coin, [role(1)]))])" "$out"
+      "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)]))])" "$out"
 check "a constraint on an agent variable is refused" \
       "V = malformed([constraint_not_numeric(mint, pvar(u))])" "$out"
-check "an atom added with a multiplicity and deleted at one role is admitted" \
-      "V = syntactically_grassroots" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 5p)"
+check "an atom added with a multiplicity and deleted at one role is refused" \
+      "V = malformed([multiplicity(churn, 1, atom(coin, [role(1)]))])" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 5p)"
 check "a head listing a number and a value variable twice, and leaving out two, is refused" \
       "V = malformed([head_not_variable(mint, num(5)), head_repeated(mint, num(k)), not_in_head(mint, num(d)), not_in_head(mint, num(t))])" "$out"
 check "and it is not compiled, the faults named" \
@@ -1443,17 +1485,17 @@ EOF
 check_eq "GSN's unfriend prints its cleared atoms negated in its head, the wildcard _, as Definition Name term, role writes it" \
          "$unfriend_notation" "$(notation "$GSNT" | one_schema unfriend)"
 # Compiled (def:compile): c'_p := ((c_p \ -(i)) \ K_p) u +(i), K_p holding
-# every atom of c_p, with its multiplicity, that matches a cleared atom; the
+# every atom of c_p that matches a cleared atom; the
 # cleared atoms require nothing, so the proviso holds friend of the other
 # alone.  unfriend has a name term, <Bob>.*, so it is printed in the general
 # form, a line per agent.
 read -r -d '' unfriend_tex <<'EOF'
 \begin{align*}
-&c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}) \setminus K_{\Alice},\\
-&\text{where } K_{\Alice} \text{ holds every atom of } c_{\Alice} \text{, with its multiplicity, that matches } \mathit{listed}(\Bob,\ast) \text{ or } \mathit{member}(\langle\Bob\rangle\cdot\ast),\\
-&c'_{\Bob} := (c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}) \setminus K_{\Bob},\\
-&\text{where } K_{\Bob} \text{ holds every atom of } c_{\Bob} \text{, with its multiplicity, that matches } \mathit{listed}(\Alice,\ast) \text{ or } \mathit{member}(\langle\Alice\rangle\cdot\ast),\\
-&\text{provided } \mathit{identity},\mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{friend}(\Alice) \in c_{\Bob},\\
+&c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{\detokenize{friend}}(\Bob)\}) \setminus K_{\Alice},\\
+&\text{where } K_{\Alice} \text{ holds every atom of } c_{\Alice} \text{ that matches } \mathit{\detokenize{listed}}(\Bob,\ast) \text{ or } \mathit{\detokenize{member}}(\langle\Bob\rangle\cdot\ast),\\
+&c'_{\Bob} := (c_{\Bob} \setminus \{\mathit{\detokenize{friend}}(\Alice)\}) \setminus K_{\Bob},\\
+&\text{where } K_{\Bob} \text{ holds every atom of } c_{\Bob} \text{ that matches } \mathit{\detokenize{listed}}(\Alice,\ast) \text{ or } \mathit{\detokenize{member}}(\langle\Alice\rangle\cdot\ast),\\
+&\text{provided } \mathit{\detokenize{identity}},\mathit{\detokenize{friend}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}},\mathit{\detokenize{friend}}(\Alice) \in c_{\Bob},\\
 &\text{guarded by } \{\Alice\}
 \end{align*}
 EOF
@@ -1486,13 +1528,12 @@ check_not "and it is not refused on compiling" "is malformed" "$(printf '%s' "$o
 out=$(run "check_variant(cl_wild, $GSNV, V).")
 check "the wildcard outside a negated atom of the head is read, and an atom added with one has no traceable provenance" \
       "V = not_grassroots([untraceable([seen])])" "$out"
-# "An atom of H or of B with no wildcard may carry a multiplicity"
-# (def:numbers).
+# A multiplicity is refused, a local state being a set, on every atom.
 out=$(run "check_variant(cl_mult, $GSNV, V)." "compile_variant(cl_mult, $GSNV).")
 check "a multiplicity on an atom with the wildcard is refused, on the cleared atoms and on an atom added, each named" \
-      "V = malformed([multiplicity_wildcard(drop, 1, atom(seen, [any])), multiplicity_wildcard(drop, 1, atom(listed, [role(1), any])), multiplicity_wildcard(drop, 1, atom(member, [nterm(ext_any(own(1)))]))])" "$out"
+      "V = malformed([multiplicity(drop, 1, atom(seen, [any])), multiplicity(drop, 1, atom(listed, [role(1), any])), multiplicity(drop, 1, atom(member, [nterm(ext_any(own(1)))]))])" "$out"
 check "and it is not compiled, the fault named" \
-      "drop at role 1 carries a multiplicity on an atom with the wildcard;" "$(printf '%s' "$out" | tr '\n' ' ')"
+      "drop at role 1 carries a multiplicity, and a local state is a set;" "$(printf '%s' "$out" | tr '\n' ' ')"
 # Clause 1 of def:unobstructed: the schema of arity one adding an atom the
 # introductory act requires "requires and clears nothing".  GKK's establish
 # clearing note(*) besides supplies no identity, so acquaint is obstructed.
@@ -1534,7 +1575,7 @@ EOF
 )
 check_eq "deliver prints its signing conditions after its body, as def:numbers writes them" \
          "$sig_notation" "$(notation "$SIGC" | one_schema deliver)"
-sig_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{\mathit{sent}(x,\Bob)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{\mathit{item}(x,\Alice)\},\\&\text{provided}\mathit{identity},\mathit{knows}(\Bob)\inc_{\Alice}\text{and}\mathit{identity},\mathit{knows}(\Alice)\inc_{\Bob},\\&\text{provided}\mathrm{unsigned}(\Bob,x)\land\mathrm{signed}(\Alice,x),\\&\text{guardedby}\{\Alice\}\end{align*}'
+sig_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\cup\{\mathit{\detokenize{sent}}(x,\Bob)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\cup\{\mathit{\detokenize{item}}(x,\Alice)\},\\&\text{provided}\mathit{\detokenize{identity}},\mathit{\detokenize{knows}}(\Bob)\inc_{\Alice}\text{and}\mathit{\detokenize{identity}},\mathit{\detokenize{knows}}(\Alice)\inc_{\Bob},\\&\text{provided}\mathrm{unsigned}(\Bob,x)\land\mathrm{signed}(\Alice,x),\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "deliver compiles its signing conditions into its proviso (def:compile)" \
          "$sig_display" "$(compiled sig_conds deliver)"
 # A signing condition not formed as def:numbers says is refused: u that is
@@ -1567,8 +1608,9 @@ check "and the speech-act fault named" \
 # agent variable of the schema (def:schema).  A bound variable holding an atom
 # need not be among the names.
 SAS_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+SAS_CREATE="sas(create, ['Alice'], [n], [atom(listed, ['Alice', 'Alice', n]), atom(member, ['Alice', ext(own('Alice'), n)])], [atom(identity, ['Alice'])], true, ['Alice'])"   # adds listed and member, which close requires (GSC, Section 3.2, "A contract is required to supply what its acts require")
 sas_close() { # sas_close <names> <head conjunct cond> <body conjunct cond> <body conjunct lits> <more body>
-  printf "[%s, sas(close, %s, [n], [atom(closed, ['Alice', n]), forall('Bob', %s, [not(atom(member, ['Bob', ext(own('Alice'), n)]))])], [atom(identity, ['Alice'])%s, forall('Bob', %s, [%s])], true, ['Alice'])]" \
+  printf "[%s, $SAS_CREATE, sas(close, %s, [n], [atom(closed, ['Alice', n]), forall('Bob', %s, [not(atom(member, ['Bob', ext(own('Alice'), n)]))])], [atom(identity, ['Alice'])%s, forall('Bob', %s, [%s])], true, ['Alice'])]" \
     "$SAS_EST" "$1" "$2" "$5" "$3" "$4"
 }
 LC="atom(listed, ['Alice', 'Bob', n])"
@@ -1606,8 +1648,8 @@ check_eq "close leaving Bob out of its names is read, the reader inferring a bou
          "$(sv 7)" "$(sv 9)"
 check_eq "establish guarded by Bob, no agent variable of it, is refused" \
          "V = malformed([guard_not_role(establish, 'Bob')])" "$(sv 10)"
-check_eq "a multiplicity on an atom forbidden is read in the clause syntax" \
-         "V = not_grassroots([no_introductory_act])" "$(sv 11)"
+check_eq "a multiplicity on an atom forbidden is read in the clause syntax, and refused" \
+         "V = malformed([multiplicity(hoard, 1, atom(coin, [role(1)]))])" "$(sv 11)"
 check "a contract whose reading has faults is not compiled, its faults named" \
       "deletes an atom it does not require;" "$(printf '%s' "$out" | tr '\n' ' ')"
 # A required k.A with one copy deleted (Definition Speech-act schema: "It is
@@ -1621,19 +1663,12 @@ check "a contract whose reading has faults is not compiled, its faults named" \
 # 2.coin and requires one copy, neither a sub-multiset of =(i).
 SPEND1="${GKK_SCHEMAS}, sas(mint, ['Alice'], [k], [times(num(k), atom(coin, ['Alice', 'Alice']))], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice']), sas(spend, ['Alice'], [k], [not(atom(coin, ['Alice', 'Alice']))], [atom(identity, ['Alice']), times(num(k), atom(coin, ['Alice', 'Alice']))], true, ['Alice'])]"
 out=$(run "check($SPEND1, V)." "as_read($SPEND1, R).")
-check "a required k.coin with one copy deleted is read, and the contract is syntactically grassroots" \
-      "V = syntactically_grassroots" "$out"
+check "a required k.coin with one copy deleted is read, and refused, a local state being a set" \
+      "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$out"
 check "spend as read: coin deleted, the copies of k.coin beyond it kept" \
       "schema(spend, ['Alice'], [num(k)], [rs(guarded, [], [atom(coin, [role(1)])], [atom(identity, []), rest(num(k), num(1), atom(coin, [role(1)]))], [])])" "$out"
-read -r -d '' spend_tex <<'EOF2'
-\begin{align*}
-&c'_{\Alice} := c_{\Alice} \setminus \{\text{\textcent}(\Alice)\},\\
-&\text{provided } \{\mathit{identity},k\cdot\text{\textcent}(\Alice)\} \subseteq c_{\Alice},\\
-&\text{guarded by } \{\Alice\}
-\end{align*}
-EOF2
-check_eq "spend compiles deleting one copy of coin and requiring k.coin" \
-         "$(printf '%s' "$spend_tex" | squash)" "$(compiled_in spend_one "$SPEND1" spend)"
+check "spend is not compiled, its multiplicity named" \
+      "spend at role 1 carries a multiplicity, and a local state is a set;" "$(run "compile_schema_in(spend_one, $SPEND1, spend)." | tr '\n' ' ')"
 spend_clause=$(cat <<'EOF2'
 spend: not coin(Alice, Alice) <-
     identity(Alice), k.coin(Alice, Alice) guarded by Alice
@@ -1664,20 +1699,20 @@ SPEND5K=$(spend_j "[k]" "num(5)" "num(k)" "ge(num(k), num(4))")
 out=$(run "check($SPEND2C, V)." "check($SPEND2N, V)." "check($SPENDJC, V)." "check($SPENDJN, V)." "check($SPENDJ3C, V)." "check($SPENDJ3N, V)." \
           "as_read($SPEND2C, R)." "as_read($SPENDJC, R)." "as_read($SPENDJ3C, R)." \
           "check($SPENDJM, V)." "check($SPEND5K, V).")
-check_eq "k.coin required, 2.coin deleted, k >= 2: read, and syntactically grassroots" \
-         "V = syntactically_grassroots" "$(sv 1)"
+check_eq "k.coin required, 2.coin deleted, k >= 2: read, and refused, a local state being a set" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sv 1)"
 check_eq "k.coin required, 2.coin deleted, no constraint: refused" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sv 2)"
-check_eq "k.coin required, j.coin deleted, j <= k: read, and syntactically grassroots" \
-         "V = syntactically_grassroots" "$(sv 3)"
+check_eq "k.coin required, j.coin deleted, j <= k: read, and refused, a local state being a set" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sv 3)"
 check_eq "k.coin required, j.coin deleted, no constraint: refused" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sv 4)"
-check_eq "3.coin required, j.coin deleted, j <= 3: read, and syntactically grassroots" \
-         "V = syntactically_grassroots" "$(sv 5)"
+check_eq "3.coin required, j.coin deleted, j <= 3: read, and refused, a local state being a set" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sv 5)"
 check_eq "3.coin required, j.coin deleted, no constraint: refused" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sv 6)"
-check_eq "k.coin required, j.coin deleted, j <= m and m <= k over a value m: read, and syntactically grassroots" \
-         "V = syntactically_grassroots" "$(sv 7)"
+check_eq "k.coin required, j.coin deleted, j <= m and m <= k over a value m: read, and refused, a local state being a set" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sv 7)"
 check_eq "k.coin required, 5.coin deleted, k >= 4: refused, k being 4 at a binding" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sv 8)"
 check "spend as read, 2.coin deleted: the copies of k.coin beyond the two kept" \
@@ -1686,16 +1721,8 @@ check "spend as read, j.coin deleted: the copies of k.coin beyond the j kept" \
       "rs(guarded, [], [times(num(j), atom(coin, [role(1)]))], [atom(identity, []), rest(num(k), num(j), atom(coin, [role(1)]))], [])" "$out"
 check "spend as read, j.coin deleted of 3.coin: the copies beyond the j kept" \
       "rs(guarded, [], [times(num(j), atom(coin, [role(1)]))], [atom(identity, []), rest(num(3), num(j), atom(coin, [role(1)]))], [])" "$out"
-read -r -d '' spendj_tex <<'EOF2'
-\begin{align*}
-&c'_{\Alice} := c_{\Alice} \setminus \{j\cdot\text{\textcent}(\Alice)\},\\
-&\text{provided } \{\mathit{identity},k\cdot\text{\textcent}(\Alice)\} \subseteq c_{\Alice},\\
-&\text{provided } j \le k,\\
-&\text{guarded by } \{\Alice\}
-\end{align*}
-EOF2
-check_eq "spend compiles deleting j copies of coin and requiring k.coin" \
-         "$(printf '%s' "$spendj_tex" | squash)" "$(compiled_in spend_j "$SPENDJC" spend)"
+check "spend deleting j copies of coin and requiring k.coin is not compiled, its multiplicities named" \
+      "spend at role 1 carries a multiplicity, and a local state is a set;" "$(run "compile_schema_in(spend_j, $SPENDJC, spend)." | tr '\n' ' ')"
 spendj_clause=$(cat <<'EOF2'
 spend: not j.coin(Alice, Alice) <-
     identity(Alice), k.coin(Alice, Alice), j <= k guarded by Alice
@@ -1768,8 +1795,8 @@ check_eq "ne on agent variables and on a bound variable, in a constraint and in 
          "V = syntactically_grassroots" "$(sf 8)"
 check_eq "the wildcard in a required atom is a variable of its own" \
          "V = syntactically_grassroots" "$(sf 9)"
-check_eq "a multiplicity negated in the body, fewer than k copies" \
-         "V = syntactically_grassroots" "$(sf 10)"
+check_eq "a multiplicity negated in the body, fewer than k copies: refused, a local state being a set" \
+         "V = malformed([multiplicity(cap, 1, atom(leads, [svar(n)]))])" "$(sf 10)"
 check_eq "a cardinality in a constraint" \
          "V = syntactically_grassroots" "$(sf 11)"
 check_eq "a schema with a safe formula in its body is no introductory act" \
@@ -1811,16 +1838,16 @@ TWO_OR=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "or(le(plus(num(i), num
 TWO_NL=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "and(le(plus(num(i), num(j)), num(k)), le(mul(num(i), num(j)), num(k)))")
 TWO_REQ=$(spend_two "[]" "num(1)" "num(2)" "atom(coin, ['Alice', 'Alice']), times(num(2), atom(coin, ['Alice', 'Alice']))" "true")
 out=$(run "check($TWO_OK, V)." "check($TWO_NO, V)." "check($TWO_OR, V)." "check($TWO_NL, V)." "check($TWO_REQ, V)." "as_read($TWO_OK, R).")
-check_eq "i.coin and j.coin deleted, k.coin required, i + j <= k: read" \
-         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "i.coin and j.coin deleted, k.coin required, i + j <= k: read, and refused, a local state being a set" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sf 1)"
 check_eq "each at most k and not their sum: refused" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 2)"
-check_eq "a linear constraint with a disjunction implying it: read" \
-         "V = syntactically_grassroots" "$(sf 3)"
+check_eq "a linear constraint with a disjunction implying it: read, and refused" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sf 3)"
 check_eq "a constraint that is not linear: refused, though a conjunct implies it, each deletion named" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)])), deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 4)"
-check_eq "1.coin and 2.coin deleted, coin and 2.coin required: read, =(i) a multiset" \
-         "V = syntactically_grassroots" "$(sf 5)"
+check_eq "1.coin and 2.coin deleted, coin and 2.coin required: read, and refused" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sf 5)"
 check "the copies beyond the two deletions kept" \
       "rest(num(k), plus(num(i), num(j)), atom(coin, [role(1)]))" "$out"
 n_form=$(cat <<'EOF'
@@ -1927,7 +1954,7 @@ EOF2
 check_eq "the notation prints a sum binding no variable with no comma" \
          "$n_sum_copies" "$(notation "$SUM_COPIES" | one_schema room)"
 check "the compiler prints a cardinality binding no variable with no comma" \
-      "\\mathrm{cardinality}(\\mathit{listed}" "$(compiled_in card_copies_c "$CARD_COPIES" room)"
+      "\\mathrm{cardinality}(\\mathit{\\detokenize{listed}}" "$(compiled_in card_copies_c "$CARD_COPIES" room)"
 # "A numeric term" (def:numbers): an agent is not a value, so a term with an
 # agent in it is not numeric, and no more is a speech-act variable's (GSC #12,
 # 2026-11-06 17:23 UTC, 1).  The same fault as in any constraint expression.
@@ -1986,10 +2013,10 @@ check_eq "and of an atom of phi" \
          "V = malformed([not_in_vars(room, member)])" "$(sf 3)"
 check_eq "and of a constraint of phi" \
          "V = malformed([not_in_vars(room, constraint)])" "$(sf 4)"
-check_eq "a multiplicity of phi that is no positive whole number is refused" \
-         "V = malformed([multiplicity_not_whole(room, 1, atom(member, [svar(n)]))])" "$(sf 5)"
+check_eq "a multiplicity of phi is refused" \
+         "V = malformed([multiplicity(room, 1, atom(member, [svar(n)]))])" "$(sf 5)"
 check_eq "a multiplicity of phi on the wildcard is refused" \
-         "V = malformed([multiplicity_wildcard(room, 1, atom(member, [any]))])" "$(sf 6)"
+         "V = malformed([multiplicity(room, 1, atom(member, [any]))])" "$(sf 6)"
 check_eq "a speech-act variable of a name term of the anchor outside the head is refused" \
          "V = malformed([not_in_head(room, svar(y))])" "$(sf 7)"
 check_eq "an anchor whose holder is no name is refused" \
@@ -2097,8 +2124,8 @@ check_eq "a name term over no role of the schema is refused" \
 L_YES=$(spend_j "[j, k, n, m]" "num(j)" "num(k)" "and(le(num(j), num(k)), ne(n, m))")
 L_NO=$(spend_j "[j, k, n, m]" "num(j)" "num(k)" "ne(n, m)")
 out=$(run "check($L_YES, V)." "check($L_NO, V).")
-check_eq "an inequality of speech-act variables beside the linear part of an implication is read" \
-         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "an inequality of speech-act variables beside the linear part of an implication is read, and refused for its multiplicities" \
+         "V = malformed([multiplicity(mint, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)])), multiplicity(spend, 1, atom(coin, [role(1)]))])" "$(sf 1)"
 check_eq "and implies no multiplicity" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 2)"
 # Printed and compiled as the equalities of agent variables are.
@@ -2244,6 +2271,17 @@ check "a whole t blocks every whole x: meet obstructed" "intro_act(meet, obstruc
 check "a whole t blocks no real x but a whole one: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
 check "a real t blocks every real x: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 3p)"
 
+# A number is written num(N), and val(C) is a value of any other type
+# (programs/gsc/self.glp, Arg): val(N) of a number N, in an atom or in a
+# constraint, is refused, value_number (Audit PR 76, Finding 5).
+RE_VALN=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)])], [atom(identity, ['Alice'])], gt(num(k), val(0)), ['Alice'])")
+RE_VALA=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)]), atom(tag, ['Alice', val(2)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
+RE_VALC=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)]), atom(tag, ['Alice', val(blue)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
+out=$(run "check($RE_VALN, V)." "check($RE_VALA, V)." "check($RE_VALC, V).")
+check_eq "a number written val(0) in a constraint is refused" "V = malformed([value_number(mint, 0)])" "$(sf 1)"
+check_eq "a number written val(2) in an atom is refused" "V = malformed([value_number(mint, 2)])" "$(sf 2)"
+check_eq "a constant written val(blue) is read" "V = syntactically_grassroots" "$(sf 3)"
+
 # Restriction by its syntactic approximations (GSC, Section 9: def:stronger,
 # prop:syntactic; restrict.glp, README "Restriction"), over GSG written in the
 # clause syntax: befriend strengthened by an atom of its body, by (a); unfriend
@@ -2288,8 +2326,8 @@ check_eq "adding an unguarded befriend_auto with befriend's head and roles and a
          "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), added_b(befriend_auto, befriend)])" "$(sf 3)"
 check_eq "adding a guarded schema is no step of the proposition" \
          "V = not_shown([added_guarded(befriend2)])" "$(sf 4)"
-check_eq "a predicate the base has not puts the contract outside the proposition" \
-         "V = not_shown([preds_not_in_base([trusts])])" "$(sf 5)"
+check_eq "a predicate the base has not puts the contract outside the proposition, and, no act adding it, the contract is malformed besides (GSC, Section 3.2: a contract supplies what its acts require; an act adding trusts would be an added guarded schema, another fault)" \
+         "V = not_shown([not_pv(restriction, malformed([unsupplied(befriend, trusts)])), preds_not_in_base([trusts])])" "$(sf 5)"
 check_eq "introduce with Carol named Dave is read up to the names of its variables" \
          "V = restriction([kept(establish), kept(acquaint), replaced_a(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 6)"
 check_eq "nudge, unguarded, strengthened is a step of (c), restricting under its invariant" \
@@ -2382,7 +2420,7 @@ check_eq "the same constants written bare are variables not in the head" "V = ma
 # its instance with child for ward, parenting for guardian_of and parent_of
 # for guarded_by is certified with child its ward mark; an addition named
 # establish replaces the base's, and sign is put after the base's schemas.
-GNWT=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+GNWT=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
 GNWP="$GNWT"   # GnW.glp's term is parametric(...) since GLP 829e65c3 (GSC #14)
 GNWB="[ward = child, guardian_of = parenting, guarded_by = parent_of]"
 EST2="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
@@ -2403,11 +2441,31 @@ check "a binding of no parameter, a name occurring in the base, a name written t
       "F = [not_a_parameter(friend), occurs(knows), written_twice(c), bound_twice(retired)]" "$out"
 check "an instance of a contract that names no parameters is a fault" "F = [not_parametric]" "$out"
 check "an addition named establish replaces the base's in its place" \
-      "D = reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
+      "D = parametric([creator, created, retired], reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
 check "and an addition of a new name comes after the base's schemas" \
       "atom(person, ['Alice'])], true, ['Alice'])])" "$(printf '%s\n' "$out" | grep 'sas(sign, ')"
 check "a constant parameter val(bylaws_p) is written bylaws_mcs by the binding bylaws_p = bylaws_mcs" \
       "D = [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_mcs)])], [atom(identity, ['Alice'])], true, ['Alice'])]" "$out"
+# "An instantiation of some of the parameters of a parametric contract is a
+# parametric contract in the others ... and a contract that amends another may
+# declare further parameters, among the predicates and constants of the schemas
+# it adds" (GSC, Definition Parametric contract, f3aeec3): the instance keeps
+# the parameters no binding writes, and those an addition declares after them;
+# an instance writing all six is no parametric contract.
+GNWALL="[ward = child, creator = creator, created = created, guardian_of = parenting, guarded_by = parent_of, retired = retired]"
+NOTEB="parametric([badge], [sas(note, ['Alice'], [], [atom(noted, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(badge, ['Alice'])], true, ['Alice'])])"
+out3=$(run "instantiate($GNWP, [ward = child], [], D1)." "instantiate($GNWP, $GNWALL, [], D2), check(D2?, V2)." \
+           "instantiate($GNWP, [ward = child], $NOTEB, D3)." "instantiate($GNWP, $GNWALL, $NOTEB, D4), check(D4?, V4).")
+check "an instance writing ward alone is parametric in the other five" \
+      "D1 = parametric([creator, created, guardian_of, guarded_by, retired], reflexive(" "$out3"
+check "an instance writing all six, three as themselves, is no parametric contract and is certified" \
+      "V2 = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out3"
+check_not "and its term declares no parameters" "D2 = parametric(" "$out3"
+check "an addition declaring badge adds it after the unwritten ones" \
+      "D3 = parametric([creator, created, guardian_of, guarded_by, retired, badge], reflexive(" "$out3"
+check "an instance writing all six with that addition is parametric in badge alone, which supplies note" \
+      "D4 = parametric([badge], reflexive(" "$out3"
+check "and is certified" "V4 = syntactically_grassroots_with_wards(acquaint, [child]" "$out3"
 # An instance may name the base's schemas its own way (GSC 22605d6), in its
 # bindings beside the predicates': ward_acquaint = child_acquaint renames the
 # relay act, and an addition named child_acquaint replaces it; a name taken
@@ -2427,6 +2485,34 @@ check "an addition bearing the instance's name for a schema replaces it in its p
       "sas(child_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'], [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Carol']), atom(child, ['Carol']), atom(parent_of, ['Carol', 'Alice']), atom(identity, ['Bob']), atom(person, ['Bob'])], true, ['Carol', 'Bob']), sas(ward_befriend" "$out2"
 check "as_read keeps a parametric contract's parameters" \
       "R = parametric([val(bylaws_p)], [schema(adopt, ['Alice'], [], [rs(guarded, [atom(bylaws, [val(bylaws_p)])], [], [atom(identity, [])], [])])])" "$out"
+# An instance may write for a parameter that is not a mark a predicate with
+# further value arguments (GSC 220151a, Definition Parametric contract), the
+# binding extended(P, Q, Types): GO's officers each hold a role, so GnW's
+# guardian_of and guarded_by are written officer_of and officer with a num.
+# In each schema the atoms of such predicates over one set of agent variables
+# share a fresh value variable, so the two records of one guardianship share
+# it and each guardian has his own, bound by the quantifier binding one of
+# its agents, or in Vars; an atom with a wildcard among its agents takes the
+# wildcard.  The instance is certified with GnW, its guardianship the office
+# (Theorem What the check preserves, clause 5).  A mark is no such parameter,
+# nor a name the base has no atom of.
+GNWX="[ward = org, extended(guardian_of, officer_of, [num]), extended(guarded_by, officer, [num])]"
+out3=$(run "instance_faults($GNWP, $GNWX, F)." "instantiate($GNWP, $GNWX, [], D), check(D?, V)." \
+           "instantiate($GNWP, $GNWX, [], D)." \
+           "instance_faults($GNWP, [extended(ward, w2, [num]), extended(nothing, n2, [num])], F).")
+check "an instance with officers holding a role has no fault" "F = []" "$out3"
+check "it is certified with wards, its guardianship the office" \
+      "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)], [relay(ward_acquaint, ward(1, org, no_guardian), free(2)), relay(wards_acquaint, ward(1, org, no_guardian), ward(2, org, no_guardian))], [identity, person])" "$out3"
+check "make_guardian: the new guardian's two records share his office, Alice's hers, and every Erin's is bound with Erin" \
+      "sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [iv3, iv2], [atom(officer_of, ['Bob', 'Carol', num(iv3)]), atom(friend, ['Bob', 'Carol']), atom(knows, ['Bob', 'Carol']), atom(officer, ['Carol', 'Bob', num(iv3)])" "$out3"
+check "the listed guardians' office is bound by their quantifier" \
+      "forall(['Erin', iv1], atom(officer, ['Carol', 'Erin', num(iv1)]), true, and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(officer_of, ['Erin', 'Carol', num(iv1)]))))], true, ['Bob', 'Alice', 'Erin'])" "$out3"
+check "retire clears every office of the ward with the wildcard" \
+      "not(atom(officer, ['Carol', '_', '_']))" "$out3"
+check "end_guardian ends one office of Bob's" \
+      "sas(end_guardian, ['Alice', 'Bob', 'Carol', 'Erin'], [iv2, iv3], [not(atom(officer_of, ['Bob', 'Carol', num(iv2)])), not(atom(officer, ['Carol', 'Bob', num(iv2)]))]" "$out3"
+check "a mark written with a value argument, and a name the base has no atom of, are faults" \
+      "F = [extended_mark(ward), extended_no_atom(nothing), not_a_parameter(nothing)]" "$out3"
 
 # --- the author, the item and a condition on an utterance (GSC 6df39d4, def:numbers) ---
 # "the author author(y), the first signer of y, in an equality with an agent
@@ -2538,8 +2624,8 @@ check "as_read gives kept(Alice, item(x)) as atom(kept, [item_of(svar(x))])" \
       "schema(keep, ['Alice'], [svar(x)], [rs(guarded, [atom(kept, [item_of(svar(x))])], [], [atom(identity, []), atom(item, [svar(x)])], [])])" "$(asread "$AU_ARG")"
 check "the notation prints installed(Alice, item(y))" "installed(Alice, item(y))" "$(notation "$AU_INST")"
 out=$(run "compile_schema_in(t, $AU_ARG, keep)." "compile_contract(t, $AU_UNREQ).")
-check "the compiled form writes \\mathit{kept}(\\mathrm{item}(x))" \
-      '\uplus\{\mathit{kept}(\mathrm{item}(x))\}' "$(printf '%s' "$out" | squash)"
+check "the compiled form writes \\mathit{\\detokenize{kept}}(\\mathrm{item}(x))" \
+      '\cup\{\mathit{\detokenize{kept}}(\mathrm{item}(x))\}' "$(printf '%s' "$out" | squash)"
 check "a contract with an item no agent role requires is not compiled, the fault named" \
       "as an argument of an atom, and no agent role requires" "$out"
 
@@ -2562,8 +2648,263 @@ out=$(run "check($NOTE_ENV, V1)." "check($NOTE_KNOWS, V2)." "check($NOTE_PLAIN, 
 check "an atom whose reading role only an environment atom names is untraceable: Provenance traces through no environment atom" \
       "V1 = not_grassroots([untraceable([met])])" "$out"
 check "the same, an atom of knows naming the reading role: traceable" "V2 = syntactically_grassroots" "$out"
-check "the same, nearby not an environment predicate: nearby, added by no schema, names it, and it is traceable" "V3 = syntactically_grassroots" "$out"
+check "the same, nearby not an environment predicate: nearby, added by no schema and required by note, is not supplied, and the contract is refused (GSC, Section 3.2: a contract supplies what its acts require)" "V3 = malformed([unsupplied(note, nearby)])" "$out"
 check "an environment predicate over agents, required at each guarding role, is not reported untraceable" "V4 = syntactically_grassroots" "$out"
+
+# The search of an introduction with wards (wards/wards.glp, GLP dce4192, reported by Calculus #6, 2026-11-15): a mark that a role adds without iota is in no set M (def:kinds, clause 2), so it is left out before the sets are tried.  The instance of GnW with child for ward, nine more marks f1 to f9, each added by an act of a person, and two predicates pp and qq that no act adds, environment predicates of the instance since a contract supplies what its acts require (GSC, Section 3.2), which give every mark a guardianship candidate, is certified as the instance is, within the limit of run; the search over every set of the nine did not end within it.
+FLAGS=""
+for i in 1 2 3 4 5 6 7 8 9; do
+  FLAGS="$FLAGS${FLAGS:+, }sas(flag$i, ['Alice'], [], [atom(f$i, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), not(atom(f$i, ['Alice']))], true, ['Alice'])"
+done
+NOTEPQ="sas(note, ['Alice', 'Bob'], [], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(pp, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(qq, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+out=$(run "instantiate($GNWP, $GNWB, environment([pp, qq], [$FLAGS, $NOTEPQ]), D), check(D?, V).")
+check "an instance of GnW with nine marks no ward bears is certified with child its ward mark, the search leaving them out" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
+# Some schema adds each type in M (Definition Types, clause 2, GSC a3c95d9; Udi, 2026-11-15): rider, an environment predicate that no act adds and that ride requires at its reading role, is the type of no ward, though pp and qq, which no act adds, would give it a guardianship and no guarding role requires it.  Before the clause the search certified the instance with M = [child, rider] (as ORH's rider and driver were tried).
+RIDE="sas(ride, ['Alice', 'Bob'], [], [atom(rode, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(rode, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(rider, ['Bob'])], true, ['Alice'])"
+out=$(run "instantiate($GNWP, $GNWB, environment([pp, qq, rider], [$NOTEPQ, $RIDE]), D), check(D?, V).")
+check "a type no act adds, an environment predicate, is no type of ward: the instance is certified with child alone" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
+
+# A signed term whose signer is no role of its schema (reported by Helper #1 for Calculus #6, 2026-11-15: check/2 failed, with no verdict): resign adds item(sgn(Item, Bob)) at Alice, Bob an agent variable holding no atom and no guard; the paper's Definition Speech-act schema has the signer an agent role, so the contract is malformed, the fault not_agent_role, and not_required as no role of the signer requires an atom with Item.
+SGB="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(sign, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item']))], true, ['Alice'])"
+RESIGN="sas(resign, ['Alice', 'Bob'], ['Bob', 'Item'], [atom(item, ['Alice', sgn('Item', 'Bob')])], [atom(identity, ['Alice']), atom(item, ['Alice', 'Item'])], true, ['Alice'])"
+out=$(run "check([$SGB], V1)." "check([$SGB, $RESIGN], V2).")
+check "a contract whose items are signed by their role is certified" "V1 = syntactically_grassroots" "$out"
+check "a signed term whose signer is no role of its schema is malformed, not a failure of check/2" \
+      "V2 = malformed([signed(resign, 1, atom(item, [sgn('Item', 0)]), not_agent_role), signed(resign, 1, atom(item, [sgn('Item', 0)]), not_required)])" "$out"
+
+# GKK, GSG and GnW as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each NAME.glp is the full schemas, printed from NAME.txt by calculus/tools/adopt.py, and is certified.
+AGKK=$(contract_term "$GLP_DIR/programs/gsc" GKK)
+AGSG=$(contract_term "$GLP_DIR/programs/gsc" GSG)
+AGNW=$(contract_term "$GLP_DIR/programs/gsc" GnW)
+out=$(run "check($AGKK, V1)." "check($AGSG, V2)." "check($AGNW, V3).")
+check "GKK as adopted is certified" "V1 = syntactically_grassroots" "$out"
+check "GSG as adopted is certified" "V2 = syntactically_grassroots" "$out"
+check "GnW as adopted is certified with wards, ward its mark, guardian and has_guardian its guardianship" \
+      "V3 = syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])" "$out"
+
+# GFP and GSN as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each begins with the adopted GKK's schemas and is certified; an item and a message are speech acts with a name, a forwarded item is signed over, and a post is delivered once to each member.
+AGFP=$(contract_term "$GLP_DIR/programs/gsc" GFP)
+AGSN=$(contract_term "$GLP_DIR/programs/gsc" GSN)
+check "GFP as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGFP"
+check "GSN as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGSN"
+check "GFP's forward adds the item signed over by the forwarder" "atom(item, ['Bob', sgn('Item', 'Alice')])" "$AGFP"
+out=$(run "check($AGFP, V1)." "check($AGSN, V2).")
+check "GFP as adopted is certified" "V1 = syntactically_grassroots" "$out"
+check "GSN as adopted is certified" "V2 = syntactically_grassroots" "$out"
+
+# A contract's term may declare its parameters, its environment predicates and its reflexive predicates together, parametric outermost, then environment, then reflexive (programs/self.glp, SDeclared and SBody; reported by GO #6 and Calculus #6, 2026-11-15: contract_named(gbank, environment([today], reflexive([knows], [...]))) did not type).  A file whose contract_named has such a term loads, the term is checked, and an instance of a parametric one keeps both declarations.
+DECLF="$GLP_DIR/programs/gsc/zz_declared_fixture.glp"
+printf 'procedure contract_named(Constant?, SDeclared).\ncontract_named(both, environment([today], reflexive([friend], %s))).\ncontract_named(all3, parametric([friend], environment([today], reflexive([friend], %s)))).\n' "$GSGT" "$GSGT" > "$DECLF"
+DBOTH=$(term "$DECLF" both)
+DALL3=$(term "$DECLF" all3)
+rm -f "$DECLF"
+check "a term declaring environment and reflexive predicates together is read from its file" "environment([today], reflexive([friend], [sas(establish, " "$DBOTH"
+check "a parametric term declaring both is read from its file" "parametric([friend], environment([today], reflexive([friend], [sas(establish, " "$DALL3"
+out=$(run "check($DBOTH, V1)." "instantiate($DALL3, [friend = pal], [], D), check(D?, V2)." "instantiate(parametric([friend], environment([today], $GSGT)), [friend = pal], [], E).")
+check "a contract declaring both is certified" "V1 = syntactically_grassroots" "$out"
+check "an instance of a parametric contract declaring both keeps both declarations" "D = environment([today], reflexive([pal], [sas(establish, " "$out"
+check "and is certified" "V2 = syntactically_grassroots" "$out"
+check "an instance of a parametric contract declaring environment predicates alone keeps them" "E = environment([today], [sas(establish, " "$out"
+
+# A value variable over constants, const(X) (GSC #17, 2026-11-15; the appendix "Values in Speech-Act Schemas": "Which types the values have --- numbers, strings, dates --- is the realisation's; the contract is parametric in them, and a value variable of a schema has a type, which the schema's term form writes"; Section 3.2: "Speech-act schemas allow values of any type").  The adopted GKK with appoint, which adds role(Bob, Alice, Role) at Bob, Role the name of a role its appointers choose, and act_as, guarded by Bob, which requires role(Bob, Alice, val('Treasurer')): certified, the variable read as a value variable, num(X) in the atom and const(X) among the schema's variables, and printed by its name; written const(X) and num(X), or const(X) and real(X), or const(X) and as a multiplicity, it is of two types; it stands in an inequality of a constraint, and in an equality with a constant; in the matches of def:unobstructed it meets a constant value, so a schema of arity one adding tag(Alice, const('T')) supplies tag(Alice, val(member)) the introductory act requires, and one adding it at another's role blocks tag(Alice, val(banned)) the act forbids, where the same schemas written num('T') do neither; and a parametric contract's predicate is extended with a value argument of the type (extended(P, Q, [const])).
+CKB="${GKKT%]}"
+C_APPOINT="sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+C_ACTAS="sas(act_as, ['Bob', 'Alice'], ['Alice'], [atom(acted, ['Bob', 'Alice'])], [atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(role, ['Bob', 'Alice', val('Treasurer')])], true, ['Bob'])"
+c_two() { # c_two <type> ; appoint with Role written const(X) in one atom and <type>(X) in another
+  printf '%s' "sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')]), atom(roled, ['Alice', 'Bob', $1('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+}
+C_MULT="sas(appoint, ['Alice', 'Bob'], ['Role'], [times(const('Role'), atom(role, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+C_REAPPOINT="sas(reappoint, ['Alice', 'Bob'], ['Role', 'New'], [not(atom(role, ['Bob', 'Alice', const('Role')])), atom(role, ['Bob', 'Alice', const('New')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(role, ['Bob', 'Alice', const('Role')])], ne(const('Role'), const('New')), ['Alice', 'Bob'])"
+C_TREASURE="sas(treasure, ['Alice', 'Bob'], ['Role'], [atom(treasurer, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(role, ['Bob', 'Alice', const('Role')])], eq(const('Role'), val('Treasurer')), ['Alice', 'Bob'])"
+out=$(run "check($CKB, $C_APPOINT, $C_ACTAS], V1)." "as_read($CKB, $C_APPOINT, $C_ACTAS], R)." \
+          "check($CKB, $(c_two num)], V2)." "check($CKB, $(c_two real)], V3)." "check($CKB, $C_MULT], V4)." \
+          "check($CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT, $C_TREASURE], V5)." \
+          "notation_contract($CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT])." \
+          "compile_schema_in(t, $CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT], reappoint).")
+check "a contract adding role with a variable over constants and requiring it with a constant is certified" "V1 = syntactically_grassroots" "$out"
+check "the variable over constants is read as a value variable, const(X) among the schema's variables and num(X) in its atom" \
+      "schema(appoint, ['Alice', 'Bob'], [const('Role')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(role, [role(1), num('Role')])], [], [atom(identity, [])], [])])" "$out"
+check "the constant beside it is read as a constant value" "atom(role, [pvar('Alice'), val('Treasurer')])" "$out"
+check "a variable written const(X) and num(X) is of two types" "V2 = malformed([value_type(appoint, 'Role')])" "$out"
+check "a variable written const(X) and real(X) is of two types" "V3 = malformed([value_type(appoint, 'Role')])" "$out"
+check "a variable written const(X) as a multiplicity is of two types" "V4 = malformed([value_type(appoint, 'Role')])" "$out"
+check "variables over constants in an inequality of a constraint, and in an equality with a constant, are certified" "V5 = syntactically_grassroots" "$out"
+check "the notation prints the variable over constants by its name" \
+      "appoint:role(Bob,Alice,Role)<-identity(Alice),knows(Alice,Bob),identity(Bob)guardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+check "and the inequality of two" \
+      "identity(Bob),role(Bob,Alice,Role),Role!=NewguardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+check "the compilation prints the variable over constants by its name" \
+      'c'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{\detokenize{role}}(\Alice,Role)\})\cup\{\mathit{\detokenize{role}}(\Alice,New)\}' "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+C_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+c_supply() { # c_supply <type> ; acquaint requires tag(Alice, val(member)), which tag, of arity one, adds with a variable of the type
+  printf '%s' "[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', $1('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', val(member)])], true, ['Alice', 'Bob'])]"
+}
+c_block() { # c_block <type> ; acquaint forbids tag(Alice, val(banned)), which tag adds at Alice with a variable of the type, at a binding with Carol anyone
+  printf '%s' "[$C_EST, sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), not(atom(tag, ['Alice', val(banned)]))], true, ['Alice', 'Bob']), sas(tag, ['Carol', 'Alice'], ['T'], [atom(tag, ['Alice', $1('T')]), atom(tagged, ['Carol', 'Alice'])], [atom(identity, ['Carol']), atom(identity, ['Alice']), atom(knows, ['Carol', 'Alice'])], true, ['Carol', 'Alice'])]"
+}
+C_INTRO="[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', const('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], ['T'], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', const('T')])], true, ['Alice', 'Bob'])]"
+out=$(run "check($(c_supply const), V1)." "check($(c_supply num), V2)." "check($(c_block const), V3)." "check($(c_block num), V4)." "check($C_INTRO, V5).")
+check "a constant the introductory act requires is supplied by a schema of arity one adding it with a variable over constants" "V1 = syntactically_grassroots" "$out"
+check "and not by one adding it with a variable over the whole numbers" \
+      "V2 = not_grassroots([obstructed(acquaint, 1, atom(tag, [val(member)]), unobtainable)])" "$out"
+check "a constant the introductory act forbids is blocked by a schema adding it with a variable over constants" \
+      "V3 = not_grassroots([obstructed(acquaint, 1, atom(tag, [val(banned)]), blocked_by(tag, 2, atom(tag, [num('T')])))])" "$out"
+check "and not by one adding it with a variable over the whole numbers" "V4 = syntactically_grassroots" "$out"
+check "a variable over constants of the introductory act is a value its introduction chooses" "V5 = syntactically_grassroots" "$out"
+GNWC="[ward = org, extended(guardian_of, officer_of, [const]), extended(guarded_by, officer, [const])]"
+out=$(run "instance_faults($GNWP, $GNWC, F)." "instantiate($GNWP, $GNWC, [], D), check(D?, V)." "instantiate($GNWP, $GNWC, [], D).")
+check "an instance of GnW with officers each holding a role, a variable over constants, has no fault" "F = []" "$out"
+check "it is certified with wards, its guardianship the office" \
+      "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)]" "$out"
+check "its atoms of the office carry the variable over constants" "atom(officer_of, ['Bob', 'Carol', const(iv" "$out"
+# A contract supplies what its acts require (GSC, Section 3.2, the paragraph before Proposition Turing completeness): "the predicate of every atom that a role of a schema requires, the anchor of a quantifier among them, or that occurs in a safe formula of a body, is the predicate of an atom that some schema of the contract adds, an environment predicate, a predicate the contract declares reflexive (Section 8) or a parameter of it (Section 9) ... the checker refuses it".  GKK's three schemas with note(Alice), which adds noted(Alice) and requires besides identity one thing more: an atom of badge, which nothing adds, refused, unsupplied(note, badge); the same with badge an environment predicate, with an act award adding badge, with badge a parameter of the contract, and with self(Alice, Alice) required and self declared reflexive, each certified; a constant parameter val(badge) is no predicate; an atom forbidden is not required, a negated literal of the body, an atom negated in a safe formula of the body, under an odd number of its negations, and a negated literal of the conclusion of a quantified conjunct of the body, which a listed role forbids, alike (GSC #17, 2026-11-15: "occurs unnegated in a safe formula of a body"), an atom under two negations being unnegated; and a predicate only in a safe formula of the body, only the anchor of a quantifier of the body, and only the anchor of a quantified conjunct of the head, each refused, a conditional atom of a quantified conjunct of a head counting as added; the faults in the order of the schemas and of first occurrence, a predicate once a schema.
+SUPK="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+supnote() { # supnote <body items after identity> [<head items after noted>] ; the act note
+  echo "sas(note, ['Alice'], [], [atom(noted, ['Alice'])${2:+, $2}], [atom(identity, ['Alice']), $1], true, ['Alice'])"
+}
+SUPN=$(supnote "atom(badge, ['Alice'])")
+SUPAWARD="sas(award, ['Alice'], [], [atom(badge, ['Alice'])], [atom(identity, ['Alice']), not(atom(badge, ['Alice']))], true, ['Alice'])"
+SUPSELF=$(supnote "atom(self, ['Alice', 'Alice'])")
+SUPTAG="sas(tag, ['Alice'], [x], [atom(tag, ['Alice', x])], [atom(identity, ['Alice']), not(atom(tag, ['Alice', x]))], true, ['Alice'])"
+SUPSEEN="sas(look, ['Alice'], [x], [atom(looked, ['Alice'])], [atom(identity, ['Alice']), atom(seen, ['Alice', x])], true, ['Alice'])"
+out=$(run "check([$SUPK], V0)." "check([$SUPK, $SUPN], V1)." "check(environment([badge], [$SUPK, $SUPN]), V2)." \
+          "check([$SUPK, $SUPN, $SUPAWARD], V3)." "check([$SUPK, $SUPSELF], V4)." "check(reflexive([self], [$SUPK, $SUPSELF]), V5)." \
+          "check(parametric([badge], [$SUPK, $SUPN]), V6)." "check(parametric([val(badge)], [$SUPK, $SUPN]), V7)." \
+          "check([$SUPK, $(supnote "not(atom(badge, ['Alice']))")], V8)." \
+          "check([$SUPK, $(supnote "or(atom(badge, ['Alice']), atom(knows, ['Alice', 'Alice']))")], V9)." \
+          "check([$SUPK, $(supnote "exists([x], atom(tag, ['Alice', x]), true)")], V10)." \
+          "check([$SUPK, $(supnote "atom(noted, ['Alice'])" "forall([x], atom(tag, ['Alice', x]), true, [atom(seen, ['Alice', x])])")], V11)." \
+          "check([$SUPK, $SUPTAG, $(supnote "not(atom(noted, ['Alice']))" "forall([x], atom(tag, ['Alice', x]), true, [atom(seen, ['Alice', x])])"), $SUPSEEN], V12)." \
+          "check([$SUPK, $SUPTAG, $SUPSEEN], V13)." \
+          "check([$SUPK, $(supnote "and(not(atom(badge, ['Alice'])), atom(identity, ['Alice']))")], V15)." \
+          "check([$SUPK, $(supnote "not(exists([x], atom(tag, ['Alice', x]), atom(badge, ['Alice'])))")], V16)." \
+          "check([$SUPK, $(supnote "not(not(atom(badge, ['Alice'])))")], V17)." \
+          "check([$SUPK, $SUPTAG, $(supnote "forall([x], atom(tag, ['Alice', x]), true, [not(atom(badge, [x]))])")], V18)." \
+          "check([$SUPK, $SUPTAG, $(supnote "forall([x], atom(tag, ['Alice', x]), true, [atom(badge, [x])])")], V19)." \
+          "check([$SUPK, $(supnote "atom(badge, ['Alice']), atom(pass, ['Alice']), atom(badge, ['Alice'])"), sas(more, ['Alice'], [], [atom(more, ['Alice'])], [atom(pass, ['Alice']), atom(ticket, ['Alice'])], true, ['Alice'])], V14).")
+check "GKK's three schemas supply what they require" "V0 = syntactically_grassroots" "$out"
+check "an act requiring an atom of a predicate nothing adds is refused, unsupplied(note, badge)" "V1 = malformed([unsupplied(note, badge)])" "$out"
+check "the same with the predicate an environment predicate is certified" "V2 = syntactically_grassroots" "$out"
+check "the same with an act adding the predicate is certified" "V3 = syntactically_grassroots" "$out"
+check "a predicate required and added by nothing, not declared reflexive, is refused" "V4 = malformed([unsupplied(note, self)])" "$out"
+check "the same declared reflexive is no fault" "V5 = syntactically_grassroots" "$out"
+check "a predicate required and added by nothing, a parameter of a parametric contract, is no fault" "V6 = syntactically_grassroots" "$out"
+check "a constant parameter of that name, val(badge), is no predicate, and the act is refused" "V7 = malformed([unsupplied(note, badge)])" "$out"
+check "an atom forbidden, a negated literal of the body, is not required" "V8 = syntactically_grassroots" "$out"
+check "an atom negated in a safe formula of a body is not required" "V15 = syntactically_grassroots" "$out"
+check "nor is a quantifier negated there, its anchor and its condition" "V16 = syntactically_grassroots" "$out"
+check "an atom under two negations is unnegated, and required" "V17 = malformed([unsupplied(note, badge)])" "$out"
+check_not "what a listed role forbids, a negated literal of the conclusion of a quantified conjunct of the body, is not required" "unsupplied" "$(printf '%s\n' "$out" | grep -F 'V18 = ')"
+check "what it requires there is" "V19 = malformed([unsupplied(note, badge)])" "$out"
+check "a predicate only in a safe formula of a body, added by nothing, is refused" "V9 = malformed([unsupplied(note, badge)])" "$out"
+check "a predicate only the anchor of a quantifier of a body, added by nothing, is refused" "V10 = malformed([unsupplied(note, tag)])" "$out"
+check "a predicate only the anchor of a quantified conjunct of a head, added by nothing, is refused" "V11 = malformed([unsupplied(note, tag)])" "$out"
+check_not "a conditional atom of a quantified conjunct of a head counts as added" "unsupplied" "$(printf '%s\n' "$out" | grep -F 'V12 = ')"
+check "the conditional atom is what supplied it" "V13 = malformed([unsupplied(look, seen)])" "$out"
+check "the faults are in the order of the schemas and of first occurrence, a predicate once a schema" \
+      "V14 = malformed([unsupplied(note, badge), unsupplied(note, pass), unsupplied(more, pass), unsupplied(more, ticket)])" "$out"
+out=$(run "compile_contract(t, [$SUPK, $SUPN]).")
+check "a contract that does not supply what an act requires is not compiled, the fault named" \
+      "requires an atom of" "$out"
+out=$(run "compile_contract(t, environment([badge], [$SUPK, $SUPN]))." "compile_contract(t, parametric([badge], [$SUPK, $SUPN]))." \
+          "compile_contract(t, environment([badge], reflexive([knows], [$SUPK, $SUPN])))." "compile_schema_in(t, environment([badge], [$SUPK, $SUPN]), note).")
+check_not "compile_contract takes an environment predicate, a parameter and either around reflexive as supplying what an act requires, as check/2 does" \
+      "requires an atom of" "$out"
+check "a contract supplied by its environment is compiled" "begin{align" "$out"
+
+# --- clause 1 of def:unobstructed: a schema of arity one forbidding another atom it adds
+# Knowledge with the persons of the Calculus's item 29: acquaint requires
+# person, which establish adds with identity, forbidding identity.  Clause 1
+# admits establish for person: both have no arguments, no schema deletes or
+# clears person, and every schema adding identity at a role adds person
+# there.  A schema adding identity without person, or deleting person,
+# leaves person unobtainable.
+KPE="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+KPA="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob'])"
+KPI="sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob'])"
+KPX="sas(enter, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+KPR="sas(retire, ['Alice'], [], [not(atom(person, ['Alice']))], [atom(person, ['Alice'])], true, ['Alice'])"
+out=$(run "check(reflexive([knows], [$KPE, $KPA, $KPI]), V1)." \
+          "check(reflexive([knows], [$KPE, $KPA, $KPI, $KPX]), V2)." \
+          "check(reflexive([knows], [$KPE, $KPA, $KPI, $KPR]), V3).")
+check "person, added by establish with identity, which it forbids, is obtainable, by clause 1 of def:unobstructed" \
+      "V1 = syntactically_grassroots" "$out"
+check "a schema adding identity without person leaves person unobtainable" \
+      "V2 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
+check "a schema deleting person leaves person unobtainable" \
+      "V3 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
+
+# --- set variables (def:numbers and def:binding-numbers, the set variable;
+# the Calculus's record, items 49 to 51): set(N) is the value variable N of a
+# type Set(A), an atom with it standing for one atom per element of N, and
+# size(N) its size |N|.  The conditions read N as a value variable over
+# constants; Vars writes it set(N), an atom num(N).
+SKE="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+SKA="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob'])"
+SKI="sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob'])"
+SIS="sas(issue, ['Alice'], ['Type', 'N'], [atom(note, ['Alice', 'Alice', const('Type'), set('N')])], [atom(identity, ['Alice'])], true, ['Alice'])"
+SPY="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('N')])], true, ['Alice', 'Bob'])"
+SPZ="sas(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N', 'Sum'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('N')])], eq(size('N'), num('Sum')), ['Alice', 'Bob'])"
+SPM="sas(paym, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N', 'M'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('M')])], true, ['Alice', 'Bob'])"
+SPT="sas(payt, ['Alice', 'Bob'], ['N'], [atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(token, ['Alice', set('N')]), times(num('N'), atom(mark, ['Alice']))], true, ['Alice', 'Bob'])"
+SPC="sas(payc, ['Alice', 'Bob'], ['T', 'N'], [atom(knows, ['Bob', 'Alice']), atom(tag, ['Bob', const('T')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], eq(size('T'), num('N')), ['Alice', 'Bob'])"
+SPD="sas(payd, ['Alice', 'Bob'], ['T'], [atom(knows, ['Bob', 'Alice']), atom(tag, ['Bob', const('T')]), atom(mark, ['Bob', set('T')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+SBA="sas(acquaint, ['Alice', 'Bob'], ['B'], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob']), atom(badge, ['Alice', set('B')])], true, ['Alice', 'Bob'])"
+SBS="sas(badge, ['Alice'], ['X'], [atom(badge, ['Alice', const('X')])], [], true, ['Alice'])"
+SBT="sas(badge, ['Alice'], ['X'], [atom(badge, ['Alice', set('X')])], [], true, ['Alice'])"
+SG="reflexive([knows], [$SKE, $SKI, $SIS"
+out=$(run "check($SG, $SKA, $SPY]), V1)." "check($SG, $SKA, $SPZ]), V2)." "check($SG, $SKA, $SPM]), V3)." \
+          "check($SG, $SKA, $SPT]), V4)." "check($SG, $SKA, $SPC]), V5)." "check($SG, $SKA, $SPD]), V6)." \
+          "check($SG, $SBA, $SBS]), V7)." "check($SG, $SBA, $SBT]), V8)." "check($SG, $SBA]), V9)." \
+          "as_read($SG, $SKA, $SPZ]), R10)." "compile_schema_in(t, $SG, $SKA, $SPZ]), payn).")
+check "a payment of a set of notes, required and deleted at the payer and added at the payee, is syntactically grassroots" "V1 = syntactically_grassroots" "$out"
+check "a constraint on the size of the set is read, and no condition reads it" "V2 = syntactically_grassroots" "$out"
+check "a set deleted is required with the same set variable" \
+      "V3 = malformed([deleted_not_required(paym, 1, atom(note, [pvar('Carol'), num('Type'), num('N')]))])" "$out"
+check "a set variable written as a multiplicity is of two types" "V4 = malformed([value_type(payt, 'N')])" "$out"
+check "the size of a variable written const(X) is of two types" "V5 = malformed([value_type(payc, 'T')])" "$out"
+check "a variable written set(X) and const(X) is of two types" "V6 = malformed([value_type(payd, 'T')])" "$out"
+check "an atom of a set an introductory act requires is supplied by a schema of arity one adding one element" "V7 = syntactically_grassroots" "$out"
+check "or adding a set" "V8 = syntactically_grassroots" "$out"
+check "and is unsupplied where no schema adds it" "V9 = malformed([unsupplied(acquaint, badge)])" "$out"
+check "the checker's form writes a set variable set(N) among the variables, num(N) in an atom, and its size fn(size, [num(N)])" \
+      "nschema(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), set('N'), num('Sum')], eq(fn(size, [num('N')]), num('Sum'))" "$out"
+check "the compiler prints the size of a set |N|" "$(printf '|\nN\n|')" "$out"
+
+# --- compound values (GSC, Def numbers and Def binding, branch
+# compound-values-2026-11-25 46cbb4e; Calculus #11, 2026-11-25): a value
+# f(t1, ..., tk) of a function symbol f, written val(f, [T1, ..., Tk]), each Ti
+# a value, a value variable or a compound value; the reader writes it cmp(f,
+# Args), a binding sends it to f(beta(t1), ..., beta(tk)), and it matches a
+# value of the same f argument by argument.  A bond's note writes its
+# maturity Day in the type, bond(Day).
+SBI="sas(issue, ['Alice'], ['Day', 'N'], [atom(note, ['Alice', 'Alice', val(bond, [num('Day')]), set('N')])], [atom(identity, ['Alice'])], true, ['Alice'])"
+SBP="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Day', 'N'], [not(atom(note, ['Alice', 'Carol', val(bond, [num('Day')]), set('N')])), atom(note, ['Bob', 'Carol', val(bond, [num('Day')]), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', val(bond, [num('Day')]), set('N')])], true, ['Alice', 'Bob'])"
+SBQ="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'N'], [not(atom(note, ['Alice', 'Carol', val(bond, ['Day']), set('N')])), atom(note, ['Bob', 'Carol', val(bond, ['Day']), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', val(bond, ['Day']), set('N')])], true, ['Alice', 'Bob'])"
+SBG="reflexive([knows], [$SKE, $SKI, $SBI"
+cgap_of() { gkk_with "sas(meet, ['Alice', 'Bob'], [x], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(date, ['Alice', val(d, [num(x)])])), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(low, ['Alice'], [t], [atom(date, ['Alice', val($1, [num(t)])])], [atom(identity, ['Alice'])], true, ['Alice'])"; }
+out=$(run "check($SBG, $SKA, $SBP]), V1)." "check($SBG, $SKA, $SBQ]), V2)." "as_read([$SBP], R3)." \
+          "intro_acts($(cgap_of d), A)." "intro_acts($(cgap_of e), A)." \
+          "compile_schema_in(t, $SBG, $SKA, $SBP]), pay).")
+check "a payment of bonds, their maturity in the note's type bond(Day), is syntactically grassroots" "V1 = syntactically_grassroots" "$out"
+check "a bare name in a compound value is a variable, refused where the head does not have it" "V2 = malformed([not_in_vars(pay, note)" "$out"
+check "the reader writes val(bond, [num(Day)]) as the compound value cmp(bond, [num(Day)])" \
+      "atom(note, [pvar('Carol'), cmp(bond, [num('Day')]), num('N')])" "$out"
+check "date(d(t)) added at every t blocks date(d(x)): meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
+check "date(e(t)) of another function symbol does not: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
+check "the compiler prints a compound value \\mathit{bond}(Day)" "$(printf '\\mathit{\nbond\n}(\nDay\n)')" "$out"
+# A compound value is a value (Def numbers: f(v1, ..., vk) in V), so a value
+# variable over constants, const(t), ranges over it too (Calculus #11 and
+# vGLP #32, 2026-11-25: Notes' Type is a bond's bond(Day)): date(t) added at
+# every constant t blocks date(d(x)); a whole t does not.
+kgap_of() { gkk_with "sas(meet, ['Alice', 'Bob'], [x], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(date, ['Alice', val(d, [num(x)])])), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(low, ['Alice'], [t], [atom(date, ['Alice', $1(t)])], [atom(identity, ['Alice'])], true, ['Alice'])"; }
+out=$(run "intro_acts($(kgap_of const), A)." "intro_acts($(kgap_of num), A).")
+check "a value variable over constants meets a compound value: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
+check "a whole value variable does not: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
+bond_notation=$(notation "$SBG, $SKA, $SBP])")
+check "the notation prints a compound value bond(Day)" "bond(Day)" "$bond_notation"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

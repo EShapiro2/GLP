@@ -1,0 +1,201 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract wild
+%% (../contracts.glp, contract_named(wild, C), in the clause syntax), platform.vglp,
+%% which programs/vglp/cva/compile.sh prints from it: "a wildcard in an unnegated
+%% atom of B, or in the anchor of a quantifier, is a variable of its own, standing
+%% for some value: the machine of the person who holds the atom finds one in its
+%% state, and the act neither names nor records it, as an act that requires a bond
+%% of some maturity" (vGLP, Section 5.4, "Speech-act schemas as local
+%% specifications").
+%%
+%% play_wild, among alice, bob and carol.  alice requests accept(alice, carol),
+%% which requires bond(carol, _) at her, holding no bond: refused, unable.  carol
+%% issues her a bond of maturity 7, issue(carol, alice, 7), and one of maturity
+%% 9, alice answering yes to each; alice requests accept(alice, carol) again,
+%% holding two bonds of carol, either of which meets bond(carol, _), carol
+%% answering yes, and it commits, her state gaining accepted(carol) and keeping
+%% both bonds.  carol, who has accepted no one, first requests vow(carol), not
+%% exists g accepted(g), and gains vowed; alice, having accepted carol, requests
+%% vow(alice): refused, unable.  carol, who holds no role in anyone, requests
+%% rest(carol), not role(_, _) or retired, and gains rested; alice, holding a
+%% role in carol and not retired, requests rest(alice): refused, unable.  bob requests boast(bob), exists r
+%% role(_, r), holding no role: refused, unable.  carol appoints bob chair and
+%% then clerk, and alice chair, each answering yes; bob requests boast(bob) again,
+%% and gains officer.  carol reports to alice, report(carol, alice): its
+%% instances are the roles carol has given, chair and clerk, chair once though
+%% two hold it, and alice gains title(carol, r) for each.  carol retires,
+%% retire(carol): her agent lists alice and bob, the people she has in some
+%% role, bob once; each holds role(carol, _), and loses every role in carol in
+%% the one act, carol losing every has_role(_, _).  carol then points to
+%% alice, to whom she issued a bond, with the label x and again with the label
+%% y, and removes the first, unpoint(carol, alice, x), the request naming the
+%% pointer she removes: the pointer labelled y stays.  Last, offices, whose
+%% titles are constants: alice, holding no office, requests serve(alice,
+%% carol), which requires office(carol, _): refused, unable.  carol gives bob
+%% the offices clerk and treasurer and alice the office clerk, each answering
+%% yes; bob requests serve(bob, carol), carol answering yes, and it commits.
+%% carol dissolves, dissolve(carol): her agent lists alice and bob, bob once,
+%% and each loses every office in carol in the one act.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_wild(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_wild(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(accept(A1?, carol))),
+          wait(refused(accept(alice, carol), alice, unable)),
+          approval(issue(carol, alice, 7), yes),
+          approval(issue(carol, alice, 9), yes),
+          wait(holds(bond(carol, 9))),
+          own([A2], propose(accept(A2?, carol))),
+          wait(holds(accepted(carol))),
+          own([A3], propose(vow(A3?))),
+          wait(refused(vow(alice), alice, unable)),
+          approval(appoint(carol, alice, speech(utterance(chair), carol)), yes),
+          wait(holds(role(carol, speech(utterance(chair), carol)))),
+          own([A4], propose(rest(A4?))),
+          wait(refused(rest(alice), alice, unable)),
+          approval(report(carol, alice, [speech(utterance(chair), carol), speech(utterance(clerk), carol)]), yes),
+          own([A5], propose(serve(A5?, carol))),
+          wait(refused(serve(alice, carol), alice, unable)),
+          approval(office(carol, alice, clerk), yes)],
+         [own([B1], propose(boast(B1?))),
+          wait(refused(boast(bob), bob, unable)),
+          approval(appoint(carol, bob, speech(utterance(chair), carol)), yes),
+          approval(appoint(carol, bob, speech(utterance(clerk), carol)), yes),
+          wait(holds(role(carol, speech(utterance(clerk), carol)))),
+          own([B2], propose(boast(B2?))),
+          wait(holds(officer)),
+          approval(office(carol, bob, clerk), yes),
+          approval(office(carol, bob, treasurer), yes),
+          wait(holds(office(carol, treasurer))),
+          own([B3], propose(serve(B3?, carol))),
+          wait(holds(serving(carol)))],
+         [own([V1], propose(vow(V1?))),
+          wait(holds(vowed)),
+          own([V2], propose(rest(V2?))),
+          wait(holds(rested)),
+          own([C1], propose(issue(C1?, alice, 7))),
+          wait(holds(issued(alice, 7))),
+          own([C0], propose(issue(C0?, alice, 9))),
+          approval(accept(alice, carol), yes),
+          wait(holds(accepted_by(alice))),
+          own([C2, C3], propose(appoint(C2?, bob, speech(utterance(chair), C3?)))),
+          wait(holds(has_role(bob, speech(utterance(chair), carol)))),
+          own([C4, C5], propose(appoint(C4?, bob, speech(utterance(clerk), C5?)))),
+          wait(holds(has_role(bob, speech(utterance(clerk), carol)))),
+          own([C6, C7], propose(appoint(C6?, alice, speech(utterance(chair), C7?)))),
+          wait(holds(has_role(alice, speech(utterance(chair), carol)))),
+          own([C8], propose(report(C8?, alice))),
+          wait(holds(reported(alice))),
+          own([C9], propose(retire(C9?))),
+          wait(holds(retired)),
+          own([P1, P2], propose(point(P1?, alice, speech(utterance(x), P2?)))),
+          wait(holds(pointer(alice, speech(utterance(x), carol)))),
+          own([P3, P4], propose(point(P3?, alice, speech(utterance(y), P4?)))),
+          wait(holds(pointer(alice, speech(utterance(y), carol)))),
+          own([P5, P6], propose(unpoint(P5?, alice, speech(utterance(x), P6?)))),
+          wait(lacks(pointer(alice, speech(utterance(x), carol)))),
+          own([O1], propose(office(O1?, bob, clerk))),
+          wait(holds(has_office(bob, clerk))),
+          own([O2], propose(office(O2?, bob, treasurer))),
+          wait(holds(has_office(bob, treasurer))),
+          own([O3], propose(office(O3?, alice, clerk))),
+          wait(holds(has_office(alice, clerk))),
+          approval(serve(bob, carol), yes),
+          wait(holds(served_by(bob))),
+          own([O4], propose(dissolve(O4?))),
+          wait(holds(dissolved))],
+         LA, LB, LC, N).
+
+%% play_leave: carol enrols with alice in two groups and with bob in one, and
+%% leaves: her agent lists alice and bob, alice once, by the anchor
+%% member(Carol, _, E), a wildcard at the group's place before the listed
+%% role, and every listing of carol is cleared at each.
+exported procedure play_leave(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_leave(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(arrive(A1?))),
+          approval(enrol(carol, alice, speech(utterance(g1), carol)), yes),
+          approval(enrol(carol, alice, speech(utterance(g2), carol)), yes)],
+         [own([B1], propose(arrive(B1?))),
+          approval(enrol(carol, bob, speech(utterance(g1), carol)), yes)],
+         [own([C1, C2], propose(enrol(C1?, alice, speech(utterance(g1), C2?)))),
+          wait(holds(member(speech(utterance(g1), carol), alice))),
+          own([C3, C4], propose(enrol(C3?, alice, speech(utterance(g2), C4?)))),
+          wait(holds(member(speech(utterance(g2), carol), alice))),
+          own([C5, C6], propose(enrol(C5?, bob, speech(utterance(g1), C6?)))),
+          wait(holds(member(speech(utterance(g1), carol), bob))),
+          own([C7], propose(leave(C7?))),
+          wait(holds(left))],
+         LA, LB, LC, N).
+
+%% play_absent: the same, bob never arriving: carol's leave is refused, bob,
+%% whom she lists, not holding here, which leave requires of every leader.
+exported procedure play_absent(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_absent(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(arrive(A1?))),
+          approval(enrol(carol, alice, speech(utterance(g1), carol)), yes)],
+         [approval(enrol(carol, bob, speech(utterance(g1), carol)), yes)],
+         [own([C1, C2], propose(enrol(C1?, alice, speech(utterance(g1), C2?)))),
+          wait(holds(member(speech(utterance(g1), carol), alice))),
+          own([C5, C6], propose(enrol(C5?, bob, speech(utterance(g1), C6?)))),
+          wait(holds(member(speech(utterance(g1), carol), bob))),
+          own([C7], propose(leave(C7?)))],
+         LA, LB, LC, N).
+
+%% play_forbid: a wildcard in an atom a role forbids (vGLP, Section 5.4,
+%% "Speech-act schemas as local specifications": "a wildcard in a negated atom
+%% is universally quantified, the atom forbidding, in B, ... every atom of the
+%% state that it matches").  carol enrols with alice in the group g1.  alice
+%% requests greet(alice, carol), which forbids member(_, alice) at carol:
+%% carol, a member of a group of alice, votes no, unable, the reason naming
+%% the membership her state has, and is not asked.
+%% bob requests greet(bob, carol): carol, a member of no group of bob, answers
+%% yes, and it commits.  carol requests idle(carol), which forbids
+%% member(_, _) at her: refused, unable.  bob, a member of no group, requests
+%% idle(bob), and gains idle.
+exported procedure play_forbid(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_forbid(LA?, LB?, LC?, N?) :-
+    trio([approval(enrol(carol, alice, speech(utterance(g1), carol)), yes),
+          wait(holds(listed(carol, speech(utterance(g1), carol)))),
+          own([A1], propose(greet(A1?, carol))),
+          wait(refused(greet(alice, carol), carol, unable([], [member(speech(utterance(g1), carol), alice)], [])))],
+         [own([B1], propose(greet(B1?, carol))),
+          wait(holds(greeting(carol))),
+          own([B2], propose(idle(B2?))),
+          wait(holds(idle))],
+         [own([C1, C2], propose(enrol(C1?, alice, speech(utterance(g1), C2?)))),
+          wait(holds(member(speech(utterance(g1), carol), alice))),
+          own([C3], propose(idle(C3?))),
+          wait(refused(idle(carol), carol, unable)),
+          approval(greet(bob, carol), yes),
+          wait(holds(greeted(bob)))],
+         LA, LB, LC, N).
+
+%% alice, bob and carol, each with its dispatcher and scripted person, their
+%% networks joined.
+procedure trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).

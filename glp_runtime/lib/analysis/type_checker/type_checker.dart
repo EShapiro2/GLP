@@ -648,6 +648,21 @@ class TypeChecker {
       stateAutomaton = automaton;
     }
 
+    // A state with `Term`'s transitions has an input path for every functor,
+    // and no clause has a variable here or above: "A procedure declared with
+    // Term? at a position has an input path for every functor there, so in a
+    // well-typed program one of its clauses has a variable at that position
+    // or above it" (TGLP well-typing.tex, after Definition "Well-Typed GLP
+    // Program").  A produced `Term` is the clause's output and is not reached:
+    // the walk does not pass a produce-mode edge.
+    final any = stateAutomaton.anyFunctorTarget;
+    if (any != null && any.isDual && state == stateAutomaton.startState) {
+      const label = 'every term (a variable is needed here)';
+      items.add(_CoverageItem.error(CoverageError._(
+          decl.name, argIndex, label, _LabelPath(path, label))));
+      return items;
+    }
+
     // Get all transitions (alternatives) from this state
     final transitions = _getLabeledTransitionsFromState(state, stateAutomaton);
 

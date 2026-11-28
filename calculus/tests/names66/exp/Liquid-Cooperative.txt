@@ -1,0 +1,12 @@
+% Written by tools/expand.py from rev/; do not edit.
+Liquid Cooperative
+An *identity* is a unique key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+A *cooperative* is owned by its members.
+A *cooperative DAO* is a cooperative that delegates as a DAO does.
+Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Cooperative:1. ■ Join: Alice may join the cooperative Coop, with the consent of Bob, provided Bob is a member of Coop. Cooperative members vote.
+DAO:1, Liquid Cooperative:1. ■ Delegate: Alice may delegate to Bob in Org, provided Alice knows Bob, only if Bob is a member of Coop. DAO bylaws name a steward.

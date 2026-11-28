@@ -179,6 +179,7 @@ bool _isOpaqueClosureOf(
       if (e.key.$1 == b) e.key.$2: e.value
   };
   if (fromA.length != fromB.length) return false;
+  if (automA.anyFunctorTarget != automB.anyFunctorTarget) return false;
   for (final e in fromA.entries) {
     final tb = fromB[e.key];
     if (tb == null) return false;
@@ -327,6 +328,9 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
   // so `Ack` was below `Key` and not below `String`.
   if (stateB.isPrimitiveType) {
     final automA = dfa.getAutomaton(stateA.name);
+    // A type with `Term`'s transitions has a simple prefix for every functor,
+    // which no primitive accepts.
+    if (automA.anyFunctorTarget != null) return false;
     var accepts = false;
     for (final p in automA.acceptedPrimitives) {
       if (p != stateB.baseName) return false;
@@ -350,6 +354,20 @@ bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
 
   // Everything A's bare type-name alternatives accept, B must accept too.
   if (!automB.acceptedPrimitives.containsAll(automA.acceptedPrimitives)) {
+    return false;
+  }
+
+  // Where A has `Term`'s transitions --- a simple prefix for every functor,
+  // each ending at `Term` or, at a mode inversion, `Term?` (TGLP
+  // appendix-type-automaton.tex, "The type Term") --- B accepts them only by
+  // having them too, at the same mode (well-typing.tex, Definition "Prefix
+  // Acceptance"; and the paragraph after "Subtyping extends to input types":
+  // "A type whose paths are produced throughout and end at a constant, at
+  // Integer, Real, String or Module, or at Term is a subtype of Term").
+  // `Term` against `Term` and `Term?` against `Term?` are each below the
+  // other, so no recursion is needed.
+  if (automA.anyFunctorTarget != null &&
+      automA.anyFunctorTarget != automB.anyFunctorTarget) {
     return false;
   }
 

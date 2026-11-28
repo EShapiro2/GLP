@@ -1,0 +1,32 @@
+% GSG: Grassroots Social Graph --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GSC.  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.2 and cites a clause as GSG:1; GAI's and CSSN's papers quote it.
+% Paper: GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231
+% Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
+% Defines: friend, and trust, defined in the box after the declaration, a contract being self-contained (Udi, 2026-11-07, to GSC #13); trust is a belief, so knowledge of a breach ends it, and by GSG:3 the friendship.  Person, and knowing a person, are defined with GKK; Alice and Bob are variables naming distinct persons.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, GSG:1 undertaken (Udi, 2026-11-15, to GSC #17), and the Interface pragmas GSC's, their lines named by the clauses' new titles.  Git holds what the file said before.
+% Schemas: Friendship.glp beside this file, the full schemas, GKK's three and two over the predicate friend, printed by calculus/tools/adopt.py GSG from the Logic pragmas and never written by hand; adopt.py --check GSG holds it and cascade/Friendship/ to what the tools print.
+Friendship
+Friendship inherits from Knowledge.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice and Bob are persons.
+1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+2. ■ Unfriend: Alice may end her friendship with Bob.
+3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Logic pragmas
+Friendship extends Knowledge.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice and Bob are persons.
+1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+2. ■ Unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Logic pragmas.
+Vocabulary: x counts y as a friend = friend(x,y).
+x and y are friends: x counts y as a friend and y counts x as a friend.
+After x and y become friends, which requires x and y are not friends: x and y are friends.
+x and y are no longer friends: no longer x and y are friends.
+After x ends x's friendship with y: x and y are no longer friends.
+Interface pragmas
+Friends: the friends of Alice.
+Befriend: Alice [Befriend]
+  Bob: Alice asks to be your friend.
+Unfriend: Alice [Unfriend]

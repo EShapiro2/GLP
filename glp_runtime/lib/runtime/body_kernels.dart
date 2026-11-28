@@ -15,11 +15,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart' as crypto;
 
 import 'runtime.dart';
 import 'terms.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart'
     show constantSource, functorNameSource;
+import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/compiler/lexer.dart' show Lexer;
+import 'package:glp_runtime/compiler/parser.dart' show Parser;
 import 'machine_state.dart' show GoalRef;
 import 'sim_clock.dart' show PendingToken;
 import 'package:glp_runtime/multiagent/mad_context.dart';
@@ -113,9 +117,12 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Text (GLP-Spec appendix-guards, "Text")
   registry.register('_string_concat', 2, stringConcatKernel);
   registry.register('_term_to_string', 2, termToStringKernel);
+  registry.register('_hash', 2, hashKernel);
+  registry.register('_string_to_term', 2, stringToTermKernel);
 
   // Time operations
   registry.register('_now', 1, nowKernel);
+  registry.register('_set_clock', 1, setClockKernel);
   registry.register('_random', 4, randomKernel);
   registry.register('_split_random_seed', 3, splitRandomSeedKernel);
 
@@ -583,8 +590,25 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     return kernelAbort('[ABORT] now/1: expected 1 argument, got ${args.length}');
   }
-  final currentTime = DateTime.now().millisecondsSinceEpoch;
-  return bindResult(rt, args[0], currentTime);
+  return bindResult(rt, args[0], rt.machineNow);
+}
+
+/// `'_set_clock'(T?)`: "set_clock(T) sets the machine's clock to T, Unix
+/// milliseconds, and the clock runs on from it" (GLP-Spec appendix-guards.tex,
+/// "Clock access (now/1, set_clock/1)").
+BodyKernelResult setClockKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    return kernelAbort('[ABORT] set_clock/1: expected 1 argument, got ${args.length}');
+  }
+  final t = _deref(rt, args[0]);
+  if (t is! ConstTerm || t.value is! int) {
+    return kernelAbort('[ABORT] set_clock/1: T must be an integer');
+  }
+  if (!rt.clockSettable) {
+    return kernelAbort("[ABORT] set_clock/1: this machine's clock may not be set");
+  }
+  rt.setClock(t.value as int);
+  return BodyKernelResult.success;
 }
 
 /// `_self_module`/1 — module-as-value, producer half; the kernel behind the
@@ -1122,7 +1146,7 @@ BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
   }
   final id = _personIdentity(rt, '_self_key/1');
   if (id == null) return BodyKernelResult.abort;
-  return bindResult(rt, args[0], ConstTerm(id.pub.hex));
+  return bindResult(rt, args[0], ConstTerm(rt.keyName(id.pub.hex)));
 }
 
 /// '_sign'(T?, Key?, SignedTerm) — bind SignedTerm to the signed term of the
@@ -1145,7 +1169,7 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort('[ABORT] _sign/3: second argument (Key) must be a ground key, got '
         '${_deref(rt, args[1])}');
   }
-  if (key != id.pub.hex) {
+  if (rt.keyNamed(key) != id.pub.hex) {
     return kernelAbort('[ABORT] _sign/3: $key is not the agent\'s own key; the '
         'layer holds no other than ${id.pub.hex}, and any other key aborts the '
         'call (the GLP paper f265fec, "Identity and signature")');
@@ -1198,7 +1222,7 @@ BodyKernelResult signatureKernel(GlpRuntime rt, List<Object?> args) {
   if (s == null || s is VarRef) {
     return kernelAbort('[ABORT] _signature/2: first argument is not known');
   }
-  return bindResult(rt, args[1], _signatureOf(s));
+  return bindResult(rt, args[1], _signatureOf(rt, s));
 }
 
 /// The constant `unsigned`: the Signature of what is not a verified signed term.
@@ -1207,7 +1231,7 @@ Term get _unsigned => ConstTerm('unsigned');
 /// The Signature of the known term [s]: `signed(Key, Hash, T)` where [s] is a
 /// signed term whose signature verifies under the key it carries, `unsigned`
 /// otherwise.
-Term _signatureOf(Object s) {
+Term _signatureOf(GlpRuntime rt, Object s) {
   final String hex;
   if (s is ConstTerm && s.value is String) {
     hex = s.value as String;
@@ -1244,7 +1268,7 @@ Term _signatureOf(Object s) {
   }
   if (!PersonIdentity.verify(signer, content, signature)) return _unsigned;
   return StructTerm(
-      'signed', [ConstTerm(signer.hex), ConstTerm(bytesToHex(hSrc)), term]);
+      'signed', [ConstTerm(rt.keyName(signer.hex)), ConstTerm(bytesToHex(hSrc)), term]);
 }
 
 /// '_decompose_module'(Module?, Key, Hash, Hash) — take a module value apart:
@@ -1271,7 +1295,7 @@ BodyKernelResult decomposeModuleKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort('[ABORT] _decompose_module/4: module ${module.name} carries no '
         'certificate (it was refused one, or no one compiled it for a person)');
   }
-  final r1 = bindResult(rt, args[1], ConstTerm(bytesToHex(cert.agent)));
+  final r1 = bindResult(rt, args[1], ConstTerm(rt.keyName(bytesToHex(cert.agent))));
   if (r1 != BodyKernelResult.success) return r1;
   final r2 = bindResult(rt, args[2], ConstTerm(bytesToHex(cert.hSrc)));
   if (r2 != BodyKernelResult.success) return r2;
@@ -2049,6 +2073,115 @@ BodyKernelResult termToStringKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort("[ABORT] '_term_to_string'/2: ${e.message}");
   }
   return bindResult(rt, args[1], text, kernel: "'_term_to_string'/2");
+}
+
+/// `'_string_to_term'(S?, T)` --- assigns T the ground term the reader reads
+/// from the string S, the converse of `'_term_to_string'`: for a ground term
+/// T, `term_to_string(T, S), string_to_term(S?, T1)` gives T1 equal to T.
+/// The kernel aborts where S is not a string or is not the text of one ground
+/// term, a variable in it included ("A body kernel whose precondition fails
+/// --- ... an argument out of its domain --- aborts").  Approved by Udi,
+/// 2026-11-25 22:52 UTC, for Chess's positions as text (Audit #157).
+BodyKernelResult stringToTermKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: expected 2 arguments, got ${args.length}");
+  }
+  final s = _deref(rt, args[0]);
+  // The empty list is a String, its characters [] (string_concat's "the empty
+  // list contributes the characters []").
+  if (s is! ConstTerm || (s.value is! String && s.value != nil)) {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: the first argument is not a string: $s");
+  }
+  final text = s.value == nil ? '[]' : s.value as String;
+  final ast.Term read;
+  try {
+    final m = Parser(Lexer('w($text).').tokenize()).parseModule();
+    if (m.procedures.length != 1 || m.procedures.single.clauses.length != 1) {
+      throw const FormatException('not one term');
+    }
+    final c = m.procedures.single.clauses.single;
+    if (c.head.functor != 'w' ||
+        c.head.args.length != 1 ||
+        (c.guards ?? const []).isNotEmpty ||
+        (c.body ?? const []).isNotEmpty ||
+        c.volitionGuard != null ||
+        c.elseBranch != null) {
+      throw const FormatException('not one term');
+    }
+    read = c.head.args.single;
+  } on Object {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: the text is not one term: $text");
+  }
+  final t = _groundTermOf(read);
+  if (t == null) {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: the text is not a ground term: $text");
+  }
+  return bindResult(rt, args[1], t, kernel: "'_string_to_term'/2");
+}
+
+/// The runtime term of the ground term [t] the reader read, a list as its
+/// cells `'.'(H, T)` ending in [nil]; null where [t] holds a variable.
+Term? _groundTermOf(ast.Term t) {
+  if (t is ast.ConstTerm) {
+    final v = t.value;
+    return ConstTerm(v ?? nil);
+  }
+  if (t is ast.StructTerm) {
+    if (t.args.isEmpty) return ConstTerm(t.functor);
+    final as_ = <Term>[];
+    for (final a in t.args) {
+      final x = _groundTermOf(a);
+      if (x == null) return null;
+      as_.add(x);
+    }
+    return StructTerm(t.functor, as_);
+  }
+  if (t is ast.ListTerm) {
+    final heads = <Term>[];
+    ast.Term? cell = t;
+    while (cell is ast.ListTerm && !cell.isNil) {
+      final h = _groundTermOf(cell.head!);
+      if (h == null) return null;
+      heads.add(h);
+      cell = cell.tail;
+    }
+    Term tail;
+    if (cell == null || (cell is ast.ListTerm && cell.isNil)) {
+      tail = ConstTerm(nil);
+    } else {
+      final x = _groundTermOf(cell);
+      if (x == null) return null;
+      tail = x;
+    }
+    for (final h in heads.reversed) {
+      tail = StructTerm('.', [h, tail]);
+    }
+    return tail;
+  }
+  return null;
+}
+
+/// '_hash'(S?, H) — H is the SHA-256 of the UTF-8 bytes of the string S, as
+/// lowercase hex, the catalogue's Hash (the root self.glp, `Hash ::= String`):
+/// the same at every participant, so that a sealed value, the hash of a text
+/// naming it and a secret, shows nothing of either, and a value and a secret
+/// later stated can be checked against it (GLP-Spec
+/// appendix-guards, "Text").  The clause of hash/2 guards S ground; a first
+/// argument that is no string is out of the kernel's domain, and it aborts.
+BodyKernelResult hashKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort("[ABORT] '_hash'/2: expected 2 arguments, got ${args.length}");
+  }
+  final s = _deref(rt, args[0]);
+  if (s is! ConstTerm || s.value is! String) {
+    return kernelAbort("[ABORT] '_hash'/2: the first argument is not a string: $s");
+  }
+  final h = crypto.sha256.convert(utf8.encode(s.value as String)).bytes;
+  return bindResult(rt, args[1], bytesToHex(h), kernel: "'_hash'/2");
 }
 
 /// [value] as the reader reads it back: an integer as its digits, and a real

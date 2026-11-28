@@ -1,6 +1,6 @@
 # GLP documentation index
 
-Rewritten 2026-09-16 with the tree reorganisation; every file named here exists.  Ownership is Coordination Appendix B; the rules for working in this repository are `/Grassroots/GLP/CLAUDE.md`.
+Rewritten 2026-09-16 with the tree reorganisation; every file named here exists.  Who answers for each directory is `servers/peoplesweb/tools/directories.py`; the rules for working in this repository are `/Grassroots/GLP/CLAUDE.md`.
 
 ## Start here
 

@@ -1,0 +1,26 @@
+Programs
+Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: x holds p of y = program(x,p,y); x trusts y as a developer = trusts_developer(x,y); x has p of y installed = installed(x,p,y); x is a participant of p of z with y = participant(x,p,z,y).
+x has no participation in p of z: x is a participant of p of z with no one and no one is a participant of p of z with x.
+After x publishes p by signing it, which requires x does not hold p of x: x holds p of x.
+After x declares trust in y as a developer, which requires x does not trust y as a developer: x trusts y as a developer.
+After x withdraws x's declaration of trust in y as a developer: no longer x trusts y as a developer.
+After x offers p of z to y: y holds p signed by x of z.
+After x installs x's own p, which requires x does not have p of x installed: x has p of x installed.
+After x installs p of z, which requires x does not have p of z installed: x has p of z installed.
+After x invites y to join in p of z: y holds p signed by x of z, y has p signed by x of z installed, x is a participant of p of z with y and y is a participant of p of z with x.
+After x leaves p of z: no longer x has p of z installed and x has no participation in p of z.
+Programs:0 - | A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
+Programs:0 - | Alice, Bob, Carol and Erin are persons, Carol and Erin possibly Alice, Bob or one person, Prog a program.
+Programs:1 ◆ Publish: program(Carol,Prog,Carol) <- ~program(Carol,Prog,Carol) guarded by Carol.
+Programs:1 ◆ | Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+Programs:2 ■ | Developer Trust.
+Programs:2 ■ Trust: trusts_developer(Alice,Carol) <- knows(Alice,Carol), ~trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
+Programs:2 ■ Untrust: ~trusts_developer(Alice,Carol) <- trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
+Programs:3 ■ Offer: program(Alice,Prog@Carol,Erin) <- program(Carol,Prog,Erin), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Erin, Carol=Erin.
+Programs:3 ■ | Carol offers it by forwarding it to Alice.
+Programs:4 ■ Install own: installed(Alice,Prog,Alice) <- program(Alice,Prog,Alice), ~installed(Alice,Prog,Alice) guarded by Alice.
+Programs:4 ■ Install: installed(Alice,Prog,Carol) <- program(Alice,Prog,Carol), trusts_developer(Alice,Carol), ~installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.
+Programs:5 ■ Invite: program(Bob,Prog@Alice,Carol), installed(Bob,Prog@Alice,Carol), participant(Alice,Prog,Carol,Bob), participant(Bob,Prog,Carol,Alice) <- friend(Alice,Bob), friend(Bob,Alice), installed(Alice,Prog,Carol), trusts_developer(Bob,Carol) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Programs:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+Programs:6 ■ Leave: ~installed(Alice,Prog,Carol), ~participant(Alice,Prog,Carol,_), ~participant(_,Prog,Carol,Alice) <- installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.

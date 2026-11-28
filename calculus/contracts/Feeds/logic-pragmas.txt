@@ -1,0 +1,11 @@
+Feeds
+Feeds extends Labelled Overlay, and weakens it.
+A *feed* is named by its author.
+Alice, Bob and Carol are persons, Item an item, Bob and Carol possibly one person.
+1. ■ Post: Alice may post Item to her feed. Alice has a feed, and the item is created or received.
+2. ■ Deliver: Alice receives from Bob the item Item of Carol's feed, provided Alice has a Carol-pointer to Bob, Bob knows Alice and Bob holds the item Item of Carol's feed.
+3. ■ Labeled point transitive: Labelled Overlay:2, only if Carol knows Alice.
+Logic pragmas.
+Vocabulary: x holds the item t of z's feed = item(x,t,z); x has received the item t of z's feed from y = item_from(x,t,z,y); y has delivered the item t of z's feed to x = delivered(y,t,z,x).
+After x posts t to x's feed, which requires x does not hold the item t of x's feed: x holds the item t of x's feed.
+After x receives from y the item t of z's feed, which requires x does not hold the item t of z's feed and y has not delivered the item t of z's feed to x: x holds the item t of z's feed, x has received the item t of z's feed from y and y has delivered the item t of z's feed to x.
