@@ -1,0 +1,37 @@
+%% numbers.glp - functions of whole numbers, exact and the same on every machine.
+%% Owner: GCE (Nimrod Talmon), for the standard library (GLP #120, #123, #124).
+%%
+%% A contract applies them in a constraint as functions of a value type, which
+%% the type's owner gives as typed GLP procedures (vGLP, Section 5.4, "Speech-act
+%% schemas as local specifications"); the platform the compiler prints carries
+%% this file and calls them (programs/vglp/cva/compiler/README.md, item 47).
+%%
+%% root(N, R): R is the whole square root of N, rounded down, N a whole number
+%%   at least 0, by Newton's method on whole numbers; the goal fails for N
+%%   below 0.
+%% distance(Ps, Qs, D): D is the Manhattan distance between the points Ps and
+%%   Qs, lists of as many whole numbers each: the sum, over their places, of
+%%   the larger number less the smaller; the goal fails for lists of unequal
+%%   lengths.
+
+exported procedure root(Integer?, Integer).
+root(N, 0) :- N? =:= 0 | true.
+root(N, R?) :- N? > 0 | root_step(N?, N?, R).
+
+%% root_step(N, X, R): X > 0 is at least the root of N; Y the next estimate.
+procedure root_step(Integer?, Integer?, Integer).
+root_step(N, X, R?) :- X? > 0 | Y := (X? + N? // X?) // 2, root_next(N?, X?, Y?, R).
+
+%% root_next(N, X, Y, R): the estimates decrease to the root and stop there.
+procedure root_next(Integer?, Integer?, Integer?, Integer).
+root_next(N, X, Y, R?) :- Y? < X? | root_step(N?, Y?, R).
+root_next(_, X, Y, X?) :- Y? >= X? | true.
+
+exported procedure distance(List(Integer)?, List(Integer)?, Integer).
+distance(Ps, Qs, D?) :- dist_from(Ps?, Qs?, 0, D).
+
+%% dist_from(Ps, Qs, S, D): D is S plus the distance between Ps and Qs.
+procedure dist_from(List(Integer)?, List(Integer)?, Integer?, Integer).
+dist_from([], [], S, S?).
+dist_from([P|Ps], [Q|Qs], S, D?) :- P? >= Q? | S1 := S? + (P? - Q?), dist_from(Ps?, Qs?, S1?, D).
+dist_from([P|Ps], [Q|Qs], S, D?) :- P? < Q? | S1 := S? + (Q? - P?), dist_from(Ps?, Qs?, S1?, D).

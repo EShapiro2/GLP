@@ -16,7 +16,7 @@
 # organisation; GO #15, 2026-11-24 21:22 UTC, for Audit PR 108, Finding 19), each the one copy in its owner's file (claude.md "Sessions", the
 # cascade rule; Coordination Appendix C), its file and the name its file gives
 # it found by the table of the contracts' names, calculus/NAMES.txt, and nudge, introduce, gnudge,
-# childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts and shares, vGLP's, which contracts.glp beside the compiler
+# childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts, shares, roots, distances and nearer, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
 # none (GSC's, Currencies' and GO's name none).  A contract is checked before it is compiled
 # (GSC, Section 5): for each contract, a REPL session on its owner's file, or
@@ -44,7 +44,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 THEIRS="social_graph social_network currency organisation"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds cvalues holds"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares roots distances nearer published leaves readings backed consts roles wild wards feeds cvalues holds"
 CONTRACTS="$THEIRS $OURS"
 
 # The contract of each of GSC's and Currencies' rows, by its name in the table
@@ -157,6 +157,10 @@ for c in $CONTRACTS; do
         repl "$WORK/pn.in" "$WORK/$c.pn.out"
         pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
         [ -n "$pr" ] || pr=no_pragmas
+        # And the functions of the standard library its constraints apply, with_fns(Pragmas, Fns) (compiler/libfns.sh; compiler/README.md, item 47).
+        printf '%s\n' "$rd" > "$WORK/$c.rd"
+        lf=$(bash "$HERE/compiler/libfns.sh" "@$WORK/$c.rd")
+        [ -z "$lf" ] || [ "$pr" = no_pragmas ] || pr="with_fns($pr, $lf)"
     elif [ -f "${src%.glp}.txt" ] \
         && ! pr=$(printf '%s\n' "$rd" > "$WORK/$c.rd" && bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "@$WORK/$c.rd" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
