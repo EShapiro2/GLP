@@ -8,10 +8,10 @@ Nonprofit
 Nonprofit inherits from Corporation.
 A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Alice and Bob are parties, Orga a nonprofit.
-1. ■ Nondistribution. Pay, Pay issuer: Notes:3 and Coins:1, only if Bob is not an officer of Alice.
+1. ■ Nondistribution. Pay, Pay issuer: Notes:3 and Coins:1; Pay accepted coins, Pay own accepted coins, Pay accepted coins to the issuer: Denominated Currencies:4; each only if Bob is not an officer of Alice.
 Logic pragmas
 Nonprofit weakens Corporation.
 A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Alice and Bob are parties, Orga a nonprofit.
-1. ■ Nondistribution. Pay: Notes:3 Pay, only if Bob is not an officer of Alice. Pay issuer: Notes:3 Pay issuer, only if Bob is not an officer of Alice.
+1. ■ Nondistribution. Pay: Notes:3 Pay, only if Bob is not an officer of Alice. Pay issuer: Notes:3 Pay issuer, only if Bob is not an officer of Alice. Pay accepted coins: Denominated Currencies:4 Pay accepted coins, only if Bob is not an officer of Alice. Pay own accepted coins: Denominated Currencies:4 Pay own accepted coins, only if Bob is not an officer of Alice. Pay accepted coins to the issuer: Denominated Currencies:4 Pay accepted coins to the issuer, only if Bob is not an officer of Alice.
 Interface pragmas
