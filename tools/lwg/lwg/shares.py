@@ -1,6 +1,9 @@
-"""Shares, beyond the shareholding corporation of the organisations paper: shares that stay with their holder, exit with a part of the treasury, and motions moved by any shareholder.
+"""Shares, for a contract drawn on Shareholding Corporation (Moloch's LWGM, Guild): its own clauses, not changes to Shareholding Corporation, which GO keeps as it is (Udi, GLP#61, 2026-11-19).
 
-Each is switched on in the bylaws (map.json, "shares"): {"locked": true, "exit": true, "holders_move": true}."""
+- lock: the contract restricts Shareholding Corporation, "a share of Orga is not passed on" (Guild:2);
+- exit_schema: the contract extends Shareholding Corporation by an act of its own, Exit (Guild:3).
+A motion moved by a shareholder is no clause: Organisation:2 lets a person the bylaws name propose an act, and the contract's bylaws name the shareholders.
+Each is switched on in the bylaws (map.json, "shares"): {"locked": true, "exit": true}."""
 import copy, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'vendor', 'go_tools'))
 from sas_lib import A, N, Q, T, S, AND, P, I, num
@@ -27,18 +30,3 @@ def exit_schema():
             'le(mul(num(k), num(n)), mul(num(w), num(t)))', 'gt(mul(plus(num(k), num(1)), num(n)), mul(num(w), num(t)))',
             'eq(num(n1), minus(num(n), num(w)))'),
         ['Bob'], 'LWG, Exit: a shareholder, Bob, gives up w shares and takes the same part of the r-coins of the denomination f that Orga holds; the shares are cancelled.')
-
-def holders_move(schemas, acts):
-    """For each of the acts named, the motion an officer may move, moved by a holder of a share."""
-    out = []
-    for x in schemas:
-        if not x.name.startswith('move_') or x.name[5:] not in acts: continue
-        y = copy.deepcopy(x); y.name = 'holder_' + x.name
-        o = y.names[0]
-        off = [b for b in y.body if b.startswith('atom(officer_of, [') or b.startswith('atom(officer, [')]
-        if len(off) != 2: continue
-        y.body = [b for b in y.body if b not in off] + [A('knows', o, Q('Orga')), C(o.strip("'"), 'Orga', SHARE)]
-        y.vars = [v for v in y.vars if v != 'roa']
-        y.note = 'LWG: a shareholder moves the act %s of Orga as a motion.' % x.name[5:]
-        out.append(y)
-    return out

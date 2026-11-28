@@ -21,7 +21,9 @@ Each fills its own columns of the record (one row for each provision).
 
 A decision rule (`lwg/rules.py`): body, weight (one each, or by shares), base (all, or votes cast), threshold, quorum, and the days that must pass after a motion is moved. A rule that the organisations paper already has is passed to its generator unchanged; any other adds a vote against and a constraint over the votes.
 
-Shares (`lwg/shares.py`), for a contract on SC, each switched on in the bylaws: exit (a shareholder gives up shares and takes the same part of a coin the organisation holds), shares that are not passed on, and motions moved by a shareholder. These three are additions to SC made here and are for the organisations paper to adopt or replace.
+Shares (`lwg/shares.py`), for a contract on Shareholding Corporation (LWGM, Guild), each switched on in the bylaws: shares that are not passed on (Guild restricts Shareholding Corporation) and exit (a shareholder gives up shares and takes the same part of a coin the organisation holds; Guild extends it by this act). They are Guild's own clauses; Shareholding Corporation stays as GO has it (GLP#61, 2026-11-19). A motion moved by a shareholder is no clause: Guild's bylaws name the shareholders as proposers (Organisation:2).
+
+The four contracts in `programs/lwg` are texts only, in the Calculus's form (plain names, current base names); their Logic pragmas and schemas are for the Calculus to write. Build's own schemas come from the old generator (`vendor/`, below), which is being retired.
 
 ## Run
 

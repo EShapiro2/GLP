@@ -102,5 +102,6 @@
    "status": "built",
    "question": "The document counts tokens. Here each member has one vote, and \"1% of all tokens taking part\" becomes 1% of the members voting. Agreed, or should votes go by coins of the DAO (not built)?"
   }
- }
+ },
+ "plain": "Names DAO"
 }

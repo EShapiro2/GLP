@@ -6,6 +6,7 @@ from sas_lib import glp_file, check_names, check_dups
 from . import rules, shares
 
 GO_PAPER = os.path.join(os.path.dirname(__file__), '..', 'vendor', 'go_paper.tex')
+BASE = {'GCoop': 'Cooperative', 'GDAO': 'Cooperative DAO', 'SC': 'Shareholding Corporation'}   # the bases by their names in calculus/NAMES.txt
 TABS = ["Organisations: the organisations Alice participates in, and her roles in each.", "Coins: the coins Alice holds.", "Bonds: the bonds Alice holds."]
 
 def schemas(m):
@@ -23,14 +24,14 @@ def schemas(m):
     if sh.get('locked'): c = shares.lock(c)
     if sh.get('exit'): c.append(shares.exit_schema())
     c = rules.officers(c, bylaws)
-    if sh.get('holders_move'): c += shares.holders_move(c, sh['holders_move'])
     check_names(c); assert not check_dups(c)
     return c
 
 def clauses(m):
     """The contract's box: title, relation, definition, names, clauses. The definition and the clauses are written with the bylaws (map.json); {rule} stands for the English of that rule."""
     words = {k: rules.describe(r, m['roles']) for k, r in m['rules'].items()}
-    lines = ['%s: %s' % (m['name'], m['title']), '%s instantiates %s and restricts it.' % (m['name'], m['base']),
+    plain = m.get('plain', m['name'])                             # the contract's name in plain words (calculus/NAMES.txt)
+    lines = [plain, '%s inherits from %s (%s).' % (plain, BASE[m['base']], m['source']),
              m['definition'].format(**words), m['names']]
     lines += ['%d. %s' % (i, c.format(**words)) for i, c in enumerate(m['clauses'], 1)]
     return lines

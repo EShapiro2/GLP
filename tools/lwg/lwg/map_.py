@@ -25,9 +25,9 @@ def compose(m):
     if any(r.get('weight') == 'shares' for r in new):
         m['clauses'].append('■ Voting against by shares.  A shareholder may vote against a proposed act of Orga, once, the vote counting the shares held, in place of voting for it.')
     sh = m.get('shares', {})
-    if sh.get('locked'): m['clauses'].append('■ Shares stay.  A shareholder does not pass a share on to another person.')
-    if sh.get('exit'): m['clauses'].append('■ Exit.  A shareholder may at any time give up shares and take the same part of a coin that Orga holds.')
-    if sh.get('holders_move'): m['clauses'].append('■ Motions.  A shareholder may move as a motion: to %s.' % ', to '.join(ACTS[a] for a in sh['holders_move']))
+    if m.get('proposers'): m['definition'] = m['definition'][:-1] + '; its bylaws name every %s as one who may propose an act of Orga (Organisation:2).' % m['proposers']
+    if sh.get('locked'): m['clauses'].append('■ Shares stay.  A share of Orga is not passed on, but by Orga.')        # Guild restricts Shareholding Corporation (GLP#61)
+    if sh.get('exit'): m['clauses'].append('■ Exit.  Alice, a shareholder, may give up shares of Orga and take the same part of the coins of one kind that Orga holds; the shares are cancelled.')   # Guild extends it by this act
     m.setdefault('act_names', {a: ACTS[a] for a in m['acts'] if a != '*'})
     return m
 

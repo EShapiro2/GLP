@@ -27,10 +27,7 @@
  "name": "LWGM",
  "shares": {
   "locked": true,
-  "exit": true,
-  "holders_move": [
-   "sc_issue"
-  ]
+  "exit": true
  },
  "undertakings": [],
  "rows": {
@@ -50,7 +47,7 @@
    "question": "Exit takes a part of one kind of coin at a time; with several kinds in the treasury, the shareholder exits in several steps. Agreed?"
   },
   "4": {
-   "mapped_to": "a shareholder moves a motion to issue shares; no deposit",
+   "mapped_to": "the bylaws name every shareholder as one who may propose an act (Organisation:2); no deposit",
    "status": "built",
    "question": "The deposit against spam is not built. Needed?"
   },
@@ -84,5 +81,7 @@
    "status": "built",
    "question": "Here a director, not anyone, carries out a decided motion. Agreed?"
   }
- }
+ },
+ "plain": "Guild",
+ "proposers": "shareholder"
 }
