@@ -37,6 +37,11 @@ BY_DIR = {
     # The one paper of the Villagers site, peoplesweb.org/villagers
     # (deploy/villagers.sh; Udi, 2026-11-25); title and author as its main file has them.
     'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Anonymous', 'pdf': 'Villagers'},
+    # GUI's contracts (programs/gce/chess) and the UI structures and styles
+    # of the apps (programs/gce/ui), in preparation; title and author as its
+    # main file has them.  No source in SOURCES yet: its Overleaf project has
+    # no GitHub copy, so the site lists it with no PDF.
+    'GUI': {'title': 'The Grassroots UI Layer', 'authors': 'Nimrod Talmon', 'pdf': 'GUI'},
 }
 
 # Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
