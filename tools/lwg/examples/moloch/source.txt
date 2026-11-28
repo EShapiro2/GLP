@@ -1,0 +1,42 @@
+[
+ {
+  "id": "1",
+  "text": "Moloch has a native asset called shares. Shares are minted and assigned when a new member is accepted into the Guild and provide voting rights ..."
+ },
+ {
+  "id": "2",
+  "text": "They are non-transferrable ..."
+ },
+ {
+  "id": "3",
+  "text": "... but can be irreversibly redeemed at any time to collect a proportional share of all ETH held by the Guild in the Guild Bank."
+ },
+ {
+  "id": "4",
+  "text": "To combat spam, new membership proposals can only be submitted by existing members and require a 10 ETH deposit."
+ },
+ {
+  "id": "5",
+  "text": "The membership proposal includes the number of shares the applicant is requesting, and either the amount of ETH the applicant is offering as tribute or a pledge ..."
+ },
+ {
+  "id": "6",
+  "text": "All ETH offered as tribute is held in escrow by the Moloch.sol contract until the proposal vote is completed and processed. If a proposal vote passes, the applicant becomes a member ..."
+ },
+ {
+  "id": "7",
+  "text": "Proposals are voted on in the order they are submitted. The voting period for each proposal is 7 days. During the voting period, members can vote (only once, no redos) ..."
+ },
+ {
+  "id": "8",
+  "text": "Proposal votes are determined by simple majority of votes cast on the proposal, with no quorum requirement."
+ },
+ {
+  "id": "9",
+  "text": "At the end of the voting period, proposals enter into a 7 day grace period before the proposal is processed. The grace period gives members who voted No or didn't vote the opportunity to exit ..."
+ },
+ {
+  "id": "10",
+  "text": "At the end of the grace period, proposals are processed when anyone calls processProposal. A 0.1 ETH reward is deducted from the proposal deposit ..."
+ }
+]

@@ -1,0 +1,12 @@
+% LWGA --- a contract drawn by tools/lwg from: Israeli Amutot Law, model bylaws.  Text only: its Logic pragmas, schemas and Interface pragmas are for the Calculus to write, for Nimrod's approval.
+% Owner: GCE, proposed (a ruling of Udi's).
+% Name: Association, proposed (a ruling of Udi's); NAMES.txt row: LWGA | Association | Association | association | lwga
+Association
+Association inherits from Cooperative (Israeli Amutot Law, model bylaws).
+An *association* is a cooperative whose bylaws name two roles, *member*, held by every participant, and *committee member*; the committee members decide the admission of a member when more than half of the votes cast are for; the members decide every other act of Orga when more than half of the votes cast are for, at least a quarter of the members voted, and the motion was proposed at least 10 days before.
+Alice and Bob are persons, Orga an association.
+1. ■ Founding. Alice may found Orga and become its first member.
+2. ■ Admission. Bob becomes a member of Orga by an act of Bob and the committee members.
+3. ■ Voting against. A member or a committee member may vote against a proposed act of Orga, once, in place of voting for it.
+4. ■ Appeal. Bob becomes a member of Orga also by an act of Bob and the members.
+5. ■ Filling a seat. The committee members may appoint a member to the committee.

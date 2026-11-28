@@ -1,0 +1,13 @@
+% LWGE --- a contract drawn by tools/lwg from: ENS DAO Constitution.  Text only: its Logic pragmas, schemas and Interface pragmas are for the Calculus to write, for Nimrod's approval.
+% Owner: GCE, proposed (a ruling of Udi's).
+% Name: Names DAO, proposed (a ruling of Udi's); NAMES.txt row: LWGE | Names DAO | Names-DAO | names_dao | lwge
+Names DAO
+Names DAO inherits from Cooperative DAO (ENS DAO Constitution).
+A *names DAO* is a DAO whose steward admits members, whose members decide its acts when more than half of the members vote for, and amend its bylaws when at least two thirds of the votes cast are for and at least 1/100 of the members voted.
+Alice and Bob are persons, Orga a names DAO.
+1. ○ Names. Orga enacts no change that takes a name from its owner, or that treats the owners of names unequally in extending, transferring or using their names.
+2. ○ Fees. Orga sets a fee only to deter the speculative registration of names or to fund its own development.
+3. ○ Income. Orga uses its income first for its own long-term upkeep, and gives funds only to those who undertake these clauses.
+4. ○ Integration. Orga enacts no change that weakens its integration with the outside system of names.
+5. ■ Amendment. The members may amend the bylaws of Orga.
+6. ■ Voting against. A member may vote against a proposed act of Orga, once, in place of voting for it.

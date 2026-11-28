@@ -1,0 +1,10 @@
+% LWGU --- a contract drawn by tools/lwg from: Unicorn Grocery rules, excerpt.  Text only: its Logic pragmas, schemas and Interface pragmas are for the Calculus to write, for Nimrod's approval.
+% Owner: GCE, proposed (a ruling of Udi's).
+% Name: Grocery Cooperative, proposed (a ruling of Udi's); NAMES.txt row: LWGU | Grocery Cooperative | Grocery-Cooperative | grocery_cooperative | lwgu
+Grocery Cooperative
+Grocery Cooperative inherits from Cooperative (Unicorn Grocery rules, excerpt).
+A *grocery cooperative* is a cooperative whose directors admit a member when more than half of the directors are for; whose members expel a member or amend the bylaws when at least three quarters of the votes cast are for, at least 33/50 of the members voted, and the motion was proposed at least 14 days before; and whose members decide every other act of Orga when more than half of the votes cast are for, at least 33/50 of the members voted, and the motion was proposed at least 14 days before.
+Alice and Bob are persons, Orga a grocery cooperative.
+1. ○ Voluntary membership. Orga does not make membership a condition of employment.
+2. ○ Education. Orga tells those who may join what a member's role is, and trains its members in it.
+3. ■ Voting against. A holder of a role may vote against a proposed act of Orga, once, in place of voting for it.

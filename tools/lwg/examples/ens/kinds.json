@@ -1,0 +1,37 @@
+{
+ "0": {
+  "kind": "none",
+  "note": "preamble; says the examples do not bind"
+ },
+ "I": {
+  "kind": "scope",
+  "note": "a limit on what governance may enact"
+ },
+ "I ex": {
+  "kind": "none",
+  "note": "illustration, declared non-binding"
+ },
+ "II": {
+  "kind": "scope"
+ },
+ "II ex": {
+  "kind": "none"
+ },
+ "III": {
+  "kind": "scope",
+  "note": "also a payoff rule: how income is used"
+ },
+ "III ex": {
+  "kind": "none"
+ },
+ "IV": {
+  "kind": "scope"
+ },
+ "IV ex": {
+  "kind": "none"
+ },
+ "V": {
+  "kind": "aggregation",
+  "note": "two thirds, with one percent of all tokens taking part"
+ }
+}

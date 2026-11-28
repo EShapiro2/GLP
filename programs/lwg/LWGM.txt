@@ -1,0 +1,10 @@
+% LWGM --- a contract drawn by tools/lwg from: Moloch DAO, README, Overview.  Text only: its Logic pragmas, schemas and Interface pragmas are for the Calculus to write, for Nimrod's approval.
+% Owner: GCE, proposed (a ruling of Udi's).
+% Name: Guild, proposed (a ruling of Udi's); NAMES.txt row: LWGM | Guild | Guild | guild | lwgm
+Guild
+Guild inherits from Shareholding Corporation (Moloch DAO, README, Overview).
+A *guild* is a shareholding corporation whose bylaws name every shareholder as one who may propose an act of Orga, and whose shareholders decide every act of Orga when more than half of the shares voted are for and the motion was proposed at least 14 days before.
+Alice and Bob are persons, Orga a guild.
+1. ■ Voting against by shares. A shareholder may vote against a proposed act of Orga, once, the vote counting the shares held, in place of voting for it.
+2. ■ Shares stay. A share of Orga is not passed on, but by Orga.
+3. ■ Exit. Alice, a shareholder, may give up shares of Orga and take the same part of the coins of one kind that Orga holds; the shares are cancelled.

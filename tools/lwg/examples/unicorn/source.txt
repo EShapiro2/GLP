@@ -1,0 +1,66 @@
+[
+ {
+  "id": "14",
+  "text": "All Employees of the Co-operative may be admitted to membership of the Co-operative, except that the Co-operative in a general meeting may by a majority vote decide to exclude from membership: (a) Newly appointed Employees during such reasonable probationary period ..."
+ },
+ {
+  "id": "15",
+  "text": "In accordance with the Co-operative Principle of voluntary and open membership, whilst the Co-operative shall undertake to encourage its Employees to become Members, membership must be voluntary and as a result cannot be a condition of employment."
+ },
+ {
+  "id": "16",
+  "text": "No person shall be admitted into membership of the Co-operative unless that person has attained the age of 18, supports the aims of the Co-operative and has completed an application for membership which includes an application for at least one share in the Co-operative. Such an application form must ..."
+ },
+ {
+  "id": "17",
+  "text": "All Members agree to attend general meetings and take an active interest in the operation and development of the Co-operative and its business. Members have a duty to respect the confidential nature of the business decisions of the Co-operative."
+ },
+ {
+  "id": "18",
+  "text": "In accordance with the Co-operative Principle of education, training and information, the Co-operative shall provide potential Members with information about what the role of a Member is within the Co-operative and will provide training in the skills required to be a Member ..."
+ },
+ {
+  "id": "19",
+  "text": "The Co-operative shall provide ongoing education and training in co-operative values and principles and associated topics. The Co-operative shall support its Members by ensuring that general meetings are accessible and encourage participation."
+ },
+ {
+  "id": "20",
+  "text": "A Member shall cease to be a Member of the Co-operative immediately that s/he: (a) Ceases to be in the employment of the Co-operative; or (b) Fails to hold the minimum shareholding; or (c) Resigns in Writing to the Secretary; or (d) Is expelled from membership in accordance with these Rules; or (e) Dies."
+ },
+ {
+  "id": "21",
+  "text": "A Member may be expelled for conduct prejudicial to the Co-operative by an Extraordinary Resolution, provided that the grounds for expulsion have been specified in the notices calling the meeting and that the Member whose expulsion is to be considered shall be given the opportunity to make representations ..."
+ },
+ {
+  "id": "22",
+  "text": "If on due notice having been served the Member fails to attend the meeting the meeting may proceed in the Member's absence. (a) An expelled Member shall be paid the nominal value of shares held by them at the time of expulsion; (b) No Member expelled from membership shall be re-admitted except by an Extraordinary Resolution."
+ },
+ {
+  "id": "32",
+  "text": "The Directors shall call the annual general meeting giving 14 Clear Days' notice to all Members. All other general meetings shall be convened with at least 14 Clear Days' notice but may be held at shorter notice if so agreed in Writing by 90% of the Members."
+ },
+ {
+  "id": "37",
+  "text": "No business shall be transacted at a general meeting unless a quorum of Members is present which shall include those Members not present in person. Unless amended by Extraordinary Resolution, a quorum shall be 3 Members or 66% of the membership, whichever is the greater."
+ },
+ {
+  "id": "47",
+  "text": "In accordance with the Co-operative Principle of democratic member control, each Member shall have one vote on any question to be decided in general meeting."
+ },
+ {
+  "id": "49",
+  "text": "In the case of an equality of votes, whether on a show of hands or a poll, the chairperson shall not have a second or casting vote and the resolution shall be deemed to have been lost."
+ },
+ {
+  "id": "53",
+  "text": "Decisions at general meetings shall be made by passing resolutions: (a) The following decisions must be made by Extraordinary Resolution: (i) Decisions to expel Members; (ii) Decisions to dispose of assets of the Co-operative equivalent in value to one-third of the Co-operative's last published balance sheet ..."
+ },
+ {
+  "id": "54",
+  "text": "An Extraordinary Resolution is one passed by a majority of not less than 75% of votes cast at a general meeting and an ordinary resolution is one passed by a simple majority (51%) of votes cast."
+ },
+ {
+  "id": "55",
+  "text": "Resolutions may be passed at general meetings or by written resolution. A written resolution may consist of several identical Documents signed by one or more Members."
+ }
+]
