@@ -50,3 +50,6 @@ wrong	Two of these contracts may have one act of a contract they both inherit fr
 wrong	Two acts of these contracts that are one act of a contract they both inherit from, each with conditions, consents and effects added, are added as one act, with the additions of both.	Udi, 2026-11-26 20:46 and 20:48 UTC, to Calculus #10, style guide 41
 wrong:udi	Q: Shall I bring the sentence on madGLP fully to IGLP: the conditions of its two theorems, and the smartphone implementation as still in development?	Udi, 2026-11-26 22:06 UTC, to VMAT #4, style guide 41
 right:udi	Q: Shall VMAT say of madGLP what IGLP says?	Udi, 2026-11-26 22:06 UTC, to VMAT #4, approved, style guide 41
+wrong:udi	<ins>For p∈A(a) the act holds.</ins>	Udi, 2026-11-28 15:09 UTC: "how come a session is showing this to me?"
+wrong:udi	The act <del>holds</del> <u>may hold</u>.	Udi, 2026-11-28 15:09 UTC, claude.md Papers: no HTML tag in the chat
+right:udi	The act ~~holds~~ m̲a̲y̲ ̲h̲o̲l̲d̲.	claude.md, Papers: the marked form in the chat

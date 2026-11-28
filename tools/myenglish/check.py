@@ -41,7 +41,7 @@ What it tests besides (writing-style-guide.md, the section named):
   section 17's quoted hedges and insistences, from the file; hedges and apologies (8, 17); "users", hyperbole, "the author", "final" (1, 8, Talking to Udi);
   long sentences (2); in --paper and --clause, "I", "me", "my" (1, 5); in --udi, more than one
   sentence on a line, a dash or an arrow chain, more than one "Q:" (Talking to Udi; the project's
-  instructions).
+  instructions), an HTML tag such as <ins>, <del> or <u> (claude.md, Papers: marked text in the chat).
 """
 import difflib
 import os
@@ -543,6 +543,10 @@ def check(text, mode, fails, checks):
                                  'one fact a line (Talking to Udi)'))
             if '—' in line or re.search(r'\s--\s', line) or '–' in line:
                 out_fail.append((no, 'dash', '—', 'write the sentence with its verb, or two sentences'))
+            # Udi, 2026-11-28 15:09 UTC: "how come a session is showing this to me?" of <ins> in the chat.
+            for m in re.finditer(r'</?\s*(?:ins|del|u|s|strike|b|i|em|strong|span|mark)\b[^>]*>', raw, re.I):
+                out_fail.append((no, 'HTML tag in the chat', m.group(0),
+                                 'deleted: ~~text~~; inserted: U+0332 after every character; no tag (claude.md, Papers)'))
             if re.search(r'(->|→|=>)', line):
                 out_fail.append((no, 'arrow chain', re.search(r'(->|→|=>)', line).group(0), 'write the steps as sentences'))
             qcount += len(re.findall(r'(?<![\w])Q:', line))
