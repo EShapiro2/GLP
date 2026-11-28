@@ -1,0 +1,7 @@
+D: Dial
+Orga is a person, Old, New and Gap numbers.
+1. ■ Move: Orga may move the dial to New, provided Orga has the dial at the number Old, Gap is the difference from Old to New and Gap is at most 5.
+Logic pragmas.
+Vocabulary: z has the dial at the number n = dial(z,n).
+the earlier dial of z has ended: z has the dial at no number.
+After z moves the dial to m: the earlier dial of z has ended and z has the dial at the number m.

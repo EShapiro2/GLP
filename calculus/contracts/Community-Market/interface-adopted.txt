@@ -1,0 +1,10 @@
+Interface pragmas
+Listing: Bob [Post] <listing>
+  Alice [Pass]
+  Bob [Withdraw listing]
+Order: Alice [Order]
+  Bob: Alice asks for your consent to order.
+Deliver: Alice [Deliver]
+Cancel: Alice [Cancel] [Cancel for the buyer] [Cancel for the seller]
+  Bob [Seller cancel] [Seller cancel for the buyer] [Seller cancel for the seller]
+Recommend: Alice [Recommend]

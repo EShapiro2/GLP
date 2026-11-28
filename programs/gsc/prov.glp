@@ -173,6 +173,8 @@ prov_c1(num(_), _, _, _, yes).
 % no name term, so it has no base").
 prov_c1(item_of(_), _, _, _, yes).
 prov_c1(val(_), _, _, _, yes).
+% Nor of a compound value, a value (GSC, Def numbers).
+prov_c1(cmp(_, _), _, _, _, yes).
 prov_c1(A, RB, RBs, QBs, R?) :-
     otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |
     arg_base(A?, B),

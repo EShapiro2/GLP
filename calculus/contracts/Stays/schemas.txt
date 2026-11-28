@@ -8,6 +8,6 @@ After y reviews y's stay at x's p on e, which requires x does not keep y's revie
 Stays:0 - | Alice and Bob are persons, Place a place and Night a night, Today a date, Sum a number.
 Stays:0 - | Environment: x can host guests.
 Stays:1 ◆ List place: listed(Alice,Place) <- hosts(Alice), ~listed(Alice,Place) guarded by Alice.
-Stays:2 ■ Book: stay(Bob,Alice,Place,Night,Sum), booked(Alice,Place,Night), ~coin(Bob,Alice,*Sum), coin(Alice,Alice,*Sum) <- knows(Bob,Alice), listed(Alice,Place), today(Bob,Today), gt(Night,Today), ~booked(Alice,Place,Night), coin(Bob,Alice,*Sum) guarded by Bob, Alice.
-Stays:3 ■ Cancel: ~stay(Bob,Alice,Place,Night,Sum), ~booked(Alice,Place,Night), ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- today(Alice,Today), gt(Night,Today), stay(Bob,Alice,Place,Night,Sum), booked(Alice,Place,Night), coin(Alice,Alice,*Sum) guarded by Alice.
+Stays:2 ■ Book: stay(Bob,Alice,Place,Night,Sum), booked(Alice,Place,Night), ~note(Bob,Alice,coin,*Sum), note(Alice,Alice,coin,*Sum) <- knows(Bob,Alice), listed(Alice,Place), today(Bob,Today), gt(Night,Today), ~booked(Alice,Place,Night), note(Bob,Alice,coin,*Sum) guarded by Bob, Alice.
+Stays:3 ■ Cancel: ~stay(Bob,Alice,Place,Night,Sum), ~booked(Alice,Place,Night), ~note(Alice,Alice,coin,*Sum), note(Bob,Alice,coin,*Sum) <- today(Alice,Today), gt(Night,Today), stay(Bob,Alice,Place,Night,Sum), booked(Alice,Place,Night), note(Alice,Alice,coin,*Sum) guarded by Alice.
 Stays:4 ■ Review: review(Alice,Bob,Place,Night) <- stay(Bob,Alice,Place,Night,Sum), today(Bob,Today), le(Night,Today), ~review(Alice,Bob,Place,Night) guarded by Bob.

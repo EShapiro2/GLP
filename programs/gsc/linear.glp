@@ -1,11 +1,18 @@
 % ---------------------------------------------------------------------------
-% Linear arithmetic over the values (GSC, the appendix "Values in Act
-% Schemas").  A schema's constraint "is a conjunction of linear equalities
-% and inequalities over its value variables and values" (def:numbers), and a
-% binding maps each value variable to a value "under which gamma holds and
-% every multiplicity of tau is a positive whole number" (def:binding-numbers).
-% The conditions "stay decidable, the constraints being linear" (ibid.); this
-% file decides them, exactly.
+% Linear arithmetic over the values (GSC, the appendix "Values in
+% Speech-Act Schemas").  A schema's constraint "is a decidable condition on
+% the values assigned to its value variables, written in the relations and
+% functions the types of the values provide" (def:numbers), and a binding
+% maps each value variable to a value "under which gamma holds and every
+% multiplicity of tau is a positive whole number" (def:binding-numbers).  No
+% condition reads a constraint (the appendix), an introductory act and a
+% schema of arity one admitted by clause 1 of def:unobstructed carrying none,
+% "since whether some binding satisfies a constraint is undecidable in
+% general" (def:numbers).  What is decided here, exactly, is linear: the
+% equations a match of atoms rests on, the multiplicities, and the
+% implication def:numbers asks of a multiplicity deleted, which "the checker
+% decides ... where the constraint is linear over whole numbers, and refuses
+% the schema otherwise" (cons_cd).
 %
 % A value variable a constraint compares ranges over the numbers, and one
 % used as a multiplicity over the positive whole numbers.  The values are a
@@ -1007,9 +1014,9 @@ decomp_defs([X|Xs], [equ(lin([t(q(iv(X?)), 1), t(z(nv(X?)), -1), t(q(fv(X?)), -1
 % is, and one that is not whole as the fraction N / 2^k it is.  An
 % expression is ex(L, D), the form L divided by D > 0; a product is linear
 % where one factor has no variable; a cardinality and a sum are no linear
-% form.  A constraint that is not a conjunction
-% of linear equalities and inequalities over value arguments is refused
-% before it is read (check.glp); were one read, it would be the false atom.
+% form.  A part of a constraint that is no linear form, a product of two
+% value variables or a function among them, is read by cons_cd as true, with
+% its flag W no, so that no implication resting on it is decided.
 
 exported procedure num_frac(Constant?, Integer, Integer).
 num_frac(X, N?, 1) :- integer(X?) | N := X? + 0.

@@ -1,0 +1,11 @@
+Interface pragmas
+Nondistribution: Alice [Pay] <sum>
+  Bob: Alice asks for your consent to pay.
+  Alice [Pay issuer] <sum>
+  AliceOfficer [Pay issuer for Alice] <dollar>
+  AliceOfficer [Pay for Alice] <dollar>
+  Bob: AliceOfficer asks for your consent to pay for alice.
+  Alice [Pay for Bob] <bobofficer> <sum>
+  BobOfficer: Alice asks for your consent to pay for bob.
+  AliceOfficer [Pay for Alice and Bob] <bobofficer> <dollar>
+  BobOfficer: AliceOfficer asks for your consent to pay for alice and bob.

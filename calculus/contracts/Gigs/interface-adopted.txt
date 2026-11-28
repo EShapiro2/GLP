@@ -5,8 +5,8 @@ Job: Alice [Post] <job>
 Engage: Alice [Engage]
   Bob: Alice asks for your consent to engage.
 Deliver: Bob [Deliver]
-Acceptance: Alice [Accept work] [Reject] <carol> <job>
-Cancelling: Alice [Cancel]
-  Bob [Worker cancel]
+Acceptance: Alice [Accept work] [Reject] <carol>
+Cancelling: Alice [Cancel] [Cancel for the client] [Cancel for the worker]
+  Bob [Worker cancel] [Worker cancel for the client] [Worker cancel for the worker]
   Alice [Lapse]
 Recommend: Alice [Recommend]

@@ -28,12 +28,23 @@ BUILD_DIR where the site is written, and SITE_TEST=1 says that the build
 writes no world, the test pages using the live server's worlds, and that the
 pages are served one level below the site's root, where the API is.
 """
-import json, os, re, shutil, subprocess, sys
+import ast, json, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # servers/peoplesweb
 GLP = os.environ.get('GLP_ROOT') or os.path.dirname(os.path.dirname(HERE))   # the repository
 BUILD = os.environ.get('BUILD_DIR') or os.path.join(HERE, 'build')
 TEST = os.environ.get('SITE_TEST') == '1'                             # the test site (deploy/test.sh)
+# The Villagers site, peoplesweb.org/villagers (deploy/villagers.sh; Udi,
+# 2026-11-25 00:19 UTC: "a version of the website in /villagers that includes
+# only the contracts in this repo, and one paper, the Villagers paper.  and
+# the Villagers contract in the south pole"): VILLAGERS_DIR names the
+# contracts/ of a clone of EShapiro2/Villagers, each contract in NAME/contract.txt;
+# the site shows those contracts alone, the globe upside down with the
+# contract built on all the others at the south pole, and the Villagers paper
+# alone.  It is served one level below the site's root, as the test site is.
+VILLAGERS = os.environ.get('VILLAGERS_DIR') or ''
+if VILLAGERS:
+    TEST = True
 WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.path.join(BUILD, 'www')
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
@@ -100,7 +111,7 @@ def parse_rules(text):
             cur = {'name': m.group(1), 'head': f"{m.group(1)}: {m.group(2)}", 'form': 'rule',
                    'adds': [h for h in heads if not h.startswith('not ')],
                    'removes': [h[4:] for h in heads if h.startswith('not ')],
-                   'body': '', 'needs': [], 'guarded': []}
+                   'body': '', 'needs': [], 'guarded': [], 'guard': ''}
             out.append(cur)
         elif cur is not None and line.startswith(' '):
             cur['body'] += ' ' + line.strip()
@@ -109,14 +120,19 @@ def parse_rules(text):
                 body, g = cur['body'].strip(), ''
             cur['needs'] = split_top(body)
             cur['guarded'] = [x.strip() for x in g.split(',') if x.strip()]
+            cur['guard'] = g.strip()
         else:
             header.append(line.strip())
     return header, out
 
 
 # A label is a contract's name, a colon and a clause's number: 'GSG:1',
-# 'Community Bank:1', "Workers' Cooperative:2" (calculus/NAMES.txt).
-CALC_LINE = re.compile(r"^([A-Z][A-Za-z' -]*?):(\d+) (\S) (.*)$")
+# 'Community Bank:1', "Workers' Cooperative:2" (calculus/NAMES.txt); an act
+# that a later contract's clause changes has the labels of both, joined by
+# '+', 'Booking:1+Tennis Courts:1' (Audit #4, ticket 138: until 2026-11-25
+# such acts were left out).
+LABEL = r"[A-Z][A-Za-z' -]*?:\d+"
+CALC_LINE = re.compile(r"^(" + LABEL + r"(?:\+" + LABEL + r")*) (\S) (.*)$")
 
 
 def parse_calculus(text):
@@ -134,7 +150,8 @@ def parse_calculus(text):
         if not m:
             header.append(line.strip())
             continue
-        rest = m.group(4)
+        rest = m.group(3)
+        labels = [(n, int(k)) for n, k in (x.rsplit(':', 1) for x in m.group(1).split('+'))]
         r = re.match(r'^([^|:][^:]*): (.*?)\s*<-\s*(.*?)\.?$', rest)
         if rest.startswith('|') or not r:
             continue
@@ -143,11 +160,12 @@ def parse_calculus(text):
             body, g = r.group(3), ''
         heads, needs = split_top(r.group(2)), split_top(body)
         out.append({'name': r.group(1), 'head': f"{r.group(1)}: {r.group(2)}", 'form': 'rule',
-                    'origin': file_of(m.group(1)), 'clause': int(m.group(2)),
+                    'origin': file_of(labels[0][0]), 'clause': labels[0][1],
+                    'labels': [f"{n}:{k}" for n, k in labels], 'by': [file_of(n) for n, _ in labels],
                     'adds': [h for h in heads if not h.startswith('~')],
                     'removes': [h[1:] for h in heads if h.startswith('~')],
                     'body': body.strip(), 'needs': ['not ' + n[1:] if n.startswith('~') else n for n in needs],
-                    'guarded': [x.strip() for x in g.split(',') if x.strip()]})
+                    'guarded': [x.strip() for x in g.split(',') if x.strip()], 'guard': g.strip()})
     return header, out
 
 
@@ -246,6 +264,15 @@ for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
             if first.startswith(f[:-4] + ': ') or file_of(first.strip()) == f[:-4]:
                 texts[f[:-4]] = p
 
+# The Villagers site's contracts: contracts/NAME/contract.txt of the Villagers repository, beside
+# every contract of programs/, of which the site keeps those they inherit from (KEEP, below).
+VILL = set()
+if VILLAGERS:
+    for f in sorted(os.listdir(VILLAGERS)):
+        if os.path.exists(os.path.join(VILLAGERS, f, 'contract.txt')):
+            texts[f] = os.path.join(VILLAGERS, f, 'contract.txt')
+            VILL.add(f)
+
 # The owners, as cascade.sh's table names them; else the first word of the % Owner line.
 owners = {}
 for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read(os.path.join(GLP, 'cascade.sh')), re.M):
@@ -257,7 +284,24 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
 # 2026-11-16), instantiates and composes, the last read
 # apart below; implements is GSC's, and amends stands while a text in force
 # states it.
-RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates')
+RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates',
+             # The Calculus's words since 2026-11-24 (calculus/contracts): a
+             # contract unites, renames or lifts others, and weakens or
+             # augments what it extends (Website #6).
+             'unites', 'renames', 'lifts', 'weakens', 'augments',
+             # 'Villagers inherits from Village Life and ...' (the Villagers
+             # repository since 2026-11-24, Calculus item 71).
+             'inherits')
+# The Calculus's operations: of its verbs (calculus/tools/expand.py, VERBS),
+# in their order, those the Calculus's own contracts state in their first
+# lines (calculus/contracts/NAME/contract.txt, line 2), so the globe's key is
+# the Calculus's and never falls behind it (Udi, 2026-11-25: "arrow legends in
+# the globes not aligned with operations in Calculus, please revise").
+_VERBS = ast.literal_eval(re.search(r'^VERBS = (\([^)]*\))', open(os.path.join(GLP, 'calculus', 'tools', 'expand.py')).read(), re.M).group(1))
+_FIRST = ' '.join((open(os.path.join(GLP, 'calculus', 'contracts', d, 'contract.txt')).read().split('\n') + ['', ''])[1]
+                  for d in sorted(os.listdir(os.path.join(GLP, 'calculus', 'contracts')))
+                  if os.path.exists(os.path.join(GLP, 'calculus', 'contracts', d, 'contract.txt')))
+OPERATIONS = [v for v in _VERBS if re.search(r'\b' + v + r'\b', _FIRST)]
 
 
 NAMEID, NAMES_RE = {}, [None]
@@ -320,6 +364,18 @@ def extends_of(c, lines):
                     if cur == 'composes':
                         comp = comp or inst or t
                 pend = [] if named else pend + [cur]
+                # 'AI Agents unites a renaming of Guardians and Forwarding, and
+                # extends and augments the union': a relation that names no
+                # contract, where there is no instance or composition, is to
+                # what the line made of the contracts named before it, and so
+                # to each of them (Udi, 2026-11-25).
+                if not named and not (inst or comp) and c['rels_all'] and re.search(r'\b(it|them|the)\b', part):
+                    for t in c['rels_all']:
+                        for r in pend[:-1]:
+                            if r not in c['rels_all'][t]:
+                                c['rels_all'][t].append(r)
+                        if cur not in c['rels_all'][t]:
+                            c['rels_all'][t].append(cur)
                 # 'GAS composes GPD with GSV, restricts the composition, and
                 # extends it': a composition with no instance, named by the
                 # first contract composed (GSC's Section 2, GSC 220151a).
@@ -346,6 +402,8 @@ for c in cat.values():
     c['extends'] = extends_of(c, read(texts[c['id']]).split('\n'))
     own = next((l for l in c['meta'] if l.startswith('% Owner:')), '% Owner: ')
     c['owner'] = re.sub(r'[^A-Za-z].*$', '', own[len('% Owner:'):].strip()) or owners.get(c['id'], '')
+    if c['id'] in VILL:
+        c['owner'] = 'Villagers'
     c['source'] = 'example' if c['meta'] and re.search(r'an (example|experimental) contract', c['meta'][0]) else 'paper'
 
 def has_platform(n):
@@ -356,9 +414,34 @@ def has_platform(n):
 
 
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
+
+
+def ancestors0(cid, seen=None):
+    seen = set() if seen is None else seen
+    for p in cat[cid]['extends']:
+        if p in cat and p not in seen:
+            seen.add(p)
+            ancestors0(p, seen)
+    return seen
+
+
+# The Villagers site keeps the Villagers repository's contracts and every
+# contract they inherit from, directly or through others (Udi, 2026-11-25
+# 01:07 UTC: "it should include all contracts villagers inherit from, and show
+# both terse and full contracts").
+KEEP = set(cat)
+if VILLAGERS:
+    KEEP = set(VILL)
+    for v in VILL:
+        KEEP |= ancestors0(v)
+    compiled = [n for n in compiled if n in KEEP]
 # The test site writes no world: its apps are the live server's, so a contract
 # is live there where the live build made its world.
+# The live build's worlds are in the live clone, LIVE_WORLDS, which
+# deploy/test.sh names, since the test site builds its own tree, which has
+# none (Website #6, 2026-11-24: /next said "0 run as apps").
 if TEST:
+    WORLDS = os.environ.get('LIVE_WORLDS') or WORLDS
     compiled = [n for n in compiled if os.path.exists(os.path.join(WORLDS, f'live_{n.lower()}', 'platform.vglp'))]
 
 shutil.rmtree(BUILD, ignore_errors=True)
@@ -391,7 +474,8 @@ for n in compiled:
 # since 2026-11-16.  calculus/STATE.txt, where there is one, has a line for each
 # contract: its name, its owner, and yes or no for certified by GLP's checker,
 # compiled to GLP, and adopted by its owner.
-CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
+# Since 2026-11-24 the Calculus keeps each contract in calculus/contracts/NAME/ (Code #37).
+CALC = os.environ.get('CALCULUS_DIR') or next((d for d in (os.path.join(GLP, 'calculus', 'contracts'), os.path.join(GLP, 'calculus')) if os.path.exists(os.path.join(d, 'STATE.txt'))), os.path.join(GLP, 'calculus', 'contracts'))
 calc_state = {}
 if os.path.exists(os.path.join(CALC, 'STATE.txt')):
     for l in read(os.path.join(CALC, 'STATE.txt')).split('\n'):
@@ -416,7 +500,27 @@ def calculus_of(n):
     v['adopted'] = bool(st and st['adopted']) or os.path.exists(own)
     if not v['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
         v['proposed'] = read(os.path.join(CALC, n, 'contract.txt')).strip()
-    fc = own if v['adopted'] else os.path.join(CALC, n, 'full-contract.txt')
+    # The Calculus's full contract, printed from the current texts, where it
+    # has one: a record of the cascade keeps the full contract of the text it
+    # was printed from, and 28 records were behind the Calculus on
+    # 2026-11-24 (Calculus #11 to Website #6: the site shows the text of
+    # calculus/contracts/NAME/ and its pragmas).
+    calc_fc = os.path.join(CALC, n, 'full-contract.txt')
+    fc = calc_fc if os.path.exists(calc_fc) else own if v['adopted'] else calc_fc
+    return full_of(v, n, fc)
+
+
+def villagers_of(n):
+    """A contract of the Villagers repository: its full contract, as its
+    owner prints it, contracts/n/full-contract.txt, where there is one."""
+    fc = os.path.join(VILLAGERS, n, 'full-contract.txt')
+    if not os.path.exists(fc):
+        return None
+    return full_of({'owner': 'Villagers', 'certified': False, 'compiled': False, 'adopted': True}, n, fc)
+
+
+def full_of(v, n, fc):
+    """v with the full contract fc, where it exists, copied into the site."""
     if os.path.exists(fc):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
@@ -460,7 +564,7 @@ def ancestors(cid):
     return out
 
 
-shown = set(cat)
+shown = set(cat) & KEEP
 
 
 def nearest(cid):
@@ -483,7 +587,7 @@ def look_line(pragmas):
 
 
 contracts = []
-for n in sorted(set(compiled) | set(cat)):
+for n in sorted((set(compiled) | set(cat)) & KEEP):
     c = dict(cat[n])
     d = os.path.join(GLP, 'cascade', n)
     # The icon and family the contract's Look line names, where its owner
@@ -493,15 +597,17 @@ for n in sorted(set(compiled) | set(cat)):
     c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
-    # Labels" (Udi, 2026-11-07).
+    # Labels" (Udi, 2026-11-07).  The base is named by its shown name, so a
+    # contract named in words, Backed Community Bank, keeps its name whole
+    # (Website #6, 2026-11-24).
     t = c['title']
     for p in c['extends']:
         if p in cat:
-            t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
+            t = re.sub(re.escape(cat[p]['title']), cat[p]['name'], t, flags=re.I)
     c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
-    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
-    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts and n not in VILL else ''
+    c['paper'] = cite_of('Villagers', served, paper_state) if n in VILL else paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
     c['paperKey'] = key_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''))
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
@@ -533,7 +639,7 @@ for n in sorted(set(compiled) | set(cat)):
     # verbatim: "i want the web to include for each contract a button you
     # press 'full contract' that show the full contract"), and the Calculus's
     # proposed text and state.
-    c['calculus'] = calculus_of(n)
+    c['calculus'] = villagers_of(n) if n in VILL else calculus_of(n)
     # A contract that builds on one with no platform is drawn building on the nearest shown ones.
     ps = nearest(n)
     c['extends'] = [p for p in ps if not any(p in set(ancestors(q)) for q in ps if q != p)]
@@ -543,8 +649,13 @@ for n in sorted(set(compiled) | set(cat)):
 for c in contracts:
     for s in c['schemas']:
         # The Calculus's form names each act's origin itself.
+        # An act a later clause changes, 'Booking:1+Tennis Courts:1', is from
+        # the contract it was first written in, and is this contract's own
+        # where this contract's clause is among its labels.
         if s.get('origin'):
-            s['from'] = s.pop('origin')
+            by = s.pop('by', [])
+            s['from'] = c['id'] if c['id'] in by else s.pop('origin')
+            s.pop('origin', None)
             continue
         s['from'] = c['id']
         for a in ancestors(c['id']):
@@ -595,14 +706,30 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 # A contract the Calculus has and its owner has not written, SGSG today: listed
 # from the Calculus with its proposed text and nothing in force, until its
 # owner adopts it (calculus/MIGRATION.md, Website, item 2).
-for n in sorted(set(calc_state) - set(cat)):
+# A contract of the Calculus with no owner ('none' in calculus/contracts/STATE.txt),
+# the Villagers repository's thirteen today, is not on the main globe: the
+# Villagers contracts stay on the Villagers site (Udi, 2026-11-26 16:48 UTC:
+# "villagers-specific contracts stay there and not imported back to the main
+# globe").
+calc_only = [n for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []) if calc_state[n]['owner'] != 'none' and 'proposed' in (calculus_of(n) or {})]
+for n in calc_only:
     v = calculus_of(n)
     if not v or 'proposed' not in v:
         continue
     lines = v['proposed'].split('\n')
     title = lines[0].split(': ', 1)[1] if ': ' in lines[0] else n
-    m = next((re.match(re.escape(n) + r' extends ([^.]+)\.', l) for l in lines if l.startswith(n + ' extends ')), None)
-    ext = [x for x in re.findall(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', m.group(1)) if x in cat] if m else []
+    # The first line names what it builds on: 'X extends Y.' before
+    # 2026-11-26, 'X inherits from Y, Z and W.' since the Calculus's first
+    # lines (c63b27e), X its title; each name, as the title lines spell it
+    # ('Lost and Found'), found longest first, a contract of the Calculus
+    # alone that it builds on being one of them too.
+    m = next((re.match(re.escape(t) + r' (?:extends|inherits from) ([^.]+)\.', l) for l in lines for t in (title, n, lines[0].strip()) if l.startswith((t + ' extends ', t + ' inherits from '))), None)
+    known = {**{k: v for k, v in NAMEID.items() if v in cat}, **{x.replace('-', ' '): x for x in calc_only}}
+    ext, rest = [], m.group(1) if m else ''
+    for k in sorted(known, key=len, reverse=True):
+        if re.search(r'\b' + re.escape(k) + r'\b', rest):
+            rest = re.sub(r'\b' + re.escape(k) + r'\b', ' ', rest)
+            ext.append(known[k])
     _a = about.get(n, ['📄', 'other', ''])
     contracts.append({'id': n, 'title': title, 'label': f'{n}: {title}', 'preamble': '', 'clauses': [], 'pragmas': [],
                       'extends': ext, 'rels': {x: 'extends' for x in ext}, 'relation': 'extends', 'owner': '' if v['owner'] == 'none' else v['owner'],
@@ -619,6 +746,26 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 # app that opens such a link.
 for d in ('i', '.well-known', 'katex'):
     shutil.copytree(os.path.join(HERE, 'web', d), os.path.join(WWW, d), dirs_exist_ok=True)
+# The Villagers site's link preview says what it is (Udi, 2026-11-25: "link
+# preview of villagers should reflect what it is"): its title, line, address
+# and picture, web/og-villagers.jpg (tools/og.js, OG_URL, OG_TITLE, OG_LINE).
+if VILLAGERS:
+    shutil.copy(os.path.join(HERE, 'web', 'og-villagers.jpg'), os.path.join(WWW, 'og.jpg'))
+    os.remove(os.path.join(WWW, 'og-villagers.jpg'))
+    LINE = 'A grassroots contract for village digital life: the Villagers contract and every contract it extends.'
+    t = read(os.path.join(WWW, 'index.html'))
+    for old, new in [('<meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta name="description" content="{LINE}">'),
+                     ('<meta property="og:title" content="The Grassroots Sphere">', '<meta property="og:title" content="Villagers: A Grassroots Contract for Village Digital Life">'),
+                     ('<meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta property="og:description" content="{LINE}">'),
+                     ('<meta property="og:url" content="https://peoplesweb.org/">', '<meta property="og:url" content="https://peoplesweb.org/villagers/">'),
+                     ('<meta property="og:image" content="https://peoplesweb.org/og.jpg">', '<meta property="og:image" content="https://peoplesweb.org/villagers/og.jpg">'),
+                     ('<meta property="og:image:alt" content="The grassroots contracts on a sphere, beside the name of the Grassroots Sphere">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it extends on a sphere, Villagers at the south pole">'),
+                     ('<title>The Grassroots Sphere</title>', '<title>Villagers · The Grassroots Sphere</title>')]:
+        if old not in t:
+            raise SystemExit('villagers: index.html has no ' + old)
+        t = t.replace(old, new)
+    with open(os.path.join(WWW, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(t)
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
@@ -630,13 +777,14 @@ if served:
 # papers no project holds.  What no entry covers, and what does not fit the
 # tree, the build prints and the page shows, so that every directory is
 # accounted for.
-projects, code, faults = directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
+projects, code, faults = ([{'id': 'Villagers', 'name': cite_of('Villagers')['title'], 'dirs': [],
+                             'papers': [{'key': 'Villagers', 'dirs': [], 'contracts': [{'id': c['id'], 'items': []} for c in contracts if c['id'] in VILL]}]}], [], []) if VILLAGERS else directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
 for p in projects:
     for q in p['papers']:
         q['cite'] = cite_of(q['key'], served, paper_state) or {}
         if not q['cite']:
             faults.append(f"the paper {q['key']} of {p['id']} is not in tools/papers.py")
-lost = directories.unaccounted(GLP)
+lost = [] if VILLAGERS else directories.unaccounted(GLP)
 if lost:
     print('directories: no entry answers for ' + ', '.join(lost))
 for f in faults:
@@ -660,12 +808,17 @@ for c in contracts:
     c['acts'] = [len(sch), sum(1 for s in sch if s.get('from') == c['id'])]
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
-            'noPaper': [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
-            'otherPapers': foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
-            'unaccounted': lost, 'faults': faults}
+            'noPaper': [] if VILLAGERS else [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
+            'otherPapers': [] if VILLAGERS else foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
+            'unaccounted': lost, 'faults': faults, 'operations': OPERATIONS}
     if TEST:
         # The test site's pages are one level below the site's root, and the
         # API they call is the live server's, at the root.
         data['test'], data['api'] = True, ''
+    if VILLAGERS:
+        # The globe upside down: the contract built on all the others at the
+        # south pole (web/index.html, D.flip).
+        data['south'], data['site'] = 'Villagers', 'villagers'
+        data['villagersCommit'] = subprocess.run(['git', '-C', os.path.dirname(VILLAGERS.rstrip('/')), 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
     f.write('window.DATA = ' + json.dumps(data, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

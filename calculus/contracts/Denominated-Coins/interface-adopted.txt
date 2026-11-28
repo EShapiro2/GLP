@@ -1,2 +1,2 @@
 Interface pragmas
-Issue: Alice [Issue] <sum> [First issue] <sum> <dollar>
+Issue: Alice [Issue] <type> <sum> [First issue] <dollar> <sum>

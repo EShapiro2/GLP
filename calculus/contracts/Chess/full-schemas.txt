@@ -1,0 +1,31 @@
+Chess (expanded schemas)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Chess:0 - | Alice, Bob and Carol are persons, Game a game, Move a move, Board and Next positions, Side, Limit and Made numbers, Day, Today and Due dates.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Chess:0 - | The *rules of chess* are the Laws of Chess of FIDE, the International Chess Federation. A *position* is the board with the side to move, the rights to castle and to capture en passant, the positions since the last capture or pawn move and the number of moves made, so that it shows a draw by repetition or by the fifty-move or seventy-five-move rule. The *time limit* of a game is the number of days a player has for each move.
+Chess:0 - | Functions: b is the first position; v is the legality of m on b; c is the position after m on b; s is the side to move of b; v is the mate of b; v is the draw of b; v is the automatic draw of b; n is the moves made on b.
+Chess:1 ■ | Start.
+Chess:1 ■ Start: started(Alice,Game), started(Bob,Game), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day), colour(Alice,Game,1), colour(Bob,Game,2), limit(Alice,Game,Limit), limit(Bob,Game,Limit) <- friend(Alice,Bob), friend(Bob,Alice), first(Board), today(Alice,Day), ~started(Alice,Game), ~started(Bob,Game) guarded by Alice, Bob.
+Chess:1 ■ Start as black: started(Alice,Game), started(Bob,Game), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day), colour(Alice,Game,2), colour(Bob,Game,1), limit(Alice,Game,Limit), limit(Bob,Game,Limit) <- friend(Alice,Bob), friend(Bob,Alice), first(Board), today(Alice,Day), ~started(Alice,Game), ~started(Bob,Game) guarded by Alice, Bob.
+Chess:2 ■ | Move.
+Chess:2 ■ Move: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), at(Alice,Game,Bob,Next,Today), at(Bob,Game,Alice,Next,Today) <- colour(Alice,Game,Side), side(Side,Board), legal(1,Move,Board), after(Next,Move,Board), autodraw(0,Next), today(Alice,Today), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice.
+Chess:2 ■ Drawing move: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), drawn(Alice,Game,Bob), drawn(Bob,Game,Alice) <- colour(Alice,Game,Side), side(Side,Board), legal(1,Move,Board), after(Next,Move,Board), autodraw(1,Next), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice.
+Chess:3 ■ Win: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), won(Alice,Game,Bob) <- colour(Bob,Game,Side), side(Side,Board), mate(1,Board), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice.
+Chess:4 ■ Time: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), won(Alice,Game,Bob) <- colour(Bob,Game,Side), side(Side,Board), limit(Bob,Game,Limit), sum(Due,Day,Limit), today(Alice,Today), gt(Today,Due), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice.
+Chess:5 ■ Resign: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), won(Bob,Game,Alice) <- at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice.
+Chess:6 ■ | Draw.
+Chess:6 ■ Draw: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), drawn(Alice,Game,Bob), drawn(Bob,Game,Alice) <- plies(Made,Board), gt(Made,1), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice, Bob.
+Chess:6 ■ Claim draw: ~at(Alice,Game,Bob,Board,Day), ~at(Bob,Game,Alice,Board,Day), drawn(Alice,Game,Bob), drawn(Bob,Game,Alice) <- colour(Alice,Game,Side), side(Side,Board), draw(1,Board), at(Alice,Game,Bob,Board,Day), at(Bob,Game,Alice,Board,Day) guarded by Alice.
+Chess:7 ○ | Fair play.
+Chess:7 ○ | Alice will choose each of her moves herself, with no help from a chess engine.

@@ -1,0 +1,9 @@
+Partnership
+Partnership weakens Corporation.
+x is a partner of z: x is an officer of z.
+Roles: the partners of z = partners(z), listed by z has y as an officer and y is an officer of z.
+Partnership:0 - | A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; a person joins only with the consent of every partner.
+Partnership:0 - | Bob is a person, Orga a partnership.
+Partnership:1 ■ Join: Organisation:3 Join <- guarded by partners(Orga).
+Partnership:2 ○ | Partners' liability.
+Partnership:2 ○ | Every partner will be accountable at law for the undertakings of Orga, with Orga.

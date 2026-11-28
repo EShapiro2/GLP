@@ -337,6 +337,7 @@ filter_vvars([], []).
 filter_vvars([num(X)|As], [num(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([real(X)|As], [real(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([const(X)|As], [const(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
+filter_vvars([set(X)|As], [const(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([_|As], R?) :- otherwise, ground(As?) | filter_vvars(As?, R).
 
 % The value variables over constants of a schema, each marked in the
@@ -351,6 +352,7 @@ const_marks(NSc, R?) :- ground(NSc?) |
 procedure const_marks1(Args?, Subst).
 const_marks1([], []).
 const_marks1([const(X)|Vs], [bind(const(X?), undef)|R?]) :- const_marks1(Vs?, R).
+const_marks1([set(X)|Vs], [bind(const(X?), undef)|R?]) :- const_marks1(Vs?, R).
 const_marks1([_|Vs], R?) :- otherwise | const_marks1(Vs?, R).
 
 % The value variables taken as whole: those of type num, and those written as
@@ -367,10 +369,13 @@ whole_vvars([_|Vs], Pw, R?) :- otherwise, ground(Vs?), ground(Pw?) | whole_vvars
 % name term, with literals for its body and head, carrying no constraint
 % (def:numbers), requiring and clearing nothing (GSC 327e035: its role's atoms
 % marked -, -(i) and the cleared atoms *(i), and its unmarked atoms are
-% none), and forbidding nothing or only that atom,
-% which the introductory act then requires once at its role, at a binding
+% none), and forbidding nothing or only one atom it adds, the atom or
+% another, the introductory act then requiring the atom once at its role, at a binding
 % sending its role to the person in question: an atom the schema adds
-% equals the atom there, and so does each atom it forbids.  Its role is
+% equals the atom there, and so does each atom it forbids; or it forbids one
+% other atom psi it adds, psi and the atom having no arguments, no schema of
+% the contract deleting or clearing the atom, and every schema adding psi at a
+% role adding the atom there (companion, below).  Its role is
 % guarded, so an agent role.  The answer is a formula over the act's values
 % and the supplying schema's (named by Tg), one conjunction for each atom of
 % each such schema that matches; O is the formula saying that the act
@@ -400,57 +405,190 @@ supply_dnf(match(S, E), NSc, Tg, PwI, [C?]) :-
     ground(S?), ground(E?), ground(NSc?), ground(Tg?), ground(PwI?) |
     inst_conj(NSc?, Tg?, S?, E?, PwI?, C).
 
-procedure mult_supply(Atom?, Atoms?, RoleSpecs?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
-mult_supply(Psi, N, Rs, NSc, G, V, O, Tg, PwI, R?) :-
-    ground(Psi?), ground(N?), ground(Rs?), ground(NSc?), ground(G?), ground(V?), ground(O?),
-    ground(Tg?), ground(PwI?) |
+procedure mult_supply(Atom?, Atoms?, Atoms?, Contract?, RoleSpecs?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+mult_supply(Psi, N, P, PC, Rs, NSc, G, V, O, Tg, PwI, R?) :-
+    ground(Psi?), ground(N?), ground(P?), ground(PC?), ground(Rs?), ground(NSc?), ground(G?),
+    ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
     const_marks(NSc?, M),
     match_atom(Psi?, G?, Rs?, [bind(role(1), V?)|M?], [], MR0),
-    forb_match(N?, G?, Rs?, MR0?, MR),
+    forb_ok(MR0?, N?, G?, Rs?, Psi?, P?, PC?, MR),
     supply_dnf(MR?, NSc?, Tg?, PwI?, D0),
     once_and(N?, O?, D0?, R).
 
-procedure mults_supply(Mults?, Atoms?, RoleSpecs?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
-mults_supply([], _, _, _, _, _, _, _, _, []).
-mults_supply([M|Ms], N, Rs, NSc, G, V, O, Tg, PwI, R?) :-
-    ground(M?), ground(Ms?), ground(N?), ground(Rs?), ground(NSc?), ground(G?), ground(V?),
-    ground(O?), ground(Tg?), ground(PwI?) |
+procedure forb_ok(MatchRes?, Atoms?, GAtom?, RoleSpecs?, Atom?, Atoms?, Contract?, MatchRes).
+forb_ok(MR0, N, G, Rs, Psi, P, PC, R?) :-
+    ground(MR0?), ground(N?), ground(G?), ground(Rs?), ground(Psi?), ground(P?), ground(PC?) |
+    forb_match(N?, G?, Rs?, MR0?, MR1),
+    forb_other(MR1?, N?, Psi?, P?, PC?, MR0?, R).
+
+% forb_other(MR1, N, Phi, P, PC, MR0, MR): where the schema does not forbid
+% only the atom Phi it supplies, it supplies it if it forbids one other atom
+% psi of P, the atoms it adds, Phi and psi having no arguments, and psi
+% carries Phi in the contract PC (companion; clause 1 of def:unobstructed).
+procedure forb_other(MatchRes?, Atoms?, Atom?, Atoms?, Contract?, MatchRes?, MatchRes).
+forb_other(match(S, E), _, _, _, _, _, match(S?, E?)).
+forb_other(nomatch, [atom(F, [])], atom(Q, []), P, PC, MR0, R?) :-
+    ground(F?), ground(Q?), ground(P?), ground(PC?), ground(MR0?) |
+    atoms_member(P?, atom(F?, []), A1),
+    companion(PC?, F?, Q?, A2),
+    both_yes(A1?, A2?, A),
+    match_if(A?, MR0?, R).
+forb_other(_, _, _, _, _, _, nomatch) :- otherwise | true.
+
+procedure match_if(Ans?, MatchRes?, MatchRes).
+match_if(yes, MR, MR?).
+match_if(no, _, nomatch).
+
+% companion(PC, F, Q, R): no schema of PC deletes or clears Q, and every
+% schema that adds F at a role adds Q there, F and Q having no arguments
+% (clause 1 of def:unobstructed).  An atom with no arguments is cleared by
+% no cleared atom, which carries the wildcard as an argument, so it is
+% deleted only as an atom marked - (rs_marked_del).  A conditional literal
+% of a quantified conjunct adding F at the agent role J is answered by an
+% atom Q that role adds, or that the same conjunct adds at J.
+procedure companion(Contract?, Constant?, Constant?, Ans).
+companion([], _, _, yes).
+companion([S|Ss], F, Q, R?) :- ground(S?), ground(Ss?), ground(F?), ground(Q?) |
+    sch_roles(S?, Rs),
+    sch_conjs(S?, Cj),
+    companion1(Rs?, Cj?, F?, Q?, A1),
+    companion(Ss?, F?, Q?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure companion1(RoleSpecs?, Conjuncts?, Constant?, Constant?, Ans).
+companion1(Rs, Cj, F, Q, R?) :- ground(Rs?), ground(Cj?), ground(F?), ground(Q?) |
+    comp_roles(Rs?, F?, Q?, A1),
+    comp_conjs(Cj?, Rs?, F?, Q?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure comp_roles(RoleSpecs?, Constant?, Constant?, Ans).
+comp_roles([], _, _, yes).
+comp_roles([RS|Rs], F, Q, R?) :- ground(RS?), ground(Rs?), ground(F?), ground(Q?) |
+    rs_add(RS?, P),
+    rs_marked_del(RS?, M),
+    comp_role(P?, M?, F?, Q?, B1),
+    comp_roles(Rs?, F?, Q?, B2),
+    both_yes(B1?, B2?, R).
+
+procedure comp_role(Atoms?, Atoms?, Constant?, Constant?, Ans).
+comp_role(P, M, F, Q, R?) :- ground(P?), ground(M?), ground(F?), ground(Q?) |
+    atoms_member(P?, atom(F?, []), AF),
+    atoms_member(P?, atom(Q?, []), AQ),
+    atoms_member(M?, atom(Q?, []), DQ),
+    if_yes(AF?, AQ?, B1),
+    flip(DQ?, B2),
+    both_yes(B1?, B2?, R).
+
+% if_yes(A, B, R): R is yes unless A is yes and B no.
+procedure if_yes(Ans?, Ans?, Ans).
+if_yes(no, _, yes).
+if_yes(yes, B, B?).
+
+procedure comp_conjs(Conjuncts?, RoleSpecs?, Constant?, Constant?, Ans).
+comp_conjs([], _, _, _, yes).
+comp_conjs([conjunct(_, _, _, _, Add, Del, _)|Cs], Rs, F, Q, R?) :-
+    ground(Add?), ground(Del?), ground(Cs?), ground(Rs?), ground(F?), ground(Q?) |
+    hms_has(Del?, Q?, DQ),
+    flip(DQ?, B1),
+    comp_hms(Add?, Add?, Rs?, F?, Q?, B2),
+    comp_conjs(Cs?, Rs?, F?, Q?, B3),
+    both_yes(B1?, B2?, B12),
+    both_yes(B12?, B3?, R).
+
+% hms_has(Hs, Q, R): some conditional literal of Hs is the atom Q.
+procedure hms_has(HMults?, Constant?, Ans).
+hms_has([], _, no).
+hms_has([hm(_, M)|Hs], Q, R?) :- ground(M?), ground(Hs?), ground(Q?) |
+    plain_mult(M?, A),
+    atoms_member([A?], atom(Q?, []), A1),
+    hms_has(Hs?, Q?, A2),
+    or_yes(A1?, A2?, R).
+
+% hms_at(Hs, J, Q, R): some conditional literal of Hs adds Q at the role J.
+procedure hms_at(HMults?, Integer?, Constant?, Ans).
+hms_at([], _, _, no).
+hms_at([hm(J1, M)|Hs], J, Q, R?) :- ground(M?), ground(Hs?), integer(J1?), integer(J?), ground(Q?) |
+    plain_mult(M?, A),
+    atoms_member([A?], atom(Q?, []), A1),
+    eq_int(J1?, J?, A2),
+    both_yes(A1?, A2?, A12),
+    hms_at(Hs?, J?, Q?, A3),
+    or_yes(A12?, A3?, R).
+
+procedure eq_int(Integer?, Integer?, Ans).
+eq_int(A, B, yes) :- A? =:= B? | true.
+eq_int(A, B, no) :- A? =\= B? | true.
+
+procedure comp_hms(HMults?, HMults?, RoleSpecs?, Constant?, Constant?, Ans).
+comp_hms([], _, _, _, _, yes).
+comp_hms([hm(J, M)|Hs], All, Rs, F, Q, R?) :-
+    integer(J?), ground(M?), ground(Hs?), ground(All?), ground(Rs?), ground(F?), ground(Q?) |
+    plain_mult(M?, A),
+    atoms_member([A?], atom(F?, []), AF),
+    hms_at(All?, J?, Q?, AH),
+    nth_role_adds(Rs?, J?, Q?, AR),
+    or_yes(AH?, AR?, AQ),
+    if_yes(AF?, AQ?, B1),
+    comp_hms(Hs?, All?, Rs?, F?, Q?, B2),
+    both_yes(B1?, B2?, R).
+
+% nth_role_adds(Rs, J, Q, R): the J-th role of Rs adds Q.
+procedure nth_role_adds(RoleSpecs?, Integer?, Constant?, Ans).
+nth_role_adds([], _, _, no).
+nth_role_adds([RS|_], J, Q, R?) :- J? =:= 1, ground(RS?), ground(Q?) |
+    rs_add(RS?, P),
+    atoms_member(P?, atom(Q?, []), R).
+nth_role_adds([_|Rs], J, Q, R?) :- J? > 1, integer(J?), ground(Rs?), ground(Q?) |
+    J1 := J? - 1,
+    nth_role_adds(Rs?, J1?, Q?, R).
+
+procedure mults_supply(Mults?, Atoms?, Atoms?, Contract?, RoleSpecs?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+mults_supply([], _, _, _, _, _, _, _, _, _, _, []).
+mults_supply([M|Ms], N, P, PC, Rs, NSc, G, V, O, Tg, PwI, R?) :-
+    ground(M?), ground(Ms?), ground(N?), ground(P?), ground(PC?), ground(Rs?), ground(NSc?),
+    ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
     plain_mult(M?, Psi),
-    mult_supply(Psi?, N?, Rs?, NSc?, G?, V?, O?, Tg?, PwI?, D1),
-    mults_supply(Ms?, N?, Rs?, NSc?, G?, V?, O?, Tg?, PwI?, D2),
+    mult_supply(Psi?, N?, P?, PC?, Rs?, NSc?, G?, V?, O?, Tg?, PwI?, D1),
+    mults_supply(Ms?, N?, P?, PC?, Rs?, NSc?, G?, V?, O?, Tg?, PwI?, D2),
     linear # dnf_app(D1?, D2?, R).
 
-procedure unary_supplies1(RoleSpecs?, NameTerms?, NRoleSpecs?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
-unary_supplies1([rs(guarded, P, [], [], N)], [], [rs(guarded, PM, [], [], _)], NSc, G, V, O, Tg, PwI, R?) :-
-    ground(P?), ground(N?), ground(PM?), ground(NSc?), ground(G?), ground(V?), ground(O?),
+procedure unary_supplies1(RoleSpecs?, NameTerms?, NRoleSpecs?, Contract?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+unary_supplies1([rs(guarded, P, [], [], N)], [], [rs(guarded, PM, [], [], _)], PC, NSc, G, V, O, Tg, PwI, R?) :-
+    ground(P?), ground(N?), ground(PM?), ground(PC?), ground(NSc?), ground(G?), ground(V?), ground(O?),
     ground(Tg?), ground(PwI?) |
-    mults_supply(PM?, N?, [rs(guarded, P?, [], [], N?)], NSc?, G?, V?, O?, Tg?, PwI?, R).
-unary_supplies1(_, _, _, _, _, _, _, _, _, []) :- otherwise | true.
+    mults_supply(PM?, N?, P?, PC?, [rs(guarded, P?, [], [], N?)], NSc?, G?, V?, O?, Tg?, PwI?, R).
+unary_supplies1(_, _, _, _, _, _, _, _, _, _, []) :- otherwise | true.
 
-procedure unary_supplies0(Schema?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
-unary_supplies0(Sc, NSc, G, V, O, Tg, PwI, R?) :-
-    ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
+procedure unary_supplies0(Schema?, NSchema?, Contract?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+unary_supplies0(Sc, NSc, PC, G, V, O, Tg, PwI, R?) :-
+    ground(Sc?), ground(NSc?), ground(PC?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
     nsch_bare(NSc?, A),
-    unary_supplies2(A?, Sc?, NSc?, G?, V?, O?, Tg?, PwI?, R).
+    unary_supplies2(A?, Sc?, NSc?, PC?, G?, V?, O?, Tg?, PwI?, R).
 
-procedure unary_supplies2(Ans?, Schema?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
-unary_supplies2(no, _, _, _, _, _, _, _, []).
-unary_supplies2(yes, Sc, NSc, G, V, O, Tg, PwI, R?) :-
-    ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
+procedure unary_supplies2(Ans?, Schema?, NSchema?, Contract?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+unary_supplies2(no, _, _, _, _, _, _, _, _, []).
+unary_supplies2(yes, Sc, NSc, PC, G, V, O, Tg, PwI, R?) :-
+    ground(Sc?), ground(NSc?), ground(PC?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
     sch_roles(Sc?, Rs),
     sch_nts(Sc?, Ns),
     nsch_roles(NSc?, NRs),
-    unary_supplies1(Rs?, Ns?, NRs?, NSc?, G?, V?, O?, Tg?, PwI?, R).
+    unary_supplies1(Rs?, Ns?, NRs?, PC?, NSc?, G?, V?, O?, Tg?, PwI?, R).
 
 % obtainable(NC, G, V, O, Tg, PwI, D): D says that some schema of arity one
 % of the contract supplies G to V.
 procedure obtainable(NContract?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
-obtainable([], _, _, _, _, _, []).
-obtainable([S|Ss], G, V, O, Tg, PwI, R?) :-
-    ground(S?), ground(Ss?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
+obtainable(NC, G, V, O, Tg, PwI, R?) :-
+    ground(NC?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
+    plain_contract(NC?, PC),
+    obtainable1(NC?, PC?, G?, V?, O?, Tg?, PwI?, R).
+
+procedure obtainable1(NContract?, Contract?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+obtainable1([], _, _, _, _, _, _, []).
+obtainable1([S|Ss], PC, G, V, O, Tg, PwI, R?) :-
+    ground(S?), ground(Ss?), ground(PC?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
     plain_schema(S?, Sc),
-    unary_supplies0(Sc?, S?, G?, V?, O?, Tg?, PwI?, D1),
-    obtainable(Ss?, G?, V?, O?, Tg?, PwI?, D2),
+    unary_supplies0(Sc?, S?, PC?, G?, V?, O?, Tg?, PwI?, D1),
+    obtainable1(Ss?, PC?, G?, V?, O?, Tg?, PwI?, D2),
     linear # dnf_app(D1?, D2?, R).
 
 % once_dnf(All, M, G, B, PwI, D): the act requires the atom G once at its
@@ -949,6 +1087,9 @@ sym_binds([real(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 sym_binds([const(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
+    ground(X?), ground(Vs?), ground(B?) |
+    sym_binds(Vs?, B?, R).
+sym_binds([set(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 sym_binds([A|Vs], B, R?) :- otherwise, ground(A?), ground(Vs?), ground(B?) |

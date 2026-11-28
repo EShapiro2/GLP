@@ -1,2 +1,2 @@
-AppStore composes Programs with Services: holds
+AppStore extends Programs and Services: holds
 AppStore extends it (Programs and Services): holds

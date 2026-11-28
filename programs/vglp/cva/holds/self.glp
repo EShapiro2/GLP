@@ -1,0 +1,52 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract holds
+%% (../contracts.glp, contract_named(holds, C): a set read at one role for its
+%% size), platform.vglp, which programs/vglp/cva/compile.sh prints from it.
+%%
+%% play_holds: alice establishes her identity, issues the notes 1 and 2 and
+%% stakes 3.  She requests provide(alice): her machine reads the notes she
+%% holds, two, fewer than her stake, so it is ready for no part named so and
+%% drops the request with the notice refused(provide(alice), alice, unable).
+%% She issues the note 3 and requests provide(alice) again: her machine reads
+%% three notes, at least her stake, and she holds provider.  bob establishes
+%% his identity and does nothing more.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_holds(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_holds(LA?, LB?, N?) :-
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          own([A2], propose(issue(A2?, 1))), wait(holds(note(1))),
+          own([A3], propose(issue(A3?, 2))), wait(holds(note(2))),
+          own([A4], propose(stake(A4?, 3))), wait(holds(stake(3))),
+          own([A5], propose(provide(A5?))), wait(refused(provide(alice), alice, unable)),
+          own([A6], propose(issue(A6?, 3))), wait(holds(note(3))),
+          own([A7], propose(provide(A7?))), wait(holds(provider))],
+         [own([B1], propose(establish(B1?))), wait(holds(identity))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

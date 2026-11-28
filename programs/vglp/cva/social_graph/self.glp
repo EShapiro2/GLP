@@ -96,6 +96,20 @@ play_refused(LA?, LB?, N?) :-
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
+%% play_reacquaint (Audit #128, Grassroots-Audit PR 129: on peoplesweb.org's Friendship world, alice acquainting bob twice held knows(bob) twice): alice and bob come to know each other, alice requests acquaint(alice, bob) again, bob answers yes and it commits, and then they befriend; a local state being a set (the Calculus, Definition "Local state, configuration"), each holds knows of the other once.
+exported procedure play_reacquaint(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
+play_reacquaint(LA?, LB?, N?) :-
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
+          own([M2], propose(acquaint(M2?, bob))),
+          own([A2], propose(befriend(A2?, bob))),
+          wait(holds(friend(bob)))],
+         [own([B1], propose(establish(B1?))), wait(holds(identity)),
+          approval(acquaint(alice, bob), yes),
+          approval(acquaint(alice, bob), yes),
+          approval(befriend(alice, bob), yes)],
+         LA, LB, N).
+
 exported procedure play_menu(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 play_menu(LA?, LB?, N?) :-
     pair([look, own([A1], propose(establish(A1?))), wait(holds(identity)),

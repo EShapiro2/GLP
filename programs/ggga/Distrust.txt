@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 029de9f; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GGGA's, their lines named by the clauses' new titles, clause 1 with a button for each of its two acts (GGGA #4).  Git holds what the file said before.
 % Schemas: Distrust.glp beside this file, the full schemas, Knowledge's three, Friendship's two and four over the predicate distrusts, printed by calculus/tools/adopt.py Distrust from the Logic pragmas and never written by hand; adopt.py --check Distrust holds it and cascade/Distrust/ to what the tools print.
 Distrust
-Distrust extends Friendship.
+Distrust inherits from Friendship.
 Alice, Bob and Carol are persons.
 1. ■ Distrust: Alice, who knows Carol, may declare distrust of Carol; if they are friends, this ends their friendship.
 2. ■ Propagate: Alice, who does not know Carol, may declare distrust of Carol provided her friend Bob has declared it.

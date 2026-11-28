@@ -1,11 +1,12 @@
 % Written by tools/expand.py from rev/; do not edit.
 Second-Score Auction
 An *identity* is a unique cryptographic key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay.
-A *pickup delay* is measured from the award. The *terms* of a call, a parameter of Auction, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released. Here: second-score terms.
+A person has a *location*. d > 0, an integer, and e > 0 are numbers.
+A *pickup delay* is measured from the award. The *terms* of a call state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
 *Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
-Alice is a rider, Bob a driver, Carol a person. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. A person can be either a rider or a driver but not both.
+Alice is a rider, Bob a driver, Carol a person. A person can be either a rider or a driver but not both.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -19,6 +20,6 @@ Auction:1. ■ Call. Call: Alice, who has no open call and no ride, may call for
 Auction:2. ■ Bid: Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
 Auction:3, Second-Score Auction:2. ■ Award. Award: After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible. Close: If the terms select no bidder, Alice may close the call, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible. They set the fare P = W(τ) − s₂, where τ is that bid's pickup delay and s₂ is the highest score among the other admissible bids, or 0 if there is none, and they set the deposit D.
 Auction:4. ■ Pickup: The pickup is recorded when Alice and Bob are both at the pickup point.
-Auction:5, Second-Score Auction:3. ■ Arrive: When Alice and Bob are both at the destination, the fare and the deposit are released to Alice and to Bob as the terms say, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+Auction:5, Second-Score Auction:3. ■ Arrive: When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
 Auction:6, Second-Score Auction:4. ■ Cancel: If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say, where the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
 Auction:7. ■ Withdraw: Alice may withdraw her open call before the bidding period ends.

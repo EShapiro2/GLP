@@ -1,0 +1,7 @@
+Promoted Community Market
+Promoted Community Market unites Promoted Matching and Community Market, and extends and weakens the union.
+Vocabulary: p suits x in z = suits(x,p,z).
+Promoted Community Market:0 - | A post is an *offer* or a *request*. An *offer* is a listing of Community Market, and a *request* names a good and a price in community coins. An offer and a request match when the offer is of what the request seeks and the price of the request is at least the price of the offer. The budget of a post is community coins, set by its maker, and a forward costs one. By the *gossip protocol of equal parts*, a holder forwards a post to all their friends, each with an equal whole part of the rest of the budget. The holder's part is the cost and the remainder of the division.
+Promoted Community Market:0 - | Alice is a person, Orga a community network, Post a post.
+Promoted Community Market:0 - | Environment: p suits x in z.
+Promoted Community Market:1 ■ Post: Promoted Gossip:1 <- suits(Alice,Post,Orga).

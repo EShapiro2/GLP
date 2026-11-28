@@ -6,13 +6,16 @@
 % Last changed: 2026-11-16, renamed Resilient Feeds with its file (Udi, 2026-11-16, to Calculus #8; calculus/NAMES.txt), the old names below being those of their dates.  2026-11-15, by GFF #6: adopted from the Calculus (branch Calculus of GLP, 79ec48f, calculus/GFF-FR; calculus/MIGRATION.md, Udi confirming it, 2026-11-15), the first line extends GFF, GFF-I being no longer a contract, d a parameter, the clause titled Redundant point, with her for Alice, the Logic pragmas after it, and no Interface pragma, its one act being willed by no person.  2026-11-07, the predicate pointer, pointer(Bob, Dave) at Alice a Dave-pointer to Bob, named as the clauses and the Pointing tab name it, so that vGLP's reader finds it in the tab's line (Code #25, 12:57 UTC).  2026-11-07, later: the pointers friends have are recorded, befriend adding them and unfriend removing them, every body reading a recorded pointer, the clauses unchanged (Udi, 2026-11-07, to GFF #4: the schemas read the whole contract and do what its preamble says).  2026-11-07, the pointers friendship implies, as GDO-L's preamble says them, read in the schemas' bodies, follow_own gone (Udi, 2026-11-07).  Earlier that day, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-06, written by GFF #3 Cowork, the clause as Udi approved it that day ('yes' to GFF #3's wording, pointers labeled by persons in quotes).  It replaces the fault-resilient instance of 2026-11-05: 'logically it is a restriction' (Udi, 2026-11-06).
 % Schemas: Resilient-Feeds.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand.
 Resilient Feeds
-Resilient Feeds extends Feeds.
-d > 1, an integer, is a parameter of Resilient Feeds.
+Resilient Feeds inherits from Feeds.
+d > 1 is an integer.
 Alice, Bob and Carol are persons.
 1. ■ Redundant point: Alice, who has Carol-pointers to at least one person and to fewer than d, adds a Carol-pointer to her friend Bob, who has a Carol-pointer.
 Logic pragmas
 Resilient Feeds extends Feeds.
-d > 1, an integer, is a parameter of Resilient Feeds.
+d > 1 is an integer.
 Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
-1. ■ Redundant point: Alice adds a Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than d persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
+1. ■ Redundant point: Alice adds a redundant Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than d persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
+Logic pragmas.
+Vocabulary: y has been pointed to by x with a w-pointer = pointed(y,x,w).
+After x adds a redundant w-pointer to y, which requires x does not have a w-pointer to y and y has not been pointed to by x with a w-pointer: x has a w-pointer to y and y has been pointed to by x with a w-pointer.
 Interface pragmas

@@ -1,0 +1,3 @@
+Promoted Matching
+Promoted Matching inherits from Anonymous Matching and Promoted Gossip.
+1. ■ Organisation and ward. Organisation ward acquaint: Orga, an organisation, and Wendy, a ward, may jointly come to know each other.

@@ -1,6 +1,7 @@
 Encounters
 Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Vocabulary: x is nearby y = nearby(x,y); x has declared the place open = open_place(x).
+After x and y come to know each other: x and y know each other.
 x and y are nearby each other: x is nearby y and y is nearby x.
 After x declares x's place open, which requires x has not declared the place open: x has declared the place open.
 After x closes x's place: no longer x has declared the place open.

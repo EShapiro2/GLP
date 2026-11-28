@@ -2,19 +2,19 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 4.4 and cites a clause as Commercial Bank:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Bank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-16, by GO #8.
+% Last changed: 2026-11-24, by GO #15: Interface fields of Lend and Loan as pragmas.sh at vGLP dd9806dd gives them on the Calculus's set terms.
 % Schemas: Commercial-Bank.glp beside this file.
 Commercial Bank
-Commercial Bank instantiates Bank with commercial bank bylaws and restricts and extends it.
-A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
+Commercial Bank inherits from Bank.
+A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
 Bob and Carol are persons, Orga a commercial bank.
 1. ■ Leave, Expel: Organisation:3, only with the consent of both Bob and the directors.
 2. ■ Bank deposit: Bob, a customer, may swap Dollar-denominated coins he holds for Orga-coins.
 3. ■ Loan: Bob, a customer, and those who decide the loan for Orga may jointly swap Orga-coins for Bob-bonds.
 4. ■ Set lending limit: The directors may set the lending limit of Carol, a loan officer.
 Logic pragmas
-Commercial Bank instantiates Bank with commercial bank bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
-A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
+Commercial Bank extends Bank, and weakens it.
+A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
 Alice, Bob, Carol, Dave and Erin are persons, Dave possibly Bob, Orga a commercial bank, Dollar a fiat currency, Day a maturity date, Sum, Total, Limit, Votes and Double numbers.
 1. ■ Leave: Organisation:3 Leave, only if Orga is an organisation, with the consent of the directors of Orga. Officer leave: Organisation:3 Officer leave, only if Orga is an organisation, with the consent of the directors of Orga. Expel: Organisation:3 Expel, only if Orga is an organisation, with the consent of Bob and the directors of Orga. Officer expel: Organisation:3 Officer expel, only if Orga is an organisation, with the consent of Bob and the directors of Orga.
 2. ■ Bank deposit: Bob may swap Sum Dave-coins for Sum Orga-coins, provided Bob is a customer of Orga and Dave has issued coins of the denomination Dollar. Bank deposit own coins: Bob may swap Sum Bob-coins for Sum Orga-coins, provided Bob is a customer of Orga and Bob has issued coins of the denomination Dollar.
@@ -51,9 +51,9 @@ Leave, Expel: Bob [Leave] <director>
   Codecider: Bob consents to end his participation and his office in Orga.
   CodeciderB: Bob consents to end his participation and his office in Orga.
 Bank deposit: Bob [Bank deposit] <amount>
-Loan: Alice [Loan] <customer> <amount> <maturity> <total>
+Loan: Alice [Loan] <customer> <denomination> <amount> <maturity> <total>
   Bob: Alice offers you coins of Orga for your bonds.
-  Alice [Loan by the directors] <customer> <amount> <maturity> <total> <votes>
+  Alice [Loan by the directors] <customer> <denomination> <amount> <maturity> <total> <votes>
   Bob: Alice offers you coins of Orga for your bonds.
   Erin [Vote to lend] <customer> <amount> <maturity>
 Set lending limit: Alice [Set lending limit] <loan officer> <limit> <votes>

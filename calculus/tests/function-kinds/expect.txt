@@ -1,0 +1,10 @@
+FK         commute yes; return equivalent; recover equivalent
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/FK.txt
+FK: Function kinds (expanded schemas)
+FK:0 - | Orga is a person, Board and Next positions, Move a move, Side a number.
+FK:0 - | Functions: s is the side to move of b; c is the position after m on b.
+FK:1 ■ Play: ~at(Orga,Board), at(Orga,Next) <- at(Orga,Board), side(Side,Board), side_of(Orga,Side), after(Next,Move,Board) guarded by Orga.
+--- term FK
+[sas(play, ['Orga'], ['Board', 'Next', 'Side', 'Move'], [not(atom(at, ['Orga', const('Board')])), atom(at, ['Orga', const('Next')])], [atom(identity, ['Orga']), atom(at, ['Orga', const('Board')]), atom(side_of, ['Orga', num('Side')])], and(eq(num('Side'), fn(side, [const('Board')])), eq(const('Next'), fn(after, [const('Move'), const('Board')]))), ['Orga'])]

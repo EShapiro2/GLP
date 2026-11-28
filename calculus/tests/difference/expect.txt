@@ -1,0 +1,7 @@
+D          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/D.txt
+D: Dial (expanded schemas)
+D:0 - | Orga is a person, Old, New and Gap numbers.
+D:1 ■ Move: ~dial(Orga,_), dial(Orga,New) <- dial(Orga,Old), difference(Gap,Old,New), le(Gap,5) guarded by Orga.

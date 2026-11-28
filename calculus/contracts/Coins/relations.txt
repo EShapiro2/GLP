@@ -1,2 +1,1 @@
-Coins relaxes Notes: holds
 Coins extends Notes: holds

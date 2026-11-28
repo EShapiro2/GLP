@@ -1,2 +1,3 @@
 Meeting Rooms
-Meeting Rooms instantiates Booking with a *room* for a resource.
+Meeting Rooms inherits from Booking.
+A resource is a *room*.

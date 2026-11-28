@@ -1,0 +1,7 @@
+Clubs
+Clubs extends Knowledge.
+Alice and Bob are persons.
+1. ■ Join: Alice may join the club of Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: x is a member of the club of y = member(x,y).
+After x joins the club of y: x is a member of the club of y.

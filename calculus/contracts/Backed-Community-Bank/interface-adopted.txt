@@ -1,0 +1,104 @@
+Interface pragmas
+Treasurers: Bob [Appoint] <role>
+  Decider: Bob asks for your consent to appoint.
+  Codecider: Bob asks for your consent to appoint.
+  Bob [Resign]
+  Decider [End officer] <bob>
+  Codecider: Decider asks for your consent to end officer.
+  Bob [Officer unfriend] [Leave] [Officer leave]
+  Decider [Expel] <bob>
+  Codecider: Decider asks for your consent to expel.
+  Decider [Officer expel] <bob>
+  Codecider: Decider asks for your consent to officer expel.
+  Alice [Swap] <dave> <sum> <other> <total>
+  Bob: Alice asks for your consent to swap.
+  AliceOfficer [Swap for Alice] <dollar>
+  Bob: AliceOfficer asks for your consent to swap for alice.
+  Alice [Swap for Bob] <bobofficer> <dave> <sum> <other> <total>
+  BobOfficer: Alice asks for your consent to swap for bob.
+  AliceOfficer [Swap for Alice and Bob] <bobofficer> <dollar>
+  BobOfficer: AliceOfficer asks for your consent to swap for alice and bob.
+  Alice [Pay] <sum>
+  Bob: Alice asks for your consent to pay.
+  Alice [Pay issuer] <sum>
+  AliceOfficer [Pay issuer for Alice] <dollar>
+  AliceOfficer [Pay for Alice] <dollar>
+  Bob: AliceOfficer asks for your consent to pay for alice.
+  Alice [Pay for Bob] <bobofficer> <sum>
+  BobOfficer: Alice asks for your consent to pay for bob.
+  AliceOfficer [Pay for Alice and Bob] <bobofficer> <dollar>
+  BobOfficer: AliceOfficer asks for your consent to pay for alice and bob.
+  Alice [Deposit] <sum> <cond>
+  Carol: Alice asks for your consent to deposit.
+  AliceOfficer [Deposit for Alice] <dollar>
+  Carol: AliceOfficer asks for your consent to deposit for alice.
+  Alice [Deposit for Carol] <carolofficer> <sum> <cond>
+  CarolOfficer: Alice asks for your consent to deposit for carol.
+  AliceOfficer [Deposit for Alice and Carol] <carolofficer> <dollar>
+  CarolOfficer: AliceOfficer asks for your consent to deposit for alice and carol.
+  Carol [Release] <sum>
+  Bob: Carol asks for your consent to release.
+  CarolOfficer [Release for Carol] <dollar>
+  Bob: CarolOfficer asks for your consent to release for carol.
+  Carol [Release for Bob] <bobofficer> <sum>
+  BobOfficer: Carol asks for your consent to release for bob.
+  CarolOfficer [Release for Carol and Bob] <bobofficer> <dollar>
+  BobOfficer: CarolOfficer asks for your consent to release for carol and bob.
+  Carol [Return] <sum>
+  Alice: Carol asks for your consent to return.
+  CarolOfficer [Return for Carol] <dollar>
+  Alice: CarolOfficer asks for your consent to return for carol.
+  Carol [Return for Alice] <aliceofficer> <sum>
+  AliceOfficer: Carol asks for your consent to return for alice.
+  CarolOfficer [Return for Carol and Alice] <aliceofficer> <dollar>
+  AliceOfficer: CarolOfficer asks for your consent to return for carol and alice.
+  Alice [Redeem] <carol>
+  AliceOfficer [Redeem for Alice] <dollar>
+  Alice [Redeem coin against bond] <carol> <day>
+  AliceOfficer [Redeem coin against bond for Alice] <dollar>
+  Alice [Redeem bond] <carol>
+  AliceOfficer [Redeem bond for Alice] <dollar>
+  Alice [Redeem bond against bond] <carol> <term>
+  AliceOfficer [Redeem bond against bond for Alice] <dollar>
+  Alice [Deposit own coins] <sum> <cond>
+  Carol: Alice asks for your consent to deposit own coins.
+  AliceOfficer [Deposit own coins for Alice]
+  Carol: AliceOfficer asks for your consent to deposit own coins for alice.
+  Alice [Deposit own coins for Carol] <carolofficer> <sum> <cond>
+  CarolOfficer: Alice asks for your consent to deposit own coins for carol.
+  AliceOfficer [Deposit own coins for Alice and Carol] <carolofficer>
+  CarolOfficer: AliceOfficer asks for your consent to deposit own coins for alice and carol.
+  Alice [Deposit with the issuer] <sum> <cond>
+  Carol: Alice asks for your consent to deposit with the issuer.
+  AliceOfficer [Deposit with the issuer for Alice]
+  Carol: AliceOfficer asks for your consent to deposit with the issuer for alice.
+  Alice [Deposit with the issuer for Carol] <carolofficer> <sum> <cond>
+  CarolOfficer: Alice asks for your consent to deposit with the issuer for carol.
+  AliceOfficer [Deposit with the issuer for Alice and Carol] <carolofficer>
+  CarolOfficer: AliceOfficer asks for your consent to deposit with the issuer for alice and carol.
+  Alice [Deposit own bonds] <sum> <cond>
+  Carol: Alice asks for your consent to deposit own bonds.
+  AliceOfficer [Deposit own bonds for Alice]
+  Carol: AliceOfficer asks for your consent to deposit own bonds for alice.
+  Alice [Deposit own bonds for Carol] <carolofficer> <sum> <cond>
+  CarolOfficer: Alice asks for your consent to deposit own bonds for carol.
+  AliceOfficer [Deposit own bonds for Alice and Carol] <carolofficer>
+  CarolOfficer: AliceOfficer asks for your consent to deposit own bonds for alice and carol.
+  Alice [Deposit bond with the issuer] <sum> <cond>
+  Carol: Alice asks for your consent to deposit bond with the issuer.
+  AliceOfficer [Deposit bond with the issuer for Alice]
+  Carol: AliceOfficer asks for your consent to deposit bond with the issuer for alice.
+  Alice [Deposit bond with the issuer for Carol] <carolofficer> <sum> <cond>
+  CarolOfficer: Alice asks for your consent to deposit bond with the issuer for carol.
+  AliceOfficer [Deposit bond with the issuer for Alice and Carol] <carolofficer>
+  CarolOfficer: AliceOfficer asks for your consent to deposit bond with the issuer for alice and carol.
+  Alice [Pay accepted coins]
+  AliceOfficer [Pay accepted coins for Alice]
+  Alice [Pay own accepted coins]
+  AliceOfficer [Pay own accepted coins for Alice]
+  Alice [Pay accepted coins to the issuer]
+  AliceOfficer [Pay accepted coins to the issuer for Alice]
+Draw: Alice [Draw] <sum>
+Record: Alice [Record] <decider>
+  Decider: Alice asks for your consent to record.
+  Codecider: Alice asks for your consent to record.

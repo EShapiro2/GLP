@@ -1,5 +1,16 @@
 Tennis Courts
-Tennis Courts instantiates Booking with a court for a resource, composes it with Partners, and restricts the composition.
+Tennis Courts unites Booking and Partners, and extends and augments the union.
+Renaming of Booking: a court for a resource.
+Vocabulary: z has s of r partnered by x = partnered(z,r,s,x).
+After x and y come to know each other: x and y know each other.
+After x withdraws from s of r in z: no longer z has s of r partnered by x.
+After x and y partner s of r in z: z has s of r partnered by y.
 Tennis Courts:0 - | The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
-Tennis Courts:0 - | Alice and Carol are persons, Club an organisation.
-Tennis Courts:1 ■ Book: Booking:1 <- participant(Carol,Club), has_participant(Club,Carol), under_bound(Carol,Club) guarded by Carol.
+Tennis Courts:0 - | A booking is of the one who books and of a *partner*, and counts among the outstanding bookings of each.
+Tennis Courts:0 - | Alice and Carol are persons, Club an organisation, Court a court, Slot a slot.
+Tennis Courts:1 ■ Book: Booking:1 + partnered(Club,Court,Slot,Carol) <- participant(Carol,Club), has_participant(Club,Carol), under_bound(Carol,Club) guarded by Carol.
+Tennis Courts:2 ■ | Organisation and ward.
+Tennis Courts:2 ■ Organisation ward acquaint: knows(Club,Wendy), knows(Wendy,Club) <- organisation(Club), has_officer(Club,Alice), ward(Wendy), has_guardian(Wendy,Bob) guarded by Club, Wendy.
+Tennis Courts:3 ■ Cancel: Booking:2 + ~partnered(Club,Court,Slot,_) <-.
+Tennis Courts:4 ■ Withdraw: ~partnered(Club,Court,Slot,Carol) <- partnered(Club,Court,Slot,Carol) guarded by Carol.
+Tennis Courts:5 ■ Partner: partnered(Club,Court,Slot,Carol) <- booked(Club,Court,Slot,Alice), ~partnered(Club,Court,Slot,_), participant(Carol,Club), has_participant(Club,Carol), under_bound(Carol,Club) guarded by Alice, Carol.

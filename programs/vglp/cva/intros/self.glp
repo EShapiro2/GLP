@@ -85,7 +85,7 @@
 %%   never asked.
 %% unable: bob does not open; alice peeks at bob, bob's machine votes no,
 %%   unable, its state lacking open, and alice is told the refusal,
-%%   refused(peek(alice, bob), bob, unable([open], [])); bob is never asked.
+%%   refused(peek(alice, bob), bob, unable([open], [], [])); bob is never asked.
 %% signing: alice, who knows bob, posts a, an utterance she signed, and
 %%   b, an utterance bob signed and she signed again.  Her machine sends bob a
 %%   and not b, unsigned(bob, x) holding of a alone, and credits bob b and not
