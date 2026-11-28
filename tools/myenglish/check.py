@@ -462,11 +462,19 @@ SYNTAX = [
      'write the verb: "that either of them added to it" (Udi, 2026-11-26 20:46 UTC)'),
     ('"bring X to Y"', r"\bbring\b[^.?]{1,40}?\bto [A-Z]", 'say what the text will say: "Shall VMAT say of madGLP what IGLP says?" (Udi, 2026-11-26 22:06 UTC)'),
     ('a question listing the mechanics after a colon', r"Q:[^?\n]*\w:\s[^?\n]*\?", 'one short question (Udi, 2026-11-26 22:06 UTC)'),
+    # Udi, 2026-11-28 14:53 to 15:19 UTC, to vGLP #30, style guide 12: "Something of a certain class ... is x if
+    # [certain conditions hold of x]"; never "an x is so and so".
+    ('a definition that starts with the defined term', r"(?:^|[.;:]\s+)An? [a-z]+(?: [a-z]+)?(?: [a-z])?(?: of [A-Z]\w*)? is an? [a-z]+(?: [^\s.;]+){3,}",
+     'name the larger class first: "A proper ground instance a of an implication of G is an act of G" (Udi, 2026-11-28 15:18 UTC, style guide 12)'),
+    ('a defined kind left as a condition', r"\bis an? [^.;]{1,60}?\bif (?:it|they) (?:is|are) (?!not\b)[a-z]+\s*(?:[.;]|$)",
+     'put the kind in: "A proper ground instance a of an implication of G is an act of G" (Udi, 2026-11-28 15:06 UTC)'),
+    ('notation in a sentence of its own', r"\b[Ww]e write [^.;]{1,30}?\bfor (?:the|a|an|its|their)\b",
+     'name it in the sentence that defines it: "with A(a) its participants, Q(a) its guards" (Udi, 2026-11-28 15:16 UTC)'),
     ('a vague abstraction for a fact', r'\b(?:in (?:effect|essence)|at (?:heart|its core)|the (?:heart|crux|essence) of|boils? down|in its own right)\b',
      'state the fact'),
 ]
 CASED = ('a fronted', 'a cleft', 'the same noun', 'an undertaking', 'a mathematical object', 'a symbol defined by', 'an equation',
-         'symbols for', 'a quantifier over', 'a definition by', 'a definition that', 'a supposition', '"bring', 'a question listing')
+         'symbols for', 'a quantifier over', 'a definition that starts', 'notation in', 'a definition by', 'a definition that', 'a supposition', '"bring', 'a question listing')
 SYNTAX = [(n, re.compile(r, 0 if n.startswith(CASED) else re.I), a) for n, r, a in SYNTAX]
 
 

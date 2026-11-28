@@ -53,3 +53,10 @@ right:udi	Q: Shall VMAT say of madGLP what IGLP says?	Udi, 2026-11-26 22:06 UTC,
 wrong:udi	<ins>For p∈A(a) the act holds.</ins>	Udi, 2026-11-28 15:09 UTC: "how come a session is showing this to me?"
 wrong:udi	The act <del>holds</del> <u>may hold</u>.	Udi, 2026-11-28 15:09 UTC, claude.md Papers: no HTML tag in the chat
 right:udi	The act ~~holds~~ m̲a̲y̲ ̲h̲o̲l̲d̲.	claude.md, Papers: the marked form in the chat
+wrong	An act of G is a proper ground instance a of an implication of G (Definition Ground instance, participants), with participants A(a) and guards Q(a); a is unguarded if Q(a)=∅, and guarded otherwise.	Udi, 2026-11-28 14:53 and 15:18 UTC, to vGLP #30, Compiling GC, Definition Act, style guide 41
+right	A proper ground instance a of an implication of G (Definition Ground instance, participants) is an act of G, with A(a) its participants, Q(a) its guards, a unguarded if Q(a) is empty, guarded otherwise.	Udi, 2026-11-28 14:53 and 15:18 UTC, to vGLP #30, Compiling GC, Definition Act, approved, style guide 41
+wrong	A ground instance a of an implication of G is an act of G if it is proper.	Udi, 2026-11-28 15:06 UTC, to vGLP #30, style guide 41
+right	A proper ground instance a of an implication of G is an act of G.	Udi, 2026-11-28 15:06 UTC, to vGLP #30, approved, style guide 41
+wrong	A proper ground instance of an implication of G is an act of G.  We write A(a) for the participants of an act a, and Q(a) for its guards.	Udi, 2026-11-28 15:16 UTC, to vGLP #30, style guide 41
+right	A proper ground instance a of an implication of G is an act of G, with A(a) its participants, Q(a) its guards.	Udi, 2026-11-28 15:16 UTC, to vGLP #30, approved, style guide 41
+wrong	An act of G is an implication of G with a guard for each agent.	Udi, 2026-11-28 14:53 UTC, style guide 12: never "an x is so and so"
