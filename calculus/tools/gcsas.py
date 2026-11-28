@@ -536,7 +536,7 @@ def unfold(text, lex, neg=False, actor=None):
                         if v not in bb:
                             bb[v] = cap(bound) + v.upper()
                 inner = unfold(unwild(fill(pay[2], bb), "anyone"), lex, actor=actor)
-                if counts and len([i for i in inner if i[3] not in NUMBER_PREDS]) > 1:
+                if counts and len([i for i in inner if i[3] not in NUMBER_PREDS | lex.env_preds('fn')]) > 1:      # a function is a state of numbers too
                     raise Err("a count in a state defined by several states, which would not count one person: " + text)
                 if WILD in b.values() and len(inner) > 1:
                     raise Err("'someone' in a state defined by several states, which would not be one person: " + text)

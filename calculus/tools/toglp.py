@@ -423,7 +423,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     # product or a difference, is put in its place as an expression, a difference by its two cases joined by or.
     cnt_bound = {re.sub(r'^[<>=]+', '', a) for l in e['body'] for a in l[2] if re.fullmatch(r'(<=|>=|<|>|=)[A-Z]\w*', a)}
     is_local = lambda a: any(re.fullmatch(re.escape(b) + '[A-Z]+', a) for b in cnt_bound)
-    cond_lits = [l for l in e['body'] if l[1] in ('le', 'ge', 'gt', 'lt', 'sum', 'product', 'difference') and any(is_local(a) for a in l[2])]
+    cond_lits = [l for l in e['body'] if (l[1] in ('le', 'ge', 'gt', 'lt', 'sum', 'product', 'difference') or l[1] in FN) and any(is_local(a) for a in l[2])]
 
     def count_phi(atom_locals, b):
         mine = lambda a: re.fullmatch(re.escape(b) + '[A-Z]+', a)
@@ -431,7 +431,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         for l in [l for l in cond_lits if any(mine(a) for a in l[2])]:
             if l[0]:
                 raise ValueError('%s: a count whose condition has "not": %s' % (e['name'], l))
-            if l[1] in ('sum', 'product', 'difference') and is_local(l[2][0]) and l[2][0] not in atom_locals:
+            if (l[1] in ('sum', 'product', 'difference') or l[1] in FN) and is_local(l[2][0]) and l[2][0] not in atom_locals:
                 defs[l[2][0]] = l
             else:
                 comps.append(l)
@@ -451,6 +451,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                         raise ValueError('%s: a place of a count defined by itself: %s' % (e['name'], a))
                     if a not in env:
                         d = defs[a]
+                        if d[1] in FN:      # a function of the count's numbers, as the act's own: fn(F, Args) (GSC def:numbers)
+                            env[a] = 'fn(%s, [%s])' % (d[1], ', '.join(ex(x, seen + (a,)) for x in d[2][1:]))
+                            return env[a]
                         m, k = ex(d[2][1], seen + (a,)), ex(d[2][2], seen + (a,))
                         if d[1] == 'sum':
                             env[a] = 'plus(%s, %s)' % (m, k)
@@ -464,6 +467,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 if is_local(a):
                     raise ValueError('%s: a place of a count that no state of numbers defines: %s' % (e['name'], a))
                 return arg(a)
+            for l in comps:
+                if l[1] not in ARITH:      # a state of numbers whose value is a place of the counted state, or named twice
+                    raise ValueError('%s: a state of numbers in a count that defines no number of its own: %s' % (e['name'], l))
             cs = ['%s(%s, %s)' % (ARITH[l[1]], ex(l[2][0]), ex(l[2][1])) for l in comps]
             parts = cases + cs
             f = parts[-1] if parts else 'true'
