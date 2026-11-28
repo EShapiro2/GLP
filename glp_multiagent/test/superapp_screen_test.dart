@@ -187,7 +187,9 @@ void main() {
         "form(open_link, [field('Link', text)]), "
         "form(list, [field('Email', text), field('Name', text)]), "
         "form(list_unlisted, [field('Email', text), field('Name', text)]), "
-        "button(unlist)]))";
+        "button(unlist), "
+        "form(activate, [field('AppName', text)]), "
+        "form(accept, [field('AppName', text), field('Friend', peer)])]))";
     // What the super-app tells its person reaches her only as the thread of
     // construct 0, each notice by the widget of the reserved type Output ::=
     // Notice; the questions are numbered from 1 (vGLP 169b008, Definition
@@ -267,11 +269,12 @@ void main() {
     // (GPE), the place (GPE:1), the links (GRV:2) and the listings (GDS:2).
     for (final label in [
       'trust', 'install', 'invite', 'open_place', 'close_place',
-      'invite_link', 'open_link', 'list', 'list_unlisted', 'unlist'
+      'invite_link', 'open_link', 'list', 'list_unlisted', 'unlist',
+      'activate', 'accept'
     ]) {
       expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget);
     }
-    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(10));
+    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(12));
     await _shot(tester, '/private/tmp/superapp-forms.png');
 
     // --- Trust the compiler that certified the mini-app: its key, a Key and

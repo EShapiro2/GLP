@@ -69,6 +69,7 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 import 'isolate_protocol.dart' show runtimeTermOf, screenTermOf;
+import 'ui_runtime/app_screens.dart';
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
 import 'ui_runtime/term.dart' show GTerm;
@@ -120,6 +121,15 @@ class SuperAppHost {
         onAct?.call(cmd);
         act(runtimeTermOf(cmd));
       });
+
+  /// The screens of the mini-apps the person installs, each drawn apart from
+  /// home's (EShapiro2/GLP#181; ui_runtime/app_screens.dart): what the agent
+  /// sends tagged `app(App, D)` is theirs, and the person's grants on them go
+  /// to the agent tagged `app(App, G)`, as every act of the person goes.
+  late final AppScreens apps = AppScreens(send: (cmd) {
+    onAct?.call(cmd);
+    act(runtimeTermOf(cmd));
+  });
 
   /// Each act of the person on the screen, as the bridge sends it, before it
   /// is handed to the agent; null, and none is told.  A debuggable build
@@ -198,7 +208,8 @@ class SuperAppHost {
   Future<void> start() async {
     agent.onUserOutput = (term) {
       onUserOutput?.call(term);
-      ui.handle(screenTermOf(term));
+      final shown = screenTermOf(term);
+      if (!apps.handle(shown)) ui.handle(shown);
     };
     agent.onOutput = (line) => onOutput?.call(line);
     final log = onLog;

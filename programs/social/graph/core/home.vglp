@@ -96,7 +96,8 @@ Name        ::= String.
 
 %% A request: one alternative per request clause of serve --- trust, install,
 %% invite, Open place, Close place, Invite by link, the opening of a link,
-%% List, List unlisted and Unlist --- with the arguments its clause reads.
+%% List, List unlisted, Unlist, activate and accept --- with the arguments
+%% its clause reads.
 %% No request connects with a person by a key typed: no act of the paper
 %% takes one, a person coming to be known by an encounter, a link or an
 %% introduction, and befriended by picking them in Nearby (befriend_card/3;
@@ -110,7 +111,9 @@ Request ::= trust(CompilerKey)
           ; open_link(Link)
           ; list(Email, Name)
           ; list_unlisted(Email, Name)
-          ; unlist.
+          ; unlist
+          ; activate(AppName)
+          ; accept(AppName, Friend).
 
 %% The card of a friend who asks to connect: the friend, which the program
 %% writes for the person to see, and the person's answer, yes or no.
@@ -354,6 +357,18 @@ serve([open_place | Reqs], Id, Cd, Outs, Cmds?) :-
 serve([close_place | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?) |
     place_act(close_place, Id?, Cd?, Reqs?, Outs?, Cmds).
+
+%% Activate a mini-app installed here, with no invitation and no peer, and
+%% accept a friend's invitation to one (GSA paper, Section 3, "Activation and
+%% joining"): the agent's acts activate(App) and accept_invite(App, Friend),
+%% which until now only the boots' scripted persons could take
+%% (EShapiro2/GLP#181).
+serve([activate(App) | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?), ground(App?) |
+    place_act(activate(App?), Id?, Cd?, Reqs?, Outs?, Cmds).
+serve([accept(App, Friend) | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?), ground(App?), ground(Friend?) |
+    place_act(accept_invite(App?, Friend?), Id?, Cd?, Reqs?, Outs?, Cmds).
 
 %% Invite by link (GRV:2; GNA, Section 6, the box GRV, its interface pragma
 %% Registration, "Alice [Invite by link]"): the operating system makes a link,

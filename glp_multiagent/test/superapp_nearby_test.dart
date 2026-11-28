@@ -242,7 +242,9 @@ void main() {
               "button(invite_link), form(open_link, [field('Link', text)]), "
               "form(list, [field('Email', text), field('Name', text)]), "
               "form(list_unlisted, [field('Email', text), field('Name', text)]), "
-              'button(unlist)]))'));
+              'button(unlist), '
+              "form(activate, [field('AppName', text)]), "
+              "form(accept, [field('AppName', text), field('Friend', peer)])]))"));
       await p.host.idle;
       expect(p.net.declared, ['pan closed', 'lan closed'],
           reason: 'both trusts are declared closed at start, and stay so '
