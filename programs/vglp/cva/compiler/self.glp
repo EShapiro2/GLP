@@ -424,6 +424,8 @@ Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStan
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String)
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts)
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts, PFns).
+%% The pragmas the compiler takes: a term as above, or one with the functions of the standard library its contract's constraints apply, which compile.sh gives with the pragmas of vGLP's own contracts (compiler/libfns.sh; README.md, item 47).
+FPragmas  ::= Pragmas ; with_fns(Pragmas, PFns).
 %% The functions of the contract's value types that their owner gives as typed GLP procedures, fn(Name, Kinds, Kind), the kinds of its arguments and of its value, its last argument, and the lines of the owner's file, which the platform carries; or none (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
 PFns       ::= nofns ; fns(FnDecls, List(String)).
 %% The kind of a function's place, by its declared type: a number (Integer, Number), a constant (Constant, String), or other, which the compiler does not take.
@@ -452,18 +454,18 @@ compile_w4(wdecl(D), Nm, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, 
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
 %% The contract's environment predicates, environment(Preds, Body) (programs/gsc/self.glp, WDeclared), go to the compiler beside the contract: "An environment predicate is the day, by the calendar, or a value the contract declares and does not fix ...: given when the platform is deployed, held from startup" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 %% The contract as read, with its names, goes to the compiler whole besides, which prints it in the platform's contract(Text, Schemas) (cvac.glp, export_lines).
-imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?).
-exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, FPragmas?, Preds?, WDeclared?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, FPragmas?).
 compile(Nm, O, V, I, P) :- wdeclared_of(O?, R), compile_w5(R?, Nm?, V?, I?, P?).
-procedure compile_w5(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?).
+procedure compile_w5(WDeclOpt?, Constant?, Verdict?, Intro?, FPragmas?).
 compile_w5(wparam, Nm, _, _, _) :- not_instantiated(Nm?).
 compile_w5(wdecl(D), Nm, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas, Values): the same, with the values the developer gives, dev(Text), Text the list of their atoms, or nodev (cvac.glp, dev_lines; vGLP 922ac53, Section 5.4).
 DevValues ::= nodev ; dev(String).
-imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?, DevValues?).
-exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?, DevValues?).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, FPragmas?, Preds?, WDeclared?, DevValues?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, FPragmas?, DevValues?).
 compile(Nm, O, V, I, P, Vl) :- wdeclared_of(O?, R), compile_w6(R?, Nm?, V?, I?, P?, Vl?).
-procedure compile_w6(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?, DevValues?).
+procedure compile_w6(WDeclOpt?, Constant?, Verdict?, Intro?, FPragmas?, DevValues?).
 compile_w6(wparam, Nm, _, _, _, _) :- not_instantiated(Nm?).
 compile_w6(wdecl(D), Nm, V, I, P, Vl) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?, Vl?).
 procedure env_of(WDeclared?, Preds).

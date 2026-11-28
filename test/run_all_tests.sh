@@ -1687,6 +1687,22 @@ check "tree: member" "R6 = ok" "$a43"
 check "tree: kth at every index" "R7 = ok" "$a43"
 check "tree: union" "R8 = ok" "$a43"
 
+# --- A43b: The numbers library, programs/lib/numbers ---
+# Functions of whole numbers, exact and the same on every machine, which a
+# platform carries where its contract applies one (GLP #120, #123): root, the
+# whole square root rounded down, against K * K =< M < (K + 1) * (K + 1) for
+# each M below 3000.  numbers_test.glp's header names the checks.
+echo "--- A43b: lib/numbers ---"
+a43b=$("$REPL_RUN" <<HEREDOC
+:limit 100000000
+$GLP_DIR/programs/lib/numbers/
+test_root(3000, R1).
+:quit
+HEREDOC
+2>&1)
+check "numbers: the library and its tests load" "Loaded program: .*lib/numbers" "$a43b"
+check "numbers: root of each whole number below 3000" "R1 = ok" "$a43b"
+
 # --- A44: Circular terms, the step cGLP does not have ---
 # GLP-Spec glp.tex, "Circular terms" (GLP-ICLP-2026 main 9d2dedb; Audit
 # Finding 1, Grassroots-Audit #31): cGLP Reduce requires the writer mgu and the
@@ -5387,6 +5403,35 @@ check "CVA counts: fill taken until the count of tok(x) reaches cap's 3, each in
 check_not "CVA counts: ... and no fourth tok" "view(alice, \[tok(3)\|view(alice, \[[a-z(), 0-9]*tok(3)" "$cva_cnt"
 check "CVA counts: with the weights 4 and 1, three tok and no heavy" "view(bob, \[tok(2), tok(1), tok(0), cap(3), wt(4), wt(1)\]" "$cva_cnt"
 check_not "CVA counts: ... heavy not taken, the sum 5 below 6" "view(bob, \[[a-z(), 0-9]*heavy" "$cva_cnt"
+# A function of the standard library, root, the whole square root rounded down, which programs/lib/numbers gives as a typed GLP procedure and the platform carries and calls as a function the owner of a value type gives (#120, #123; vGLP Section 5.4; compiler/README.md, item 47): vGLP's roots, its agent run with no person and given at deployment area(a) and side(s); fence, whose constraint is s =< root(a), is taken where the side is at most the whole square root of the area: with area 10, root 3, at side 3 and not at side 4; and with area 99999999999, root 316227, at side 316227.  A platform whose contract applies none of the library's functions carries none of it.
+cva_rt_dir="$GLP_DIR/programs/tests/vg_roots_$$"
+mkdir -p "$cva_rt_dir" && cp "$CVA/roots/platform.vglp" "$cva_rt_dir/platform.vglp"
+cva_rt_emit=$(printf ':emit %s\n:quit\n' "$cva_rt_dir" | "$REPL_RUN" 2>&1)
+cva_rt=$("$REPL_RUN" <<HEREDOC
+$cva_rt_dir/platform.glp
+:limit 2000000
+agent(alice, [], N, O, [area(10), side(3)], A).
+agent(bob, [], N, O, [area(10), side(4)], A).
+agent(carol, [], N, O, [area(99999999999), side(316227)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_rt_dir:?}"
+check "CVA roots: the platform emitted to GLP, the library's root carried in it" "wrote .*vg_roots_.*platform.glp" "$cva_rt_emit"
+check "CVA roots: fence taken at side 3, the whole square root of 10 being 3" "view(alice, \[fenced, area(10), side(3)\]" "$cva_rt"
+check_not "CVA roots: ... and not at side 4" "view(bob, \[fenced" "$cva_rt"
+check "CVA roots: ... and taken at side 316227, the whole square root of 99999999999, exact on whole numbers" "view(carol, \[fenced, area(99999999999), side(316227)\]" "$cva_rt"
+check "CVA roots: the platform calls the library's root, a function the owner of the whole numbers gives (owner_val, owner_root)" "^owner_root(num_is(X1), num_is(R?)) :- integer(X1?) | root(X1?, R)\.$" "$(cat "$CVA/roots/platform.vglp")"
+check "CVA roots: ... and carries programs/lib/numbers/numbers.glp, its root" "^root(N, R?) :- N? > 0 | root_step(N?, N?, R)\.$" "$(cat "$CVA/roots/platform.vglp")"
+check_not "CVA roots: ... and a platform whose contract applies none of the library's functions carries none of it" "root_step" "$(cat "$CVA/counts/platform.vglp")"
+cva_lf_t=$(mktemp)
+printf '%s\n' "[nschema(fence, [num(a), num(s)], le(num(s), fn(root, [num(a)])), [])]" > "$cva_lf_t"
+cva_lf=$(bash "$CVA/compiler/libfns.sh" "@$cva_lf_t")
+printf '%s\n' "[nschema(fence, [num(a), num(s)], le(num(s), fn(floor, [num(a)])), [])]" > "$cva_lf_t"
+cva_lf_no=$(bash "$CVA/compiler/libfns.sh" "@$cva_lf_t")
+rm -f "$cva_lf_t"
+check "CVA roots: libfns.sh gives the library's functions where the reading applies one, as pragmas.sh gives an owner's (fns)" "^fns(\[fn(root, \[num\], num)\], \['%% numbers.glp" "$cva_lf"
+check_not "CVA roots: ... and nothing where it applies none" "fns(" "$cva_lf_no"
 # The values the developer gives (vGLP 922ac53, Section 5.4, "Speech-act schemas as local specifications": "A platform is deployed when its developer compiles it, giving the compiler the values; the program carries them, so every participant of one of its instances holds the same values"): counts compiled with counts/values, cap(3), wt(4) and wt(2), prints developer_values and an agent of four arguments that starts the agent of five with them, which a mini-app calls; run with no person, its first view shows them, held from startup (devvalues).
 cva_dv_dir="$GLP_DIR/programs/tests/vg_devvalues_$$"
 mkdir -p "$cva_dv_dir" && cp "$CVA/counts/platform.vglp" "$cva_dv_dir/platform.vglp"

@@ -43,20 +43,20 @@ compile(Nm, D, V) :- ground(D?) | compile_intro(Nm?, D?, V?, no_introduction, wo
 exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- ground(D?) | compile_intro(Nm?, D?, V?, I?, words(no_pragmas, [], [], D?, nodev)).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, for a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words": "The compiler carries them into the platform it prints: a request's label and field names and an approval question's two answers into the widget declarations it prints for the platform's request type and approval type, a sentence into the approval question that Start raises, and a list's name into the view the agent writes"; Section 6.2, "The words a platform shows").  Each act a pragma proposes is the schema its button names: "a button for each act of it a person proposes, in brackets, each bearing its act's name" (GSC 2991379, Section 2, its first paragraph).  A contract with no pragmas, no_pragmas, as compile/3 and compile/4 give it, is checked and not printed (compile3a).
-exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?, FPragmas?).
 compile(Nm, D, V, I, P) :- ground(D?) | norm_pragmas(P?, Q), compile_intro(Nm?, D?, V?, I?, words(Q?, [], [], D?, nodev)).
 %% compile(Name, Contract, Verdict, Intro, Pragmas, Env): the same, for a contract naming its environment predicates Env (self.glp, env_of).
-exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?).
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?, FPragmas?, Preds?).
 compile(Nm, D, V, I, P, E) :- ground(D?) | norm_pragmas(P?, Q), compile_intro(Nm?, D?, V?, I?, words(Q?, E?, [], D?, nodev)).
 %% compile(Name, Contract, Verdict, Intro, Pragmas, Env, Read): the same, with the contract as read, its names and its environment predicates with it, which the platform exports in contract(Text, Schemas) (export_lines).
-exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?).
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?, FPragmas?, Preds?, WDeclared?).
 compile(Nm, D, V, I, P, E, W) :- norm_pragmas(P?, Q), compile_intro(Nm?, D?, V?, I?, words(Q?, E?, [], W?, nodev)).
 %% The same, with the values the developer gives (dev_lines).
-exported procedure compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?, DevValues?).
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?, FPragmas?, Preds?, WDeclared?, DevValues?).
 compile(Nm, D, V, I, P, E, W, Vl) :- norm_pragmas(P?, Q), compile_intro(Nm?, D?, V?, I?, words(Q?, E?, [], W?, Vl?)).
 %% The pragmas as the compiler carries them, with the standing declarations, none where the term gives none.
 %% A term with no look, no version and no text, vGLP's own contracts' (../contracts.glp, pragmas_named/2), has nolook, version(1, 1) and the empty text.
-procedure norm_pragmas(Pragmas?, WPragmas).
+procedure norm_pragmas(FPragmas?, WPragmas).
 norm_pragmas(no_pragmas, no_pragmas).
 norm_pragmas(pragmas(Ls, As), pragmas(Ls?, Ts?, [], nolook, version(1, 1), '""', [], nofns)) :- norm_acts(As?, Ts).
 norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, Ts?, Ss?, nolook, version(1, 1), '""', [], nofns)) :- norm_acts(As?, Ts).
@@ -65,6 +65,11 @@ norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, T
 norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?, nofns)) :- norm_acts(As?, Ts).
 %% The functions the owner of a value type gives, the eighth argument pragmas.sh prints where NAME-functions.glp is (PFns).
 norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd, Fn), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?, Fn?)) :- norm_acts(As?, Ts).
+%% A term with the functions of the standard library its contract's constraints apply, which compile.sh gives with the pragmas of vGLP's own contracts (libfns.sh; README.md, item 47): the pragmas, their functions those.
+norm_pragmas(with_fns(P, Fn), Q?) :- norm_pragmas(P?, Q0), set_fns(Q0?, Fn?, Q).
+procedure set_fns(WPragmas?, PFns?, WPragmas).
+set_fns(no_pragmas, _, no_pragmas).
+set_fns(pragmas(Ls, Ts, Ss, Lk, Vn, Tx, Fd, _), Fn, pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?, Fn?)).
 %% Every act with the types of its fields, [] where it gives none (self.glp, PAct).
 procedure norm_acts(PActs?, TActs).
 norm_acts([], []).
