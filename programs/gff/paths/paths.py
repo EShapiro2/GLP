@@ -1,122 +1,115 @@
 #!/usr/bin/env python3
-"""Path lengths under GFF: following through a friend on Kleinberg's grid.
+"""Path lengths under GFF-I and GFF-PS: following through friends on Kleinberg's grid.
 
-GFF #1's task (Code_inbox.md, 2026-10-27 18:52 UTC, items 1-3; item 4 sent
-whole at 21:30 UTC, its rule changed at 21:40 UTC; two more rules at 21:50 UTC,
-discovery two (and three) hops deep and shortening by re-asking).  Python 3 standard library only; written and run with
+Updated 2026-11-07 to the contracts in programs/gff at d37f58f7: GDO-L, GFF,
+GFF-I and GFF-PS (their .txt clauses and .glp schemas).  The model of
+2026-10-27 (GFF's Algorithms pragmas, discovery two and three hops deep through
+relays, shortening by signatures and by re-asking, the earlier shortening rule)
+is in git history, last at 095c9cca.  Python 3 standard library only; run with
 /usr/bin/python3, Python 3.9.6.  Run:  python3 paths.py   (see README.md).
 
-THE GRAPH (item 1).  N = n*n persons, n = 100, on Kleinberg's n x n grid
+THE GRAPH.  Unchanged.  N = n*n persons, n = 100, on Kleinberg's n x n grid
 (Kleinberg 2000), not a torus: person (i, j), 0 <= i, j < n, and lattice
 distance d((i,j),(k,l)) = |i-k| + |j-l|.  Each person is a friend of their
 grid neighbours (four inside the grid, three on an edge, two at a corner) and
 makes q long-range friendships.  Person u, taken in index order u = i*n + j,
 draws a long-range contact v with probability
         P(v) = d(u,v)^-2 / sum_{w != u} d(u,w)^-2      (Kleinberg's r = 2),
-and redraws while v is already a friend of u (a grid neighbour, a contact u
-drew, or a person who drew u), until u has made q new friendships.  So the
-distribution of each contact is Kleinberg's conditioned on not already being a
-friend.  Friendship is symmetric: a contact u draws is a friend of u and u of
-it.  The draw is exact, by rejection: d is drawn with P(d) proportional to 1/d
-for d = 1 .. 2(n-1) (the 4d lattice points at distance d in Z^2 each having
-weight d^-2), a point uniformly among those 4d, and the point is redrawn while
-it is outside the grid.
+and redraws while v is already a friend of u, until u has made q new
+friendships.  Friendship is symmetric.  The draw is exact, by rejection: d is
+drawn with P(d) proportional to 1/d for d = 1 .. 2(n-1), a point uniformly
+among the 4d lattice points at distance d, redrawn while outside the grid.
 
-THE FOLLOWERS (item 2).  Every person is an author.  An author's number of
-followers k is drawn from the discrete power law of exponent 2,
-        P(k) = k^-2 / zeta(2),  k = 1, 2, ...,   zeta(2) = pi^2/6,
-and capped at N - 1 = 9999, the population less the author (a draw above the
-cap is the cap).  The k followers are drawn uniformly at random without
-replacement from the N - 1 persons other than the author.
+OTHER GRAPHS (added 2026-11-08; --graph, --r, --d).  The default above is
+unchanged, draw for draw.  (a) Kleinberg's grid with another exponent r:
+P(v) proportional to d(u,v)^-r, so P(d) proportional to d^(1-r); r = 0 draws
+long-range contacts uniformly from the grid.  Kleinberg's grid at r = 2 is not
+an expander (the cut between the grid's halves is crossed by about n edges,
+so its conductance falls like 1/n); at r = 0 it is one with high probability.
+(b) A random d-regular graph on N = n*n persons (default d = 6, the mean
+number of friends of the grid at q = 1): the configuration model, each
+person's d slots paired uniformly at random, with every loop or repeated pair
+removed by a random double-edge swap.  An expander with high probability
+(Friedman: its second eigenvalue is near 2*sqrt(d-1)/d).  It has no geometry:
+the grid position of person i*n + j means nothing there, and "first" in the
+friend list is a random friend.  graph_stats measures any graph: the spectral
+gap of the random walk (an upper bound, by power iteration), the conductance
+of the cut between the grid's halves, and the mean graph distance.
 
-THE FIRST FOLLOWING (item 2; GFF's Algorithms pragma: shortest path through a
-friend who follows).  By GFF:2, friends follow each other, so before anyone
-decides, the author follows their own feed at path length 0 and each friend
-of the author follows the author at path length 1 (item 4: "the author's
-friends at one").  All author-follower pairs decide in one random order, one
-at a time.  A decider who already follows (a friend of the author) stays at 1.
-Otherwise the decider follows through the friend with the shortest path to the
-author, at one more than that friend's length (ties: the first such friend in
-the decider's friend list); a decider with no friend following waits, in the
-author's queue.  When a person comes to follow an author, every friend of
-theirs waiting on that author is put on a FIFO work queue and, taken from it,
-follows through their friend with the shortest path then; the cascade runs out
-before the next decider in the order.  A follower's path length is fixed at
-the time they follow.
+THE FOLLOWERS.  Unchanged.  Every person is an author.  An author's number of
+deciders k (persons who come to want to follow the author) is drawn from the
+discrete power law P(k) = k^-2 / zeta(2), capped at N - 1; the k deciders are
+drawn uniformly without replacement from the other persons.
 
-DISCOVERY h HOPS DEEP (GFF, 21:50 UTC, rule 1), h in 1, 2, 3; h = 1 is the
-first following above.  A decider none of whose friends follows the author asks
-each friend to ask their friends; if a friend Carol has a friend Dave who
-follows, Carol follows the author through Dave on the decider's behalf, a relay
-following, and the decider follows through Carol; the shortest such path is
-taken (ties: the first found, friends in list order).  At h = 3 a decider with
-no path within two hops asks one hop further, Carol asking Eve to ask Eve's
-friends, and Eve and Carol both follow as relays.  A decider with no path
-within h hops waits, and is tried again whenever a person within h hops of
-them comes to follow (relays included), by the same FIFO queue: when a person
-comes to follow, the waiters within h hops of them, by paths through persons
-not following, join it.  A relay who is later a decider of the same author
-already follows.  Measured besides: the relay followings (a relay and an
-author) per author, the relay followers (distinct persons relaying for some
-author) per seed, and the holders of a feed per decided follower: the decided
-followers who follow and the relays, summed over the authors of a bin, over
-the decided followers who follow; and the same with the author's friends added.
+KNOWING.  Friends know each other: befriend (GSG:1) requires it.  Beyond
+friendship, knowing comes only from introductions (GKK), modelled under
+SHORTENING below; acquaintance is not modelled.
 
-SHORTENING BY RE-ASKING (GFF, 21:50 UTC, rule 2), after each depth of
-discovery.  After all have followed, repeatedly, every follower (all following
-the author but the author, relays and the author's friends included) asks all
-their friends again, and switches to the friend with the shortest path when
-the path through that friend is shorter than their own; the answers of a pass
-are the paths at its start, and the switches take effect together; passes
-until none switches.  Counted: the switches and the asks, one per friend asked
-per pass, the pass in which none switches included.
+FRIEND POINTERS (GDO-L's preamble; befriend in GDO-L.glp).  Friends Alice and
+Dave have a Dave-pointer from Alice to Dave, recorded by befriend.  So every
+friend of an author follows the author's feed at path length 1 without
+deciding, and the author is at 0.  unfollow excludes these pointers.
 
-SHORTENING BY SIGNATURES (item 4, as GFF changed it, 2026-10-27 21:40 UTC;
-GFF.txt's Algorithms line Shortening).  An item the author posts reaches each
-follower along their following path (GFF:4), signed by the author, at position
-0, and by each follower it passes, in order, the friend the follower follows
-through last.  After every decider has had their turn, the author posts an
-item; a follower who finds among the signers of the item they received a
-friend of theirs at a position nearer the author than the friend they follow
-through switches to that friend, the nearest such if several.  All switches of
-a pass are decided on the item of that pass and take effect for the next item
-only; the author then posts again, until a pass changes nothing.  The tables
-count the switches and the posts.  Every signer of the item a follower receives
-followed before that follower did, and so was a friend following when the
-follower chose the friend with the shortest path; so after the first following
-no follower ever finds such a friend, and the run confirms it: no switch, one
-post per author.
+THE FIRST FOLLOWING (GDO-L:1, follow_friend, willed by the follower; kept by
+GFF-I).  A decider Alice who wants to follow Dave adds a Dave-pointer to a
+friend Bob who has a Dave-pointer (to anyone).  A decider who is Dave's friend
+already follows.  The contract leaves open which Bob; the strategies:
+  random    uniformly among Alice's friends who have a Dave-pointer;
+  first     the first of them in Alice's friend list (grid neighbours first);
+  shortest  the one with the shortest path to Dave (the old Algorithms
+            pragma), ties to the first in the friend list.  An oracle: no
+            agent's state holds path lengths and no clause lets Alice learn
+            them.  Kept as a baseline; it reproduces the old tables' first
+            following one hop deep exactly.
+All author-decider pairs decide in one random order.  A decider none of whose
+friends has a Dave-pointer waits (the volition stands until the act is
+enabled).  When a person comes to have a Dave-pointer, every friend of theirs
+waiting on Dave joins a FIFO queue and, taken from it, follows by the strategy
+then; the queue runs out before the next decider decides.
+There are no relays: following on someone else's behalf is no act of the
+contracts (GDO-L:1 and GDO-L:2 are willed by the one who points), so the old
+discovery two and three hops deep is gone.  Transitive pointing (GDO-L:2,
+willed by Alice) is not modelled apart from GFF-PS's shorten.
 
-THE EARLIER SHORTENING RULE (item 4 as first sent, for comparison).  After
-every decider has had their turn: repeatedly, a follower whose friend has a path to the author
-shorter by two or more than their own ends their following and follows
-through that friend (the friend with the shortest path, ties as above); a
-follower's path length is one more than that of the friend they follow
-through, so the lengths of all who follow through them, directly or not, fall
-with it.  The followers are swept in a random order, a new order per pass,
-until a pass makes no change.  The count of such re-followings is reported.
-Waiting deciders stay waiting; the author's friends stay at 1.
+SHORTENING (GFF-PS:1, shorten, no guarding role).  Alice, who has a
+Dave-pointer to Bob and none to Carol, while Bob has a Dave-pointer to Carol,
+replaces her pointer to Bob by one to Carol, if Alice knows Carol and Carol
+knows Alice.  A friend of Dave never shortens: Dave has no Dave-pointer.
+Unless Carol is Alice's friend, the knowing needs introductions (GKK): Bob
+introduces Carol to Alice (Bob and Alice willing) and Alice to Carol (Bob and
+Carol willing).  Bob can, since in this model a pointer from Alice to Bob
+implies that each knows the other: friend pointers and follow_friend are
+between friends, and shorten requires knowing both ways.  The model: each
+introduction needed is taken with probability p (those who must will it do),
+independently, and once refused (Carol to Alice, or Alice to Carol) is not
+asked again.  p = 0: knowing is friendship.  p = 1: everyone is willing.
+Followers are taken in a random order, a new order per pass, until a pass
+changes nothing.  Counted: shortenings, introductions taken and refused.
 
-THE SHORTEST-PATH TREES (item 4, for comparison).  (a) Over the followers'
-subgraph: the friendship graph restricted to the author and those following
-the author at the end of the first following (the deciders who followed, the
-relays and the author's friends); a follower's path is their BFS distance to the author
-in it.  (b) Over the whole friendship graph: a follower's path is their graph
-distance to the author, so its ratio is 1; reported as the distance itself.
+Switching by arrival order (a follower trying a second friend and keeping
+whichever pointer delivers first), which the version of 2026-11-09 had, is no
+act of any contract and is gone; git holds it, last at 5fc93257.  GFF-FR and
+GFF-FR-BC, which need time and faults, are in async_sim.py.
 
-MEASURES (item 3).  Over all author-follower pairs, in bins by the author's
-number of followers k (1-9, 10-99, 100-999, 1000-9999, 10000; the last is
-empty, k being capped at 9999): the distribution of path length (count by
-length; mean, median, max), its ratio to the graph distance between the
-follower and the author in the friendship graph (BFS; mean, median, max), and
-the fraction of deciders still waiting.  Path and ratio are over the deciders
-who follow; a waiting decider has neither.
+BASELINES.  (a) The shortest-path tree over the followers' subgraph: the
+friendship graph restricted to the author and all who follow at the end of the
+first following (the deciders who follow and the author's friends); the same
+for every strategy.  (b) Graph distance in the friendship graph (ratio 1).
+With introductions, a path can be shorter than the graph distance: ratio < 1.
 
-SEEDS.  A run (q, s) draws everything from one generator, random.Random(s):
-graph, follower counts, followers, the order of deciding, the order of the
-passes of the earlier shortening rule, for h = 1, then 2, then 3 (discovery,
-shortening by signatures and by re-asking draw nothing).  q in 1, 2, 4;
-s in 1 .. 5.
+MEASURES.  Over author-decider pairs, in bins by the author's number of
+deciders k (1-9, 10-99, 100-999, 1000-9999, 10000; the last empty): the path
+length of each decider who follows (count by length; mean, median, max), its
+ratio to the graph distance, the fraction of deciders waiting, the holders of
+a feed (all who follow it, the author's friends included) per decided
+follower, and the author's fan-in, the persons with a Dave-pointer to Dave
+(the author's friends included), mean and max per author.  After shortening
+also: shortenings and introductions per decided follower who follows.
+
+SEEDS.  A run (q, s) draws from random.Random(s), in this order: the graph, the
+deciders, the order of deciding, then one integer from which each strategy's
+generator (first following) and each (strategy, p)'s generator (shortening)
+are seeded.  The graph, deciders and order are those of the old paths.py.
 """
 
 import argparse
@@ -151,7 +144,11 @@ def cumulative(weights):
     return out
 
 
-def build_graph(rng, n, q):
+def build_graph(rng, n, q, r=2):
+    """Kleinberg's grid with q long-range friendships per person, a contact at
+    lattice distance d drawn with probability proportional to d^-r.  r = 2
+    (the default) draws exactly as before, so its graphs and tables are
+    unchanged; r = 0 draws contacts uniformly from the grid."""
     N = n * n
     adj = [[] for _ in range(N)]
     friends = [set() for _ in range(N)]
@@ -170,7 +167,11 @@ def build_graph(rng, n, q):
             if i + 1 < n:
                 link(u, u + n)
     dmax = 2 * (n - 1)
-    dcum = cumulative([1.0 / d for d in range(1, dmax + 1)])
+    # 4d lattice points at distance d, each of weight d^-r: P(d) proportional to d^(1-r)
+    if r == 2:
+        dcum = cumulative([1.0 / d for d in range(1, dmax + 1)])
+    else:
+        dcum = cumulative([float(d) ** (1 - r) for d in range(1, dmax + 1)])
     dtot = dcum[-1]
     for u in range(N):
         i, j = divmod(u, n)
@@ -196,6 +197,138 @@ def build_graph(rng, n, q):
             link(u, v)
             made += 1
     return adj
+
+
+def build_regular(rng, N, d):
+    """A random d-regular graph on N persons: each person's d friendship
+    slots are paired uniformly at random (the configuration model), then each
+    loop or repeated pair is removed by a random double-edge swap with another
+    pair.  An expander with high probability for d >= 3 (Friedman 2008)."""
+    if d >= N or (N * d) % 2:
+        raise ValueError("a d-regular graph on N persons needs d < N and N*d even")
+    stubs = [v for v in range(N) for _ in range(d)]
+    rng.shuffle(stubs)
+    edges = [[stubs[i], stubs[i + 1]] for i in range(0, len(stubs), 2)]
+    key = lambda a, b: (a, b) if a < b else (b, a)
+    count = {}
+    for a, b in edges:
+        count[key(a, b)] = count.get(key(a, b), 0) + 1
+    bad = lambda e: e[0] == e[1] or count[key(*e)] > 1
+    todo = [i for i, e in enumerate(edges) if bad(e)]
+    while todo:
+        i = todo.pop()
+        if not bad(edges[i]):
+            continue
+        while True:
+            j = rng.randrange(len(edges))
+            if j == i:
+                continue
+            (a, b), (c, e) = edges[i], edges[j]
+            if rng.random() < 0.5:
+                c, e = e, c
+            if a == c or b == e or count.get(key(a, c), 0) or count.get(key(b, e), 0) or key(a, c) == key(b, e):
+                continue
+            for x, y in ((a, b), (edges[j][0], edges[j][1])):
+                count[key(x, y)] -= 1
+            edges[i], edges[j] = [a, c], [b, e]
+            count[key(a, c)] = count.get(key(a, c), 0) + 1
+            count[key(b, e)] = count.get(key(b, e), 0) + 1
+            break
+    adj = [[] for _ in range(N)]
+    for a, b in edges:
+        adj[a].append(b)
+        adj[b].append(a)
+    return adj
+
+
+GRAPHS = ("kleinberg", "regular")
+D_REGULAR = 6   # the default degree: the mean number of friends of Kleinberg's grid at q = 1
+
+
+def graph_spec(kind="kleinberg", q=1, r=2, d=D_REGULAR):
+    return {"kind": "kleinberg", "q": q, "r": r} if kind == "kleinberg" else {"kind": "regular", "d": d}
+
+
+def make_graph(rng, n, g):
+    """The friendship graph for spec g, on N = n*n persons."""
+    if g["kind"] == "kleinberg":
+        return build_graph(rng, n, g["q"], g.get("r", 2))
+    return build_regular(rng, n * n, g["d"])
+
+
+def graph_label(g):
+    """Short name for files and keys; Kleinberg at r = 2 keeps its old name."""
+    if g["kind"] == "regular":
+        return "regular-d{}".format(g["d"])
+    r = g.get("r", 2)
+    return "q{}".format(g["q"]) if r == 2 else "r{:g}-q{}".format(r, g["q"])
+
+
+def graph_title(g):
+    """The tables' title: q (and r, if not 2) for Kleinberg's grid, d for the regular graph."""
+    if g["kind"] == "regular":
+        return "random {}-regular graph".format(g["d"])
+    r = g.get("r", 2)
+    return "q = {}".format(g["q"]) if r == 2 else "q = {}, r = {:g}".format(g["q"], r)
+
+
+def graph_text(g, n):
+    if g["kind"] == "regular":
+        return "a random {}-regular graph on {} persons (an expander)".format(g["d"], n * n)
+    return "Kleinberg's {0} x {0} grid, {1} long-range friendship(s) per person, exponent r = {2:g}".format(
+        n, g["q"], g.get("r", 2))
+
+
+def spectral_gap(adj, rng, iters=400):
+    """1 - lambda_2 of the random walk on the graph, lambda_2 its second largest
+    eigenvalue, by power iteration on the lazy walk with the top eigenvector
+    projected out.  The Rayleigh quotient approaches lambda_2 from below, so the
+    estimate is an upper bound on the gap: close for an expander, loose for a
+    graph whose gap is tiny (a grid), where it still shows the order."""
+    N = len(adj)
+    deg = [len(a) for a in adj]
+    sq = [math.sqrt(x) for x in deg]
+    norm = math.sqrt(sum(deg))
+    u = [x / norm for x in sq]
+    x = [rng.random() - 0.5 for _ in range(N)]
+
+    def project(v):
+        c = sum(a * b for a, b in zip(u, v))
+        v = [a - c * b for a, b in zip(v, u)]
+        m = math.sqrt(sum(a * a for a in v)) or 1.0
+        return [a / m for a in v]
+
+    def S(v):   # D^-1/2 A D^-1/2 v
+        w = [v[i] / sq[i] if sq[i] else 0.0 for i in range(N)]
+        return [sum(w[j] for j in adj[i]) / sq[i] if sq[i] else 0.0 for i in range(N)]
+
+    x = project(x)
+    lam = 0.0
+    for _ in range(iters):
+        sx = S(x)
+        mx = [(a + b) / 2 for a, b in zip(x, sx)]   # the lazy walk
+        lam = sum(a * b for a, b in zip(x, mx))
+        x = project(mx)
+    return 1 - (2 * lam - 1)
+
+
+def graph_stats(adj, n, rng, sources=60, iters=400):
+    """Expansion and distance measures of a graph: the spectral gap (an upper
+    bound, see spectral_gap), the conductance of the cut between the left and
+    right halves of the grid by index (an upper bound on the graph's
+    conductance; by Cheeger, gap <= 2 * conductance), the mean number of
+    friends, and the mean and largest graph distance from sampled persons."""
+    N = len(adj)
+    left = [(v % n) < n // 2 for v in range(N)]
+    cross = sum(1 for v in range(N) for w in adj[v] if left[v] and not left[w])
+    vol = sum(len(adj[v]) for v in range(N) if left[v])
+    dist, far = [], 0
+    for s in rng.sample(range(N), min(sources, N)):
+        dd = bfs_targets(adj, s, range(N))
+        dist += [x for v, x in dd.items() if v != s]
+        far = max(far, max(dd.values()))
+    return {"gap": spectral_gap(adj, rng, iters), "cut_conductance": cross / vol if vol else float("nan"),
+            "mean_degree": sum(len(a) for a in adj) / N, "distance": sum(dist) / len(dist), "diameter_est": far}
 
 
 def draw_followers(rng, N):
@@ -250,112 +383,75 @@ def bfs_within(adj, src, allowed):
     return dist
 
 
-HOPS = (1, 2, 3)
+
+STRATEGIES = ("random", "first", "shortest")
+P_INTRO = (0.0, 0.25, 0.5, 1.0)
 
 
-def first_following(adj, N, pairs, h):
-    """The first following with discovery up to h hops deep.  Returns, per
-    author, depth (path length of everyone following), parent (the friend
-    followed through), the waiting deciders and the relay followers."""
+def first_following(adj, N, pairs, strategy, rng, log=None):
+    """GDO-L:1 (follow_friend) for every decider, by the strategy.  Returns,
+    per author, the depth map (path length of everyone following), the parent
+    map (each follower -> the person their Dave-pointer points to; the author
+    -> None) and the waiting deciders.  If log is given, it is called with
+    (author, event) for each act, in order: ("f", a, via, woken) when a
+    follows through via (woken: a waited), ("w", a) when a starts waiting
+    (live.py's events; nothing else changes)."""
     depth = [None] * N
     parent = [None] * N
     for b in range(N):
         depth[b] = {b: 0}
         parent[b] = {b: None}
-        for f in adj[b]:
+        for f in adj[b]:  # friend pointers
             depth[b][f] = 1
             parent[b][f] = b
     waiting = [set() for _ in range(N)]
-    relays = [set() for _ in range(N)]
 
-    def discover(a, db):
-        # one hop: the friend with the shortest path
-        best = None
-        for c in adj[a]:
-            dc = db.get(c)
-            if dc is not None and (best is None or dc < best):
-                best, via = dc, c
-        if best is not None:
-            return [(a, via, best + 1)]
-        if h >= 2:
-            # two hops: a friend c asks their friends; c follows through d
-            for c in adj[a]:
-                for d in adj[c]:
-                    dd = db.get(d)
-                    if dd is not None and (best is None or dd < best):
-                        best, path = dd, (c, d)
-            if best is not None:
-                c, d = path
-                return [(c, d, best + 1), (a, c, best + 2)]
-        if h >= 3:
-            seen = {a}
-            for c in adj[a]:
-                for e in adj[c]:
-                    if e in seen:
-                        continue
-                    seen.add(e)
-                    for d in adj[e]:
-                        dd = db.get(d)
-                        if dd is not None and (best is None or dd < best):
-                            best, path = dd, (c, e, d)
-            if best is not None:
-                c, e, d = path
-                return [(e, d, best + 1), (c, e, best + 2), (a, c, best + 3)]
-        return None
+    def choose(a, db):
+        cands = [c for c in adj[a] if c in db]  # friends with a Dave-pointer
+        if not cands:
+            return None
+        if strategy == "random":
+            return rng.choice(cands)
+        if strategy == "first":
+            return cands[0]
+        best = cands[0]  # shortest: the oracle baseline
+        for c in cands[1:]:
+            if db[c] < db[best]:
+                best = c
+        return best
 
-    def come(added, b):
-        db, pb, w, rb = depth[b], parent[b], waiting[b], relays[b]
-        newq = deque()
+    def come(a, via, b):
+        db, pb, w = depth[b], parent[b], waiting[b]
         work = deque()
+        woken = 0
         while True:
-            for x, p, dx in added:
-                db[x] = dx
-                pb[x] = p
-                w.discard(x)
-                newq.append(x)
-            for x, _, _ in added[:-1]:
-                rb.add(x)  # following on the decider's behalf
-            while newq:
-                x = newq.popleft()
-                if not w:
-                    continue
-                # the waiters within h hops of x, by paths through persons
-                # not following, join the work queue
-                seen = {x}
-                frontier = [x]
-                for _ in range(h):
-                    nxt = []
-                    for u in frontier:
-                        for v in adj[u]:
-                            if v in seen:
-                                continue
-                            seen.add(v)
-                            if v in db:
-                                continue
-                            if v in w:
-                                w.discard(v)
-                                work.append(v)
-                            nxt.append(v)
-                    frontier = nxt
+            db[a] = db[via] + 1
+            pb[a] = via
+            if log is not None:
+                log(b, ("f", a, via, woken))
+            woken = 1
+            if w:
+                for v in adj[a]:
+                    if v in w:
+                        w.discard(v)
+                        work.append(v)
             if not work:
                 return
-            x = work.popleft()
-            if x in db:
-                # came to follow meanwhile, as a relay for another
-                added = []
-                continue
-            added = discover(x, db)
-            assert added is not None
+            a = work.popleft()
+            via = choose(a, db)  # a friend has just come to have a pointer
 
     for f, b in pairs:
-        if f in depth[b]:
+        db = depth[b]
+        if f in db:  # a friend of the author already follows
             continue
-        added = discover(f, depth[b])
-        if added is None:
+        via = choose(f, db)
+        if via is None:
             waiting[b].add(f)
+            if log is not None:
+                log(b, ("w", f))
         else:
-            come(added, b)
-    return depth, parent, waiting, relays
+            come(f, via, b)
+    return depth, parent, waiting
 
 
 def depths_of(b, par):
@@ -373,178 +469,154 @@ def depths_of(b, par):
     return dep
 
 
-def shorten_by_signatures(adj, friend_sets, b, par0, dep0):
-    """Item 4 as GFF changed it: returns (depths, switches, posts)."""
+def shorten(friend_sets, b, par0, p, rng, log=None):
+    """GFF-PS:1 (shorten) to a fixpoint for author b, introductions taken with
+    probability p.  A worklist: the followers not pointing to the author, in a
+    random order; one who shortens is tried again, and so is everyone pointing
+    to them, whose Carol has changed.  Returns (parent map, shortenings,
+    introductions taken, introductions refused).  If log is given, it is
+    called with ("s", a, carol, intros, friend) for each shortening (intros:
+    introductions taken for it; friend: Carol is a's friend) and ("r", a,
+    carol, intros) for each refusal (intros: taken before it; live.py's events; nothing else changes)."""
     par = dict(par0)
-    dep = dict(dep0)
-    posts = switches = 0
-    while True:
-        posts += 1
-        moves = []
-        for f, p in par.items():
-            if p is None or p == b:
+    children = {}
+    for a, x in par.items():
+        if x is not None:
+            children.setdefault(x, set()).add(a)
+    movers = [a for a, x in par.items() if x is not None and x != b]
+    rng.shuffle(movers)
+    work = deque(movers)
+    queued = set(movers)
+    known = set()    # (x, y): x knows y by an introduction
+    refused = set()  # (x, y): the introduction of y to x was refused
+    shortens = intros = refusals = 0
+    while work:
+        a = work.popleft()
+        queued.discard(a)
+        bob = par[a]
+        if bob == b:
+            continue
+        carol = par[bob]  # Bob's Dave-pointer
+        ok = True
+        took = 0
+        for x, y in ((a, carol), (carol, a)):
+            if y in friend_sets[x] or (x, y) in known:
                 continue
-            fs = friend_sets[f]
-            best = None
-            x = par[p]
-            while x is not None:
-                if x in fs:
-                    best = x
-                x = par[x]
-            if best is not None:
-                moves.append((f, best))
-        if not moves:
-            return dep, switches, posts
-        for f, g in moves:
-            par[f] = g
-        switches += len(moves)
-        dep = depths_of(b, par)
+            if p <= 0 or (x, y) in refused:
+                ok = False
+                break
+            if p >= 1 or rng.random() < p:
+                known.add((x, y))
+                intros += 1
+                took += 1
+            else:
+                refused.add((x, y))
+                refusals += 1
+                ok = False
+                if log is not None:
+                    log(("r", a, carol, took))
+                break
+        if not ok:
+            continue
+        children[bob].discard(a)
+        children.setdefault(carol, set()).add(a)
+        par[a] = carol
+        shortens += 1
+        if log is not None:
+            log(("s", a, carol, took, int(carol in friend_sets[a])))
+        # sorted: a set's order depends on the Python version, and with 0 < p < 1 the order
+        # decides who draws which introduction, so iterating the set made the tables differ
+        for x in [a] + sorted(children.get(a, ())):
+            if x not in queued:
+                work.append(x)
+                queued.add(x)
+    return par, shortens, intros, refusals
 
 
-def shorten_by_reasking(adj, b, par0, dep0):
-    """Every follower asks all their friends again and switches to the friend
-    with the shortest path when the path through that friend is shorter than
-    their own; passes until none switches.  Returns (depths, switches, asks,
-    passes)."""
-    par = dict(par0)
-    dep = dict(dep0)
-    switches = asks = passes = 0
-    while True:
-        passes += 1
-        moves = []
-        for f in par:
-            if f == b:
-                continue
-            asks += len(adj[f])
-            best = None
-            for g in adj[f]:
-                dg = dep.get(g)
-                if dg is not None and (best is None or dg < best):
-                    best, via = dg, g
-            if best + 1 < dep[f]:
-                moves.append((f, via))
-        if not moves:
-            return dep, switches, asks, passes
-        for f, g in moves:
-            par[f] = g
-        switches += len(moves)
-        dep = depths_of(b, par)
+def key_first(s):
+    return "first/" + s
 
 
-def shorten_earlier_rule(adj, N, depth0, parent0, rng):
-    """Item 4 as first sent: returns (depths, re-followings per author, passes)."""
-    depth = [dict(d) for d in depth0]
-    parent = [dict(p) for p in parent0]
-    children = []
-    for b in range(N):
-        ch = {}
-        for p, par in parent[b].items():
-            if par is not None:
-                ch.setdefault(par, set()).add(p)
-        children.append(ch)
-    refollow_by_author = [0] * N
-    order = [(p, b) for b in range(N) for p in depth[b] if p != b]
-    passes = 0
-    while True:
-        passes += 1
-        rng.shuffle(order)
-        changed = 0
-        for p, b in order:
-            db = depth[b]
-            dp = db[p]
-            best, via = None, None
-            for g in adj[p]:
-                dg = db.get(g)
-                if dg is not None and (best is None or dg < best):
-                    best, via = dg, g
-            if best is not None and best <= dp - 2:
-                ch = children[b]
-                ch[parent[b][p]].discard(p)
-                ch.setdefault(via, set()).add(p)
-                parent[b][p] = via
-                delta = dp - (best + 1)
-                stack = [p]
-                while stack:
-                    x = stack.pop()
-                    db[x] -= delta
-                    stack.extend(ch.get(x, ()))
-                changed += 1
-                refollow_by_author[b] += 1
-        if changed == 0:
-            return depth, refollow_by_author, passes
+def key_ps(s, p):
+    return "ps/{}/{:g}".format(s, p)
 
 
-KEYS = ("first", "sig", "reask", "early", "sub")
-COUNTERS = ("authors", "deciders", "waits", "following", "relay_followings",
-            "holders", "holders_all", "sig_switches", "posts", "reask_switches",
-            "asks", "refollows")
+COUNTERS = ("shortens", "intros", "refusals")
+GLOBAL = ("authors", "deciders", "waits", "following", "holders")
 
 
 def run(args):
-    q, seed, n, hops = args
+    q, seed, n, strategies, ps = args[:5]
+    g = args[5] if len(args) > 5 else graph_spec("kleinberg", q)
     t0 = time.time()
     rng = random.Random(seed)
     N = n * n
-    adj = build_graph(rng, n, q)
+    adj = make_graph(rng, n, g)
     counts, followers = draw_followers(rng, N)
     pairs = [(f, b) for b in range(N) for f in followers[b]]
     rng.shuffle(pairs)
+    base = rng.getrandbits(62)
     friend_sets = [set(a) for a in adj]
     nb = len(BIN_LABELS)
-    out = {"q": q, "seed": seed, "pairs": len(pairs),
-           "mean_degree": sum(len(a) for a in adj) / N, "h": {}}
-    for h in hops:
-        th = time.time()
-        depth, parent, waiting, relays = first_following(adj, N, pairs, h)
-        sig = None
-        if h == 1:
-            sig = [shorten_by_signatures(adj, friend_sets, b, parent[b], depth[b]) for b in range(N)]
-        early, refollows, early_passes = shorten_earlier_rule(adj, N, depth, parent, rng)
-        res = {k: [[] for _ in BIN_LABELS] for k in KEYS}
-        rat = {k: [[] for _ in BIN_LABELS] for k in KEYS}
-        dist = [[] for _ in BIN_LABELS]
-        cnt = {k: [0] * nb for k in COUNTERS}
-        posts_by = [[] for _ in BIN_LABELS]
-        relay_persons = set()
-        for b in range(N):
-            k = counts[b]
-            bi = bin_of(k)
-            db = depth[b]
-            fol = [f for f in followers[b] if f in db]
-            ra = shorten_by_reasking(adj, b, parent[b], db)
-            cnt["authors"][bi] += 1
-            cnt["deciders"][bi] += k
-            cnt["waits"][bi] += len(waiting[b])
-            cnt["following"][bi] += len(fol)
-            cnt["relay_followings"][bi] += len(relays[b])
-            relay_persons |= relays[b]
-            cnt["holders"][bi] += len(set(fol) | relays[b])
-            cnt["holders_all"][bi] += len(db) - 1
-            cnt["reask_switches"][bi] += ra[1]
-            cnt["asks"][bi] += ra[2]
-            cnt["refollows"][bi] += refollows[b]
-            if sig is not None:
-                cnt["sig_switches"][bi] += sig[b][1]
-                cnt["posts"][bi] += sig[b][2]
-                posts_by[bi].append(sig[b][2])
-            if not fol:
-                continue
-            gd = bfs_targets(adj, b, fol)
-            sub = bfs_within(adj, b, db)
-            paths = {"first": db, "reask": ra[0], "early": early[b], "sub": sub}
-            if sig is not None:
-                paths["sig"] = sig[b][0]
+    keys = ["sub"] + [key_first(s) for s in strategies] + [key_ps(s, p) for s in strategies for p in ps]
+    res = {k: [[] for _ in range(nb)] for k in keys}
+    rat = {k: [[] for _ in range(nb)] for k in keys}
+    fanin = {k: [[] for _ in range(nb)] for k in keys}
+    cnt = {k: {c: [0] * nb for c in COUNTERS} for k in keys}
+    glob = {c: [0] * nb for c in GLOBAL}
+    dist = [[] for _ in range(nb)]
+    seconds = {k: 0.0 for k in keys}
+
+    F = {}
+    for si, s in enumerate(strategies):
+        ts = time.time()
+        F[s] = first_following(adj, N, pairs, s, random.Random(base + si + 1))
+        seconds[key_first(s)] += time.time() - ts
+    s0 = strategies[0]
+    for s in strategies[1:]:  # who follows does not depend on the strategy
+        assert all(len(F[s][2][b]) == len(F[s0][2][b]) for b in range(N))
+    R = {(s, p): random.Random(base + 1000 * (si + 1) + pi)
+         for si, s in enumerate(strategies) for pi, p in enumerate(ps)}
+
+    def add(key, bi, b, dep, par, fol, gd):
+        for f in fol:
+            res[key][bi].append(dep[f])
+            rat[key][bi].append(dep[f] / gd[f])
+        fanin[key][bi].append(sum(1 for x in par.values() if x == b))
+
+    for b in range(N):
+        bi = bin_of(counts[b])
+        d0 = F[s0][0][b]
+        fol = [f for f in followers[b] if f in d0]
+        glob["authors"][bi] += 1
+        glob["deciders"][bi] += counts[b]
+        glob["waits"][bi] += len(F[s0][2][b])
+        glob["following"][bi] += len(fol)
+        glob["holders"][bi] += len(d0) - 1
+        gd = bfs_targets(adj, b, fol) if fol else {}
+        for f in fol:
+            dist[bi].append(gd[f])
+        if fol:
+            sub = bfs_within(adj, b, d0)
             for f in fol:
-                g = gd[f]
-                dist[bi].append(g)
-                for key, pd in paths.items():
-                    res[key][bi].append(pd[f])
-                    rat[key][bi].append(pd[f] / g)
-        out["h"][h] = {"res": res, "rat": rat, "dist": dist, "cnt": cnt,
-                       "posts_by": posts_by, "relay_persons": len(relay_persons),
-                       "early_passes": early_passes, "seconds": time.time() - th}
-    out["seconds"] = time.time() - t0
-    return out
+                res["sub"][bi].append(sub[f])
+                rat["sub"][bi].append(sub[f] / gd[f])
+        for s in strategies:
+            dep, par = F[s][0][b], F[s][1][b]
+            add(key_first(s), bi, b, dep, par, fol, gd)
+            for p in ps:
+                k = key_ps(s, p)
+                ts = time.time()
+                par2, sh, it, rf = shorten(friend_sets, b, par, p, R[(s, p)])
+                dep2 = depths_of(b, par2)
+                seconds[k] += time.time() - ts
+                add(k, bi, b, dep2, par2, fol, gd)
+                cnt[k]["shortens"][bi] += sh
+                cnt[k]["intros"][bi] += it
+                cnt[k]["refusals"][bi] += rf
+    return {"q": q, "seed": seed, "graph": g, "label": graph_label(g), "pairs": len(pairs), "mean_degree": sum(len(a) for a in adj) / N,
+            "keys": keys, "res": res, "rat": rat, "fanin": fanin, "cnt": cnt, "glob": glob,
+            "dist": dist, "times": seconds, "seconds": time.time() - t0}
 
 
 def stats(xs, ratio=False):
@@ -569,168 +641,172 @@ def frac(a, b, fmt="{:.4f}"):
     return fmt.format(a / b) if b else "-"
 
 
-TITLES = {
-    "first": "First following (Algorithms pragma: shortest path through a friend who follows{})",
-    "sig": "After shortening by the signatures of the items received (item 4)",
-    "reask": "After shortening by re-asking",
-    "early": "After the earlier shortening rule, a friend shorter by two or more (comparison)",
-    "sub": "Shortest-path tree over the followers' subgraph (the author and all following at the end of the first following, relays included)",
-}
+def describe(key):
+    if key == "sub":
+        return "shortest-path tree over the followers' subgraph"
+    parts = key.split("/")
+    if parts[0] == "first":
+        return "first following, {}".format(parts[1])
+    return "after shortening, {}, p = {}".format(parts[1], parts[2])
 
 
-def section(runs, h, lines):
-    nb = len(BIN_LABELS)
-    H = [r["h"][h] for r in runs]
-
-    def merged(key, bi, ratio=False):
-        out = []
-        for x in H:
-            out.extend((x["rat"] if ratio else x["res"])[key][bi])
-        return out
-
-    def c(name, bi=None):
-        if bi is None:
-            return sum(x["cnt"][name][i] for x in H for i in range(nb))
-        return sum(x["cnt"][name][bi] for x in H)
-
-    disc = "" if h == 1 else "; discovery {} hops deep".format(h)
-    keys = ["first"] + (["sig"] if h == 1 else []) + ["reask", "early", "sub"]
-    for key in keys:
-        lines.append("### " + (TITLES[key].format(disc) if key == "first" else TITLES[key]))
-        lines.append("")
-        head = "| followers | authors | pairs | following |"
-        sep = "|---|---:|---:|---:|"
-        if key == "first":
-            head += " waiting | relay followings | per author | holders per decided follower | incl. author's friends |"
-            sep += "---:|---:|---:|---:|---:|"
-        if key == "sig":
-            head += " switches | posts per author mean | max |"
-            sep += "---:|---:|---:|"
-        if key == "reask":
-            head += " switches | asks | asks per decided follower |"
-            sep += "---:|---:|---:|"
-        if key == "early":
-            head += " re-followings |"
-            sep += "---:|"
-        head += " path mean | median | max | ratio mean | median | max |"
-        sep += "---:|---:|---:|---:|---:|---:|"
-        lines += [head, sep]
-        for bi in list(range(nb)) + [None]:
-            if bi is None:
-                xs = [v for i in range(nb) for v in merged(key, i)]
-                rs = [v for i in range(nb) for v in merged(key, i, True)]
-                ps = [v for x in H for i in range(nb) for v in x["posts_by"][i]]
-                label = "all"
-            else:
-                xs, rs = merged(key, bi), merged(key, bi, True)
-                ps = [v for x in H for v in x["posts_by"][bi]]
-                label = BIN_LABELS[bi]
-            row = "| {} | {} | {} | {} |".format(label, c("authors", bi), c("deciders", bi), len(xs))
-            if key == "first":
-                row += " {} | {} | {} | {} | {} |".format(
-                    frac(c("waits", bi), c("deciders", bi)), c("relay_followings", bi),
-                    frac(c("relay_followings", bi), c("authors", bi), "{:.2f}"),
-                    frac(c("holders", bi), c("following", bi), "{:.3f}"),
-                    frac(c("holders_all", bi), c("following", bi), "{:.3f}"))
-            if key == "sig":
-                row += " {} | {} | {} |".format(c("sig_switches", bi),
-                                                frac(sum(ps), len(ps), "{:.2f}"), max(ps) if ps else "-")
-            if key == "reask":
-                row += " {} | {} | {} |".format(c("reask_switches", bi), c("asks", bi),
-                                                frac(c("asks", bi), c("following", bi), "{:.1f}"))
-            if key == "early":
-                row += " {} |".format(c("refollows", bi))
-            row += " {} | {} | {} |".format(*stats(xs))
-            row += " {} | {} | {} |".format(*stats(rs, True))
-            lines.append(row)
-        lines.append("")
-    lines.append("### Graph distance from follower to author (the shortest-path tree over the whole friendship graph; ratio 1)")
-    lines.append("")
-    lines += ["| followers | following | mean | median | max |", "|---|---:|---:|---:|---:|"]
-    for bi in range(nb):
-        xs = [v for x in H for v in x["dist"][bi]]
-        lines.append("| {} | {} | {} | {} | {} |".format(BIN_LABELS[bi], len(xs), *stats(xs)))
-    lines.append("")
-    lines.append("### Distribution of path length (length:count)")
-    lines.append("")
-    lines += ["| followers | measure | length:count |", "|---|---|---|"]
-    names = {"first": "first following", "sig": "after shortening by signatures",
-             "reask": "after shortening by re-asking", "early": "after the earlier rule",
-             "sub": "tree, followers' subgraph"}
-    for bi in range(nb):
-        for key in keys:
-            xs = merged(key, bi)
-            if xs:
-                lines.append("| {} | {} | {} |".format(BIN_LABELS[bi], names[key], hist(xs)))
-        xs = [v for x in H for v in x["dist"][bi]]
-        if xs:
-            lines.append("| {} | graph distance | {} |".format(BIN_LABELS[bi], hist(xs)))
-    lines.append("")
-
-
-def write_q(q, runs, outdir, hops):
+def write_q(spec, runs, outdir, strategies, ps):
     runs = sorted(runs, key=lambda r: r["seed"])
     seeds = [r["seed"] for r in runs]
-    lines = ["# GFF path lengths, q = {}".format(q), ""]
-    lines.append("Kleinberg's {0} x {0} grid, {1} long-range friendship(s) per person; seeds {2}, pooled; "
-                 "produced by programs/gff/paths/paths.py (see README.md).".format(N_SIDE, q, ", ".join(map(str, seeds))))
-    lines.append("Path and ratio are over the deciders who follow; ratio is path length over graph distance; "
-                 "waiting is the fraction of deciders still waiting at the end; holders per decided follower is "
-                 "the decided followers who follow and the relays, over the decided followers who follow, and "
-                 "incl. author's friends adds the author's friends, who follow by friendship.")
-    lines.append("")
-    for h in hops:
-        lines.append("## Discovery {} hop{} deep, seeds pooled".format(h, "" if h == 1 else "s"))
-        lines.append("")
-        section(runs, h, lines)
-    lines.append("## Per seed")
-    lines.append("")
-    lines += ["| seed | hops | followers | pairs | waiting | first: path mean / max, ratio mean / max | re-asking: path mean / max, ratio mean / max | switches | asks | relay followings |",
-              "|---:|---:|---|---:|---:|---|---|---:|---:|---:|"]
+    nb = len(BIN_LABELS)
+    bins = list(range(nb)) + [None]
+
+    def pooled(field, key, bi):
+        idx = range(nb) if bi is None else [bi]
+        return [v for r in runs for i in idx for v in r[field][key][i]]
+
+    def g(name, bi):
+        idx = range(nb) if bi is None else [bi]
+        return sum(r["glob"][name][i] for r in runs for i in idx)
+
+    def c(key, name, bi):
+        idx = range(nb) if bi is None else [bi]
+        return sum(r["cnt"][key][name][i] for r in runs for i in idx)
+
+    def label(bi):
+        return "all" if bi is None else BIN_LABELS[bi]
+
+    L = ["# GFF path lengths, first following and Short Feeds' shortening, {}".format(graph_title(spec)), ""]
+    L.append("{}; seeds {}, pooled; "
+             "produced by programs/gff/paths/paths.py, which reprints this file unchanged run after run, "
+             "on Labelled Overlay:1 and Short Feeds:1 (programs/gff; see the docstring and README.md).".format(graph_text(spec, N_SIDE), ", ".join(map(str, seeds))))
+    L.append("Path and ratio are over the deciders who follow; ratio is path length over graph distance "
+             "in the friendship graph; waiting is the fraction of deciders still waiting at the end; holders "
+             "per decided follower is all who follow the feed (the author's friends included) over the "
+             "deciders who follow; fan-in is the persons with a pointer to the author, per author.  "
+             "Strategies: random, first (first in the friend list) and shortest (an oracle baseline).  "
+             "p is the probability that an introduction GFF-PS needs is taken.")
+    L.append("")
+
+    L.append("## First following (GDO-L:1, the strategy choosing the friend)")
+    L.append("")
+    head = ("| followers | authors | pairs | following | waiting | holders per decided follower "
+            "| path mean | median | max | ratio mean | median | max | fan-in mean | max |")
+    sep = "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
+    for s in strategies:
+        k = key_first(s)
+        L += ["### Strategy {}".format(s), "", head, sep]
+        for bi in bins:
+            L.append(("| {} " * 14 + "|").format(
+                label(bi), g("authors", bi), g("deciders", bi), g("following", bi),
+                frac(g("waits", bi), g("deciders", bi)),
+                frac(g("holders", bi), g("following", bi), "{:.3f}"),
+                *stats(pooled("res", k, bi)), *stats(pooled("rat", k, bi), True),
+                *stats(pooled("fanin", k, bi))[::2]))
+        L.append("")
+
+    L.append("## After shortening (GFF-PS:1), introductions taken with probability p")
+    L.append("")
+    head = ("| followers | following | shortenings per follower | introductions per follower "
+            "| refused per follower | path mean | median | max | ratio mean | median | max | fan-in mean | max |")
+    sep = "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
+    for s in strategies:
+        for p in ps:
+            k = key_ps(s, p)
+            L += ["### Strategy {}, p = {:g}".format(s, p), "", head, sep]
+            for bi in bins:
+                fo = g("following", bi)
+                L.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                    label(bi), fo, frac(c(k, "shortens", bi), fo, "{:.3f}"),
+                    frac(c(k, "intros", bi), fo, "{:.3f}"), frac(c(k, "refusals", bi), fo, "{:.3f}"),
+                    *stats(pooled("res", k, bi)), *stats(pooled("rat", k, bi), True),
+                    *stats(pooled("fanin", k, bi))[::2]))
+            L.append("")
+
+    L.append("## Baselines")
+    L.append("")
+    L.append("### Shortest-path tree over the followers' subgraph (the author, the author's friends and the deciders who follow)")
+    L.append("")
+    L += ["| followers | following | path mean | median | max | ratio mean | median | max |",
+          "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    for bi in bins:
+        L.append("| {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            label(bi), g("following", bi), *stats(pooled("res", "sub", bi)),
+            *stats(pooled("rat", "sub", bi), True)))
+    L.append("")
+    L.append("### Graph distance from follower to author in the friendship graph (ratio 1)")
+    L.append("")
+    L += ["| followers | following | mean | median | max |", "|---|---:|---:|---:|---:|"]
+    for bi in bins:
+        idx = range(nb) if bi is None else [bi]
+        xs = [v for r in runs for i in idx for v in r["dist"][i]]
+        L.append("| {} | {} | {} | {} | {} |".format(label(bi), len(xs), *stats(xs)))
+    L.append("")
+
+    L.append("## Distribution of path length (length:count)")
+    L.append("")
+    L += ["| followers | measure | length:count |", "|---|---|---|"]
+    keys = [key_first(s) for s in strategies] + [key_ps(s, p) for s in strategies for p in ps] + ["sub"]
+    for bi in range(nb):
+        for k in keys:
+            xs = pooled("res", k, bi)
+            if xs:
+                L.append("| {} | {} | {} |".format(BIN_LABELS[bi], describe(k), hist(xs)))
+        xs = [v for r in runs for v in r["dist"][bi]]
+        if xs:
+            L.append("| {} | graph distance | {} |".format(BIN_LABELS[bi], hist(xs)))
+    L.append("")
+
+    L.append("## Per seed, all bins")
+    L.append("")
+    L += ["| seed | measure | following | waiting | path mean / max | ratio mean / max | fan-in max "
+          "| shortenings | introductions | refused |",
+          "|---:|---|---:|---:|---|---|---:|---:|---:|---:|"]
     for r in runs:
-        for h in hops:
-            x = r["h"][h]
-            for bi in range(len(BIN_LABELS)):
-                if not x["cnt"]["deciders"][bi]:
-                    continue
-                cells = []
-                for key in ("first", "reask"):
-                    pm, _, px = stats(x["res"][key][bi])
-                    rm, _, rx = stats(x["rat"][key][bi], True)
-                    cells.append("{} / {}, {} / {}".format(pm, px, rm, rx))
-                cn = x["cnt"]
-                lines.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
-                    r["seed"], h, BIN_LABELS[bi], cn["deciders"][bi],
-                    frac(cn["waits"][bi], cn["deciders"][bi]), cells[0], cells[1],
-                    cn["reask_switches"][bi], cn["asks"][bi], cn["relay_followings"][bi]))
-    lines.append("")
-    lines += ["| seed | hops | author-follower pairs | mean friends per person | relay followers (persons) | relay followings | passes of the earlier rule | run time (s) |",
-              "|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        fo = sum(r["glob"]["following"])
+        wa = frac(sum(r["glob"]["waits"]), sum(r["glob"]["deciders"]))
+        for k in keys[:-1]:
+            xs = [v for i in range(nb) for v in r["res"][k][i]]
+            rs = [v for i in range(nb) for v in r["rat"][k][i]]
+            fi = [v for i in range(nb) for v in r["fanin"][k][i]]
+            pm, _, px = stats(xs)
+            rm, _, rx = stats(rs, True)
+            sh = sum(r["cnt"][k]["shortens"]) if k.startswith("ps/") else "-"
+            it = sum(r["cnt"][k]["intros"]) if k.startswith("ps/") else "-"
+            rf = sum(r["cnt"][k]["refusals"]) if k.startswith("ps/") else "-"
+            L.append("| {} | {} | {} | {} | {} / {} | {} / {} | {} | {} | {} | {} |".format(
+                r["seed"], describe(k), fo, wa, pm, px, rm, rx, max(fi) if fi else "-",
+                sh, it, rf))
+    L.append("")
+    L += ["| seed | author-decider pairs | mean friends per person |", "|---:|---:|---:|"]
     for r in runs:
-        for h in hops:
-            x = r["h"][h]
-            lines.append("| {} | {} | {} | {:.3f} | {} | {} | {} | {:.0f} |".format(
-                r["seed"], h, r["pairs"], r["mean_degree"], x["relay_persons"],
-                sum(x["cnt"]["relay_followings"]), x["early_passes"], x["seconds"]))
-    lines.append("")
+        L.append("| {} | {} | {:.3f} |".format(r["seed"], r["pairs"], r["mean_degree"]))
+    L.append("")
     os.makedirs(outdir, exist_ok=True)
-    with open(os.path.join(outdir, "q{}.md".format(q)), "w") as fh:
-        fh.write("\n".join(lines))
+    with open(os.path.join(outdir, "gff-ps-{}.md".format(graph_label(spec))), "w") as fh:
+        fh.write("\n".join(L))
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--q", type=int, nargs="+", default=[1, 2, 4])
+    ap.add_argument("--graph", choices=GRAPHS, default="kleinberg",
+                    help="kleinberg (the grid with long-range friends; default) or regular (a random d-regular graph)")
+    ap.add_argument("--q", type=int, nargs="+", default=[1, 2, 4], help="kleinberg: long-range friends per person")
+    ap.add_argument("--r", type=float, default=2.0,
+                    help="kleinberg: the exponent of the long-range draw (default 2; 0 draws uniformly)")
+    ap.add_argument("--d", type=int, nargs="+", default=[D_REGULAR],
+                    help="regular: friends per person (default {})".format(D_REGULAR))
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
-    ap.add_argument("--hops", type=int, nargs="+", default=list(HOPS), help="depths of discovery")
     ap.add_argument("--n", type=int, default=N_SIDE)
+    ap.add_argument("--strategies", nargs="+", default=list(STRATEGIES), choices=STRATEGIES,
+                    help="how a decider chooses among friends with a pointer (GDO-L:1)")
+    ap.add_argument("--p", type=float, nargs="+", default=list(P_INTRO),
+                    help="probabilities that an introduction GFF-PS needs is taken")
     ap.add_argument("--jobs", type=int, default=1, help="runs in parallel (processes)")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "tables"))
     a = ap.parse_args()
     set_side(a.n)
     t0 = time.time()
-    hops = sorted(a.hops)
-    tasks = [(q, s, a.n, hops) for q in a.q for s in a.seeds]
+    if a.graph == "kleinberg":
+        specs = [graph_spec("kleinberg", q=q, r=a.r) for q in a.q]
+    else:
+        specs = [graph_spec("regular", d=d) for d in a.d]
+    tasks = [(g.get("q", 0), s, a.n, a.strategies, a.p, g) for g in specs for s in a.seeds]
     if a.jobs > 1:
         with Pool(a.jobs) as pool:
             results = pool.map(run, tasks)
@@ -739,12 +815,10 @@ def main():
         for t in tasks:
             results.append(run(t))
             r = results[-1]
-            print("q={} seed={} pairs={} {}  total {:.0f}s".format(
-                r["q"], r["seed"], r["pairs"],
-                " ".join("h{}={:.0f}s".format(h, r["h"][h]["seconds"]) for h in hops),
-                r["seconds"]), flush=True)
-    for q in a.q:
-        write_q(q, [r for r in results if r["q"] == q], a.out, hops)
+            print("{} seed={} pairs={} total {:.0f}s".format(r["label"], r["seed"], r["pairs"], r["seconds"]),
+                  flush=True)
+    for g in specs:
+        write_q(g, [r for r in results if r["label"] == graph_label(g)], a.out, a.strategies, a.p)
     print("total {:.0f}s".format(time.time() - t0))
 
 

@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GFF live</title>
+<!-- Plays the acts of async_sim.py's runs, made by live.py (on demand, or in
+     live-data.js, generated) on the grid: following (GDO-L:1) and delivery with
+     one contract's act: shortening (GFF-PS:1), redundant following (GFF-FR:1)
+     or redundant following with the back-channel (GFF-FR-BC:1). -->
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --line: #2a78d6; --intro: #eb6834; --critical: #d03b3b;
+  --ramp: #86b6ef,#6da7ec,#5598e7,#3987e5,#2a78d6,#256abf,#1c5cab,#184f95,#104281,#0d366b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --line: #3987e5; --intro: #d95926; --critical: #d03b3b;
+    --ramp: #184f95,#1c5cab,#256abf,#2a78d6,#3987e5,#5598e7,#6da7ec,#86b6ef,#9ec5f4,#cde2fb;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --line: #3987e5; --intro: #d95926; --critical: #d03b3b;
+  --ramp: #184f95,#1c5cab,#256abf,#2a78d6,#3987e5,#5598e7,#6da7ec,#86b6ef,#9ec5f4,#cde2fb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
+h1 { font-size: 20px; margin: 0 0 2px; }
+.sub { color: var(--ink2); margin: 0 0 14px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.controls label { color: var(--ink2); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+select, button { font: inherit; color: var(--ink); background: var(--page);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+button { cursor: pointer; min-width: 34px; }
+button.primary { background: var(--ink); color: var(--surface); min-width: 70px; }
+.scrub { display: flex; gap: 10px; align-items: center; width: 100%; }
+.scrub input { flex: 1; }
+.num { font-variant-numeric: tabular-nums; color: var(--ink2); font-size: 13px; white-space: nowrap; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; margin-top: 14px; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.stage { position: relative; }
+canvas#grid { width: 100%; aspect-ratio: 1 / 1; display: block; border-radius: 6px;
+  touch-action: none; cursor: grab; }
+canvas#grid.dragging { cursor: grabbing; }
+.zoombar { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.zoombar button { background: var(--surface); padding: 2px 6px; font-size: 13px; }
+.zoombar .num { text-align: center; background: var(--surface); border-radius: 4px; }
+.world { margin-bottom: 10px; }
+.world input[type=number] { width: 76px; }
+.world input[type=text] { width: 150px; }
+.world input { font: inherit; color: var(--ink); background: var(--page);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+.world input:disabled, .world button:disabled { opacity: 0.5; }
+.world .status { color: var(--ink2); font-size: 13px; }
+.world .status.err { color: var(--critical); }
+.world .wtitle { font-weight: 600; font-size: 13px; }
+.params { margin-top: 16px; }
+.params h3 { font-size: 14px; margin: 14px 0 6px; }
+.params h3:first-of-type { margin-top: 2px; }
+.params dl { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 6px 14px; margin: 0; }
+@media (max-width: 640px) { .params dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } .params dd { margin-bottom: 8px; } }
+.params dt { font-weight: 600; }
+.params dd { margin: 0; color: var(--ink2); }
+.params dd b { color: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; color: var(--ink2); font-size: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.ln { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
+.ramp { width: 90px; height: 10px; border-radius: 3px; display: inline-block; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.tile .k { color: var(--ink2); font-size: 12px; }
+.tile .v { font-size: 20px; font-weight: 600; }
+.tile .d { color: var(--muted); font-size: 12px; }
+h2 { font-size: 13px; color: var(--ink2); font-weight: 600; margin: 14px 0 6px; }
+#chart { width: 100%; height: 150px; display: block; cursor: pointer; }
+#log { list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--ink2); min-height: 108px; }
+#log li { padding: 2px 0; border-bottom: 1px solid var(--grid); }
+#log li:first-child { color: var(--ink); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: none; white-space: nowrap; z-index: 2; }
+.chartwrap { position: relative; }
+.phase { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px;
+  border: 1px solid var(--border); color: var(--ink2); }
+.help { color: var(--ink2); font-size: 13px; margin-top: 16px; max-width: 900px; }
+.help p { margin: 6px 0; }
+.empty { padding: 40px; text-align: center; color: var(--ink2); }
+code { font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GFF live</h1>
+  <p class="sub" id="sub">Following through friends (GDO-L:1) and one act that improves the paths, by contract: GFF-PS, GFF-FR or GFF-FR-BC, act by act in continuous time.</p>
+  <div id="app"></div>
+</div>
+<script src="live-data.js"></script>
+<script>
+"use strict";
+let D = window.GFF_LIVE;
+const SERVER = !!window.GFF_SERVER;
+const app = document.getElementById("app");
+if (!D) {
+  app.innerHTML = '<div class="card empty">No data. Run <code>python3 live.py --serve --open</code> in this folder (or <code>python3 live.py</code>, then reload).</div>';
+  throw new Error("no live-data.js");
+}
+app.innerHTML = `
+  <div class="controls world">
+    <span class="wtitle">World</span>
+    <label title="Grid side: n × n people">n <input id="wn" type="number" min="5" max="200" step="1"></label>
+    <label title="Long-range friendships each person makes">q <input id="wq" type="number" min="0" max="12" step="1"></label>
+    <label title="Starts the random draw of the whole world">seed <input id="wseed" type="number" min="0" step="1"></label>
+    <label title="Up to 4 numbers of deciders; for each, the author whose k is nearest is shown">k <input id="wk" type="text" placeholder="9000, 3000, 2300"></label>
+    <label title="Give each of these authors exactly this many deciders, instead of the nearest drawn one"><input id="wexact" type="checkbox"> exact k</label>
+    <button id="wrun" class="primary">Run</button>
+    <span class="status" id="wstatus"></span>
+  </div>
+  <div class="controls">
+    <label title="Whose feed: the author's grid position and how many people want to follow them">Author <select id="author"></select></label>
+    <label title="Which friend a decider points to, among friends who already have a pointer for this feed">Strategy <select id="strategy"></select></label>
+    <label title="The contract, and with it the act that improves the paths">Contract <select id="then"><option value="ps">GFF-PS: shortening</option><option value="fr">GFF-FR: redundant following</option><option value="bc">GFF-FR-BC: redundant following + back-channel</option><option value="bcps">prototype: GFF-FR-BC + GFF-PS shortening</option><option value="bcpsg">prototype: GFF-FR-BC + GFF-PS, guarded</option></select></label>
+    <label title="GFF-FR and GFF-FR-BC: how many pointers each follower keeps for the feed">d <select id="dsel"></select></label>
+    <label title="GFF-PS: the probability that each introduction it needs is accepted">Introductions taken, p <select id="p"></select></label>
+    <label title="The share of time each machine (all but the author's) is down">Machines down <select id="down"></select></label>
+    <label title="A hop takes 1 + jitter × U(0, 1) time units">Jitter <select id="jitter"></select></label>
+    <span>
+      <button id="reset" title="Back to the start">&#x23EE;</button>
+      <button id="back" title="One act back (left arrow)">&#x25C0;</button>
+      <button id="play" class="primary" title="Play / pause (space)">Play</button>
+      <button id="fwd" title="One act forward (right arrow)">&#x25B6;</button>
+    </span>
+    <label title="Playback only: acts per second; it does not change the outcome">Speed <input id="speed" type="range" min="0" max="100" value="50"> <span class="num" id="speedv"></span></label>
+    <div class="scrub"><span class="phase" id="phase"></span><input id="pos" type="range" min="0" value="0"><span class="num" id="posv"></span></div>
+  </div>
+  <div class="layout">
+    <div class="card stage">
+      <canvas id="grid"></canvas>
+      <div class="zoombar">
+        <button id="zin" title="Zoom in (+). Also: mouse wheel, double-click, pinch">+</button>
+        <button id="zout" title="Zoom out (−). Also: shift-double-click">−</button>
+        <span class="num" id="zoomv">1×</span>
+        <button id="zfit" title="Whole grid (0)">Fit</button>
+        <button id="zauthor" title="Centre on the author (a)">Author</button>
+      </div>
+      <div class="tip" id="gtip"></div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--ink);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--ink)"></i>author</span>
+        <span>path length <i class="ramp" id="rampsw"></i> <span class="num" id="rampv"></span></span>
+        <span><i class="sw" style="border:1.5px solid var(--ink2)"></i>waiting decider</span>
+        <span><i class="sw" style="background:var(--muted);width:5px;height:5px"></i>not yet decided</span>
+        <span><i class="ln" style="border-color:var(--ink2)"></i>pointer to a friend</span>
+        <span><i class="ln" style="border-color:var(--intro)"></i>pointer after introductions</span>
+        <span><i class="sw" style="border:2px solid var(--critical)"></i>introduction refused</span>
+        <span><i class="ln" style="border-color:var(--muted);border-top-style:dashed"></i>redundant pointer (GFF-FR)</span>
+        <span><i class="sw" style="background:var(--axis);box-shadow:0 0 0 1.5px var(--ink2)"></i>machine down</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tiles" id="tiles"></div>
+      <h2>Mean path length of deciders who follow</h2>
+      <div class="chartwrap"><svg id="chart"></svg><div class="tip" id="ctip"></div></div>
+      <h2>Latest acts</h2>
+      <ul id="log"></ul>
+    </div>
+  </div>
+  <div class="card params">
+    <h3>Chosen on this page</h3>
+    <dl>
+      <dt>Author</dt>
+      <dd>Whose feed is shown, as the author's grid position (row, column) and <b>k</b>, how many people want to follow them (the deciders). It controls how dense the deciders are on the grid, k out of <span class="vN"></span> people, and that decides whether following spreads. A decider can only follow through a friend who already follows, so with few deciders the chains die out and most of them wait for ever; past a certain density they spread to nearly everyone.</dd>
+      <dt>Strategy</dt>
+      <dd>Which friend a decider points to, when several friends already have a pointer for this feed. The contract (GDO-L:1) leaves this open. <b>random</b>: any of them, uniformly. <b>first</b>: the first in the decider's friend list (grid neighbours before long-range friends). It controls the <i>length</i> of the paths the first following makes, not <i>who</i> follows. (The oracle <b>shortest</b> of <code>paths.py</code>'s tables isn't offered: no one's state holds path lengths.)</dd>
+      <dt>Contract</dt>
+      <dd>Every run has the first following (GDO-L:1) and delivery (GFF-I:2): each follower receives every item from whoever it points to, the first copy taken. Each contract adds one act that improves the paths, which no one chooses: the machines take it whenever it is enabled. <b>GFF-PS</b> (GFF-PS:1, shortening): a follower moves its pointer one step up its chain, to its target's target, which may need introductions; each follower is examined about <span class="vashort"></span> times per item period. The pointers stay a tree, each follower with one. <b>GFF-FR</b> (GFF-FR:1, redundant following): every follower keeps up to <b>d</b> pointers for the feed, adding them to friends who follow, so each item arrives along whichever of its paths is fastest and a failed friend doesn't cut it off. The clause excludes no one, so the author's friends add them too. <b>GFF-FR-BC</b> (GFF-FR-BC:1, the back-channel) adds to GFF-FR: a follower who gets an item first from one of its pointers forwards it to the others it points to, so a slow or broken branch catches up through its neighbour. No contract combines redundancy with shortening. Each pointer costs one copy of every item. <b>The two prototypes</b> (<code>combo_sim.py</code>, served only) do: GFF-FR-BC with GFF-PS:1's shortening, which moves one of a follower's pointers from Bob to one of Bob's own. Unguarded, it can close a loop of followers who point only at one another, drawn red; the guarded one shortens only to the one Bob received an item from, which leaves far fewer such loops, but not none.</dd>
+      <dt>Time</dt>
+      <dd>No phases and no rounds: every act happens at its own moment. Deciders decide at random times over the first <span class="vadecide"></span> time units, the author posts an item every <span class="vaperiod"></span>, and a run lasts <span class="vaend"></span> time units.</dd>
+      <dt>d</dt>
+      <dd>GFF-FR and GFF-FR-BC: the most pointers a follower keeps for the feed.</dd>
+      <dt>Introductions taken, p</dt>
+      <dd>GFF-PS: the probability that each introduction is accepted. To shorten, a follower Alice who points to Bob moves to Bob's own target Carol, but only if Alice and Carol know each other. Friends already do. Otherwise Bob must introduce Carol to Alice (Bob and Alice must agree) and Alice to Carol (Bob and Carol must agree). Each of these two is taken with probability p, independently, and once refused it's never asked again. It controls how much shortening happens: <b>p = 0</b>, only through friends; <b>p = 1</b>, everyone accepts, and every follower ends up pointing straight at the author.</dd>
+      <dt>Machines down</dt>
+      <dd>Each machine except the author's is down this share of the time, for random stretches of <span class="vadownmean"></span> item periods on average. A machine that is down takes nothing and sends nothing; when it comes back, it receives what it missed from everyone it points to and sends what they missed to everyone pointing to it. Drawn in grey.</dd>
+      <dt>Jitter</dt>
+      <dd>Each hop takes 1 + jitter × U(0, 1) time units, drawn afresh per copy. <b>0</b>: every hop takes the same time. Larger jitter spreads the times items take, which mostly matters to GFF-FR and GFF-FR-BC, whose copies race along several paths.</dd>
+      <dt>Speed</dt>
+      <dd>Acts played per second. Playback only; it doesn't change any result.</dd>
+      <dt>Timeline (act)</dt>
+      <dd>One act is one step of the run, in time order: the author posting an item; a decider following through a friend, or starting to wait; a follower shortening, or an introduction being refused (GFF-PS); a follower adding a redundant pointer (GFF-FR, GFF-FR-BC); a machine going down or coming back up. Deliveries aren't shown one by one. Drag it, click the chart, or step with the arrow keys.</dd>
+      <dt>Zoom and pan</dt>
+      <dd>Wheel or pinch to zoom at the pointer, drag to pan, double-click to zoom in (shift-double-click to zoom out), or the buttons on the grid: + − (keys + and −), Fit (0), Author (a). From about 20× each follower's path length is written under it.</dd>
+    </dl>
+    <h3 id="worldhead"></h3>
+    <dl>
+      <dt>n = <span class="vn"></span></dt>
+      <dd>The grid side: <span class="vN"></span> people on an <span class="vn"></span>&times;<span class="vn"></span> grid. Each is friends with their grid neighbours (four, or fewer at an edge). It controls the size of the world: distances, and how many people a feed can reach.</dd>
+      <dt>q = <span class="vq"></span></dt>
+      <dd>Long-range friendships each person makes, to someone at grid distance d drawn with probability proportional to 1/d² (Kleinberg's small world). Friendship is mutual, so the mean number of friends here is <span class="vdeg"></span>. It controls the shortcuts: a larger q gives shorter graph distances and more friends per person, so following spreads with fewer deciders.</dd>
+      <dt>seed = <span class="vseed"></span></dt>
+      <dd>Starts the random draw of the friendships and each author's k and deciders, as in <code>tables/gff-ps-q<span class="vq"></span>.md</code> (with n = 100). The same n, q and seed give the same world. Each run (author, contract, strategy, p or d, jitter, machines down) then has a random draw of its own.</dd>
+      <dt>k</dt>
+      <dd>Every author's number of deciders is drawn from a power law, P(k) proportional to 1/k², so most authors are small and a few are huge; the deciders are then drawn uniformly from everyone else. The k you give are targets: for each, the author whose drawn k is nearest is offered in the Author menu, so k picks <i>which</i> authors you see without changing the world. Large k are rare, so the nearest one may be far off. <b>exact k</b> instead gives each of those authors exactly that many deciders, drawn afresh, so you can move k in small steps (say across the threshold where following starts to spread). Everything else stays the same, but that author is no longer the tables' draw.</dd>
+      <dt>Strategies, p, jitter values</dt>
+      <dd>Which of the above the menus offer (<code>live.py --strategies</code>, <code>--p</code>, <code>--jitter</code>). Opened without the server, the page has only the runs <code>live-data.js</code> holds (<code>--file-jitter</code>, <code>--file-down</code>).</dd>
+    </dl>
+    <h3>What the readouts mean</h3>
+    <dl>
+      <dt>Deciders following</dt>
+      <dd>Deciders who have a pointer for this feed, so they receive it. The author's friends follow from the start, through their friend pointers. <b>Waiting</b>: decided, but no friend has a pointer yet.</dd>
+      <dt>Path length</dt>
+      <dd>How many hops a post takes from the author to a follower along the pointers (1 = directly from the author), the shortest along all its pointers. The colour of each dot. The tile and the chart show the mean over the deciders who follow, and the maximum. <b>Graph distance</b> (dashed line) is the mean shortest distance in the friendship graph for the same deciders. A path shorter than that is only possible through introductions. <b>Best tree</b> (long dashes) is the mean path in the shortest-path tree through the followers alone (the author, the author's friends and the deciders who follow): the best pointers between friends who follow can do.</dd>
+      <dt>Pointing to the author</dt>
+      <dd>How many people receive the feed straight from the author's own machine: the author's load. It starts at the author's friends, and grows as followers shorten onto the author.</dd>
+      <dt>Shortenings</dt>
+      <dd>GFF-PS: how many times a follower moved its pointer one step closer to the author. Also how many introductions were taken, and how many refused.</dd>
+      <dt>Redundant pointers</dt>
+      <dd>GFF-FR and GFF-FR-BC: how many pointers followers have added beyond their first.</dd>
+      <dt>Pointer colours</dt>
+      <dd>Grey: to a friend. Orange: to someone known only through introductions. Dashed grey: a redundant pointer. Rings: the latest acts (red: a refused introduction or a machine going down). A follower drawn red has no chain of pointers to the author; the contracts' acts keep everyone connected, so none should appear, except under the prototypes.</dd>
+    </dl>
+  </div>`;
+
+const $ = id => document.getElementById(id);
+let n = D.n, N = n * n;
+const pos2 = x => `(${Math.floor(x / n)}, ${x % n})`;
+const fmt = (x, d = 1) => (x == null || isNaN(x)) ? "–" : x.toFixed(d);
+
+// ---------- the model's state, rebuilt by replaying events ----------
+class State {
+  constructor() { this.size = 0; this.tick = 0; }
+  load(A) {
+    if (this.size !== N) {
+      this.size = N;
+      this.parent = new Int32Array(N); this.waiting = new Uint8Array(N);
+      this.intro = new Uint8Array(N); this.decider = new Uint8Array(N);
+      this.depth = new Int32Array(N); this.extra = new Array(N); this.down = new Uint8Array(N);
+      this.head = new Int32Array(N); this.nxt = new Int32Array(2 * N); this.src = new Int32Array(2 * N); this.queue = new Int32Array(N);
+      this.bfs = -1;
+    }
+    this.A = A; this.decider.fill(0);
+    for (const f of A.deciders) this.decider[f] = 1;
+    this.reset();
+  }
+  reset() {
+    const A = this.A;
+    this.parent.fill(-1); this.waiting.fill(0); this.intro.fill(0);
+    for (const f of A.friends) this.parent[f] = A.b;   // friend pointers
+    this.pos = 0; this.shortens = 0; this.intros = 0; this.refusals = 0;
+    this.items = 0; this.redundant = 0;
+    this.extra.fill(null); this.down.fill(0);
+    this.recent = []; this.flash = [];
+  }
+  apply(e, describe) {
+    const t = e[0], a = e[1];
+    let text = null, ring = t === "r" ? 1 : 0;
+    if (t === "f") {
+      this.parent[a] = e[2]; this.waiting[a] = 0; this.intro[a] = 0;
+      if (describe) text = `${pos2(a)} ${e[3] ? "stops waiting and " : ""}follows through friend ${this.who(e[2])}`;
+    } else if (t === "w") {
+      this.waiting[a] = 1;
+      if (describe) text = `${pos2(a)} decides to follow, but no friend has a pointer yet: waits`;
+    } else if (t === "s") {
+      const bob = e.length > 5 ? e[5] : this.parent[a];   // the prototypes name the pointer replaced
+      const ex = this.extra[a], i = ex && bob !== this.parent[a] ? ex.indexOf(bob) : -1;
+      if (i >= 0) { this.extra[a] = ex.slice(); this.extra[a][i] = e[2]; }
+      else { this.parent[a] = e[2]; this.intro[a] = e[4] ? 0 : 1; }
+      this.shortens++; this.intros += e[3];
+      if (describe) text = `${pos2(a)} shortens: from ${this.who(bob)} to ${this.who(e[2])}` +
+        (e[4] ? " (a friend)" : e[3] ? ` after ${e[3]} introduction${e[3] > 1 ? "s" : ""}` : " (already known)");
+    } else if (t === "r") {
+      this.refusals++; this.intros += e[3];
+      if (describe) text = `introduction refused: ${pos2(a)} stays with ${this.who(this.parent[a])}, not ${this.who(e[2])}`;
+    } else if (t === "i") {
+      this.items = a;
+      if (describe) text = `the author posts item ${a}`;
+    } else if (t === "a") {
+      (this.extra[a] = this.extra[a] || []).push(e[2]); this.redundant++;
+      if (describe) text = `${pos2(a)} adds a redundant pointer to ${this.who(e[2])} (GFF-FR)`;
+    } else if (t === "D") {
+      this.down[a] = 1; ring = 1;
+      if (describe) text = `${pos2(a)}'s machine goes down`;
+    } else if (t === "U") {
+      this.down[a] = 0;
+      if (describe) text = `${pos2(a)}'s machine comes back up and catches up`;
+    }
+    this.pos++;
+    if (describe) {
+      this.recent.unshift(text); if (this.recent.length > 6) this.recent.pop();
+      if (t !== "i") { this.flash.push([a, ring]); if (this.flash.length > 40) this.flash.shift(); }
+    }
+  }
+  who(x) { return x === this.A.b ? "the author" : pos2(x); }
+  ensureDepths() {   // path lengths along all pointers, by BFS from the author, once per tick
+    if (this.bfs === this.tick) return;
+    this.bfs = this.tick;
+    const head = this.head, depth = this.depth, qu = this.queue;
+    let edges = 0;
+    for (let x = 0; x < N; x++) edges += 1 + (this.extra[x] ? this.extra[x].length : 0);
+    if (edges > this.nxt.length) { this.nxt = new Int32Array(edges); this.src = new Int32Array(edges); }
+    const nx = this.nxt, sr = this.src;
+    head.fill(-1); depth.fill(-1);
+    let m = 0;
+    const link = (x, y) => { sr[m] = x; nx[m] = head[y]; head[y] = m++; };
+    for (let x = 0; x < N; x++) {
+      const p = this.parent[x], ex = this.extra[x];
+      if (p >= 0) link(x, p);
+      if (ex) for (const y of ex) link(x, y);
+    }
+    const b = this.A.b;
+    depth[b] = 0;
+    let qh = 0, qt = 0; qu[qt++] = b;
+    while (qh < qt) {
+      const y = qu[qh++];
+      for (let e = head[y]; e >= 0; e = nx[e]) { const x = sr[e]; if (depth[x] < 0) { depth[x] = depth[y] + 1; qu[qt++] = x; } }
+    }
+  }
+  depthOf(x) { this.ensureDepths(); return this.depth[x]; }   // -1: cut off, no chain of pointers to the author
+  stats() {
+    this.tick++;
+    const b = this.A.b;
+    let fol = 0, sum = 0, max = 0, wait = 0, fanin = 0, holders = 0, cut = 0, down = 0;
+    for (let x = 0; x < N; x++) {
+      const p = this.parent[x];
+      if (p >= 0) {
+        holders++; if (p === b) fanin++;
+        if (this.extra[x]) for (const y of this.extra[x]) if (y === b) fanin++;
+        if (this.down[x]) down++;
+        if (this.decider[x]) { const d = this.depthOf(x); fol++; if (d < 0) cut++; else { sum += d; if (d > max) max = d; } }
+      } else if (this.waiting[x]) wait++;
+    }
+    return { fol, mean: fol > cut ? sum / (fol - cut) : NaN, max, wait, fanin, holders, cut, down };
+  }
+}
+
+// ---------- selection ----------
+const S = new State(), P = new State();   // S: shown; P: for the chart's pre-pass
+let A, timeline, series, dmax, playing = false, acc = 0, eps = 100;
+
+function fillSelect(id, values, label, keep, dflt) {   // a menu of values, keeping the choice if offered
+  const sel = $(id); sel.innerHTML = "";
+  for (const v of values) sel.add(new Option(label ? label(v) : String(v), String(v)));
+  const vs = values.map(String);
+  sel.value = vs.includes(keep) ? keep : vs.includes(String(dflt)) ? String(dflt) : vs[0];
+}
+function useData(newD) {
+  const keep = id => $(id).value;
+  const kS = keep("strategy"), kP = keep("p"), kJ = keep("jitter"), kD = keep("dsel"), kW = keep("down");
+  D = newD; n = D.n; N = n * n;
+  $("author").innerHTML = "";
+  for (const [i, a] of D.authors.entries())
+    $("author").add(new Option(`${pos2(a.b)}: ${a.k.toLocaleString()} deciders${a.exact ? " (set)" : ""}`, i));
+  fillSelect("strategy", D.strategies, null, kS);
+  fillSelect("p", D.ps, null, kP, D.ps[Math.min(2, D.ps.length - 1)]);
+  fillSelect("jitter", D.jitters, null, kJ, 1);
+  fillSelect("dsel", D.ds, null, kD);
+  fillSelect("down", D.downs, v => `${Math.round(v * 100)}%`, kW, 0);
+  $("sub").textContent = `Following through friends (GDO-L:1) and one act that improves the paths, by contract: GFF-PS, GFF-FR or GFF-FR-BC, act by act in continuous time. ` +
+    `${n}×${n} grid, q = ${D.q}, seed ${D.seed}, mean degree ${D.mean_degree.toFixed(2)}.`;
+  const put = (cls, v) => document.querySelectorAll("." + cls).forEach(e => e.textContent = v);
+  const AS = D.async_params || {};
+  put("vadecide", AS.decide ?? "–"); put("vaperiod", AS.period ?? "–"); put("vaend", AS.end ?? "–");
+  put("vashort", AS.shorten_rate ?? "–"); put("vadownmean", AS.down_mean ?? "–");
+  put("vn", n); put("vN", N.toLocaleString()); put("vq", D.q); put("vseed", D.seed); put("vdeg", D.mean_degree.toFixed(2));
+  $("wn").value = n; $("wq").value = D.q; $("wseed").value = D.seed;
+  $("wk").value = (D.targets && D.targets.length ? D.targets : D.authors.map(a => a.k)).join(", ");
+  $("wexact").checked = !!D.exact;
+  view.z = 1; view.ox = 0; view.oy = 0;
+}
+
+// ---------- the world: n, q, seed, k, rerun by the server ----------
+$("worldhead").innerHTML = SERVER
+  ? "The world (set in the World row at the top; Run reruns the model)"
+  : "The world (set when <code>live-data.js</code> is generated; to set them here, start <code>python3 live.py --serve --open</code>)";
+if (!SERVER) {
+  for (const id of ["wn", "wq", "wseed", "wk", "wexact", "wrun"]) $(id).disabled = true;
+  $("wstatus").textContent = "to change these here, start python3 live.py --serve";
+}
+async function runWorld() {
+  const st = $("wstatus"), btn = $("wrun");
+  const qs = new URLSearchParams({ n: $("wn").value, q: $("wq").value, seed: $("wseed").value,
+    k: $("wk").value, exact: $("wexact").checked ? "1" : "0" });
+  st.classList.remove("err"); st.textContent = "running…"; btn.disabled = true;
+  const t0 = performance.now();
+  try {
+    const r = await fetch("api/run?" + qs);
+    if (!r.ok) throw new Error(await r.text());
+    const nd = await r.json();
+    const keepA = $("author").value;
+    useData(nd);
+    if (+keepA < D.authors.length) $("author").value = keepA;
+    select(); speedLabel(); resize(); drawChart();
+    st.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+  } catch (e) {
+    st.classList.add("err"); st.textContent = e.message;
+  } finally { btn.disabled = false; }
+}
+$("wrun").addEventListener("click", runWorld);
+for (const id of ["wn", "wq", "wseed", "wk"]) $(id).addEventListener("keydown", ev => { if (ev.key === "Enter") runWorld(); });
+
+const CONTRACT = { ps: "GFF-PS", fr: "GFF-FR", bc: "GFF-FR-BC", bcps: "prototype GFF-FR-BC + GFF-PS", bcpsg: "prototype GFF-FR-BC + GFF-PS, guarded" };
+const usesP = kind => kind === "ps" || kind === "bcps" || kind === "bcpsg";
+let pending = null;
+const keyOf = (kind, s, j, p, d, down) => `${kind}/${s}/${j}/${usesP(kind) ? p : "0"}/${kind === "ps" ? "2" : d}/${down}`;
+async function fetchRun(A0, key) {   // the server runs async_sim on demand; key: kind/strategy/jitter/p/d/down
+  const id = `${D.authors.indexOf(A0)}/${key}`;
+  if (pending === id) return;
+  pending = id;
+  const [kind, s, j, p, d, down] = key.split("/");
+  const qs = new URLSearchParams({ n: D.n, q: D.q, seed: D.seed, k: (D.targets || []).join(","), exact: D.exact ? "1" : "0",
+    author: D.authors.indexOf(A0), strategy: s, jitter: j, p, kind, d, down });
+  const st = $("wstatus");
+  st.classList.remove("err"); st.textContent = "running…";
+  try {
+    const r = await fetch("api/async?" + qs);
+    if (!r.ok) throw new Error(await r.text());
+    A0.async[key] = await r.json();
+    st.textContent = "";
+    if (A === A0) { select(); speedLabel(); }
+  } catch (e) { st.classList.add("err"); st.textContent = e.message; }
+  finally { if (pending === id) pending = null; }
+}
+
+let missing = "";
+function select() {
+  A = D.authors[+$("author").value];
+  const mode = $("then").value;
+  $("p").disabled = !usesP(mode); $("dsel").disabled = mode === "ps";
+  const key = keyOf(mode, $("strategy").value, String(+$("jitter").value), String(+$("p").value), $("dsel").value,
+                    String(+$("down").value));
+  const ev = A.async[key];
+  missing = "";
+  if (!ev) {
+    if (SERVER) { fetchRun(A, key); missing = "waiting for the server…"; }
+    else missing = "this run isn't in live-data.js: start python3 live.py --serve, or write it with --file-jitter and --file-down";
+  }
+  timeline = ev || [];
+  // pre-pass: the chart's series and the colour scale's top
+  P.load(A);
+  const step = Math.max(1, Math.ceil(timeline.length / 500));
+  series = []; dmax = 1;
+  const push = () => { const st = P.stats(); series.push([P.pos, st.mean]); if (st.max > dmax) dmax = st.max; };
+  push();
+  for (let i = 0; i < timeline.length; i++) {
+    P.apply(timeline[i], false);
+    if (P.pos % step === 0 || P.pos === timeline.length) push();
+  }
+  S.load(A);
+  $("pos").max = timeline.length;
+  eps = Math.max(5, timeline.length / 30);
+  $("speed").value = Math.round(Math.log10(eps) / 4.7 * 100);
+  setPlaying(false);
+  seek(0);
+  drawChart();
+}
+
+function seek(t) {
+  t = Math.max(0, Math.min(timeline.length, t));
+  if (t < S.pos) S.reset();
+  const keep = t - S.pos;
+  while (S.pos < t) S.apply(timeline[S.pos], t - S.pos <= 40 || keep <= 40);
+  acc = 0;
+  render();
+}
+
+// ---------- drawing the grid ----------
+const cv = $("grid"), ctx = cv.getContext("2d");
+let css, ramp, cell, size = 0;
+const view = { z: 1, ox: 0, oy: 0 };   // zoom, and the grid's offset in CSS pixels
+const ZMAX = 40;
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  css = k => cs.getPropertyValue(k).trim();
+  ramp = css("--ramp").split(",").map(x => x.trim());
+  $("rampsw").style.background = `linear-gradient(90deg, ${ramp.join(",")})`;
+}
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (size) { view.ox *= r.width / size; view.oy *= r.width / size; }   // keep the view on resize
+  size = r.width; cell = size / n;
+  cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  render();
+}
+const unit = () => cell * view.z;   // one grid cell on screen
+const cx = x => (x % n + 0.5) * unit() + view.ox, cy = x => (Math.floor(x / n) + 0.5) * unit() + view.oy;
+function bucket(d) { return Math.max(0, Math.min(ramp.length - 1, Math.floor((d - 1) / Math.max(1, dmax) * ramp.length))); }
+
+function render() {
+  if (!size || !A) return;
+  const st = S.stats(), b = A.b, U = unit();
+  ctx.fillStyle = css("--surface"); ctx.fillRect(0, 0, size, size);
+  // every person, as a faint dot (only those in view)
+  const c0 = Math.max(0, Math.floor(-view.ox / U)), c1 = Math.min(n - 1, Math.floor((size - view.ox) / U));
+  const r0 = Math.max(0, Math.floor(-view.oy / U)), r1 = Math.min(n - 1, Math.floor((size - view.oy) / U));
+  const ds = Math.max(1, Math.min(4, U * 0.16));
+  ctx.fillStyle = css("--grid"); ctx.beginPath();
+  for (let i = r0; i <= r1; i++) for (let j = c0; j <= c1; j++)
+    ctx.rect((j + 0.5) * U + view.ox - ds / 2, (i + 0.5) * U + view.oy - ds / 2, ds, ds);
+  ctx.fill();
+  const r = Math.max(1.4, Math.min(U * 0.36, 9));
+  // pointers
+  const lw = Math.max(0.6, Math.min(2, U * 0.14));
+  ctx.beginPath();
+  for (let x = 0; x < N; x++) {   // redundant pointers (GFF-FR), dashed grey
+    const ex = S.extra[x];
+    if (!ex) continue;
+    for (const y of ex) { ctx.moveTo(cx(x), cy(x)); ctx.lineTo(cx(y), cy(y)); }
+  }
+  ctx.setLineDash([2, 3]); ctx.strokeStyle = css("--muted"); ctx.globalAlpha = 0.6; ctx.lineWidth = lw; ctx.stroke(); ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  for (const [intro, col, alpha] of [[0, css("--ink2"), 0.45], [1, css("--intro"), 0.7]]) {
+    ctx.beginPath();
+    for (let x = 0; x < N; x++) {
+      const p = S.parent[x];
+      if (p < 0 || S.intro[x] !== intro) continue;
+      ctx.moveTo(cx(x), cy(x)); ctx.lineTo(cx(p), cy(p));
+    }
+    ctx.strokeStyle = col; ctx.globalAlpha = alpha; ctx.lineWidth = lw; ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // deciders not yet decided, and waiting
+  ctx.fillStyle = css("--muted"); ctx.beginPath();
+  const u = Math.max(1, r * 0.45);
+  for (const f of A.deciders) if (S.parent[f] < 0 && !S.waiting[f]) ctx.rect(cx(f) - u / 2, cy(f) - u / 2, u, u);
+  ctx.fill();
+  ctx.strokeStyle = css("--ink2"); ctx.lineWidth = 1; ctx.beginPath();
+  for (const f of A.deciders) if (S.waiting[f] && S.parent[f] < 0) { ctx.moveTo(cx(f) + r * 0.8, cy(f)); ctx.arc(cx(f), cy(f), r * 0.8, 0, 7); }
+  ctx.stroke();
+  // followers, by path length
+  const paths = ramp.map(() => new Path2D()), cutp = new Path2D();
+  for (let x = 0; x < N; x++) {
+    if (S.parent[x] < 0) continue;
+    const d = S.depthOf(x), pth = d < 0 ? cutp : paths[bucket(d)];
+    pth.moveTo(cx(x) + r, cy(x)); pth.arc(cx(x), cy(x), r, 0, 7);
+  }
+  paths.forEach((p, i) => { ctx.fillStyle = ramp[i]; ctx.fill(p); });
+  ctx.fillStyle = css("--critical"); ctx.fill(cutp);
+  const downp = new Path2D();   // machines that are down
+  for (let x = 0; x < N; x++) if (S.down[x]) { downp.moveTo(cx(x) + r, cy(x)); downp.arc(cx(x), cy(x), r, 0, 7); }
+  ctx.fillStyle = css("--axis"); ctx.fill(downp); ctx.strokeStyle = css("--ink2"); ctx.lineWidth = 1; ctx.stroke(downp);
+  // path lengths written in, when zoomed in far enough to read them
+  if (U >= 22) {
+    ctx.font = `${Math.min(12, U * 0.3)}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = css("--ink2");
+    for (let x = 0; x < N; x++) {
+      if (S.parent[x] < 0) continue;
+      const X = cx(x), Y = cy(x);
+      if (X < -U || Y < -U || X > size + U || Y > size + U) continue;
+      const d = S.depthOf(x);
+      ctx.fillText(d < 0 ? "×" : d, X, Y + r + 2);
+    }
+  }
+  // the latest acts
+  const fl = S.flash.slice(-Math.max(1, Math.min(40, Math.round(eps / 20))));
+  for (const [x, bad] of fl) {
+    ctx.beginPath(); ctx.arc(cx(x), cy(x), r + Math.max(3, r * 0.8), 0, 7);
+    ctx.strokeStyle = bad === 1 ? css("--critical") : css("--ink"); ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  // the author
+  const ra = Math.max(4, r + 4);
+  ctx.beginPath(); ctx.arc(cx(b), cy(b), ra, 0, 7);
+  ctx.fillStyle = css("--ink"); ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = css("--surface"); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx(b), cy(b), ra + 2.5, 0, 7);
+  ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1; ctx.stroke();
+  $("zoomv").textContent = `${view.z < 10 ? view.z.toFixed(1) : Math.round(view.z)}×`;
+  panel(st);
+}
+
+// ---------- zoom and pan ----------
+function clampView() {
+  view.z = Math.max(1, Math.min(ZMAX, view.z));
+  view.ox = Math.min(0, Math.max(size - size * view.z, view.ox));
+  view.oy = Math.min(0, Math.max(size - size * view.z, view.oy));
+}
+function zoomAt(mx, my, f) {   // zoom by f, keeping the point under (mx, my) still
+  const z2 = Math.max(1, Math.min(ZMAX, view.z * f)), k = z2 / view.z;
+  view.ox = mx - (mx - view.ox) * k; view.oy = my - (my - view.oy) * k; view.z = z2;
+  clampView(); render();
+}
+function centreOn(x, z) {
+  view.z = Math.max(view.z, z);
+  view.ox = size / 2 - (x % n + 0.5) * unit(); view.oy = size / 2 - (Math.floor(x / n) + 0.5) * unit();
+  clampView(); render();
+}
+function fit() { view.z = 1; view.ox = 0; view.oy = 0; render(); }
+const local = ev => { const r = cv.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
+cv.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const [mx, my] = local(ev);
+  zoomAt(mx, my, Math.exp(-ev.deltaY * (ev.deltaMode === 1 ? 0.05 : 0.002)));
+}, { passive: false });
+cv.addEventListener("dblclick", ev => { const [mx, my] = local(ev); zoomAt(mx, my, ev.shiftKey ? 0.5 : 2); });
+const pointers = new Map();
+let pinch = null;
+cv.addEventListener("pointerdown", ev => {
+  cv.setPointerCapture(ev.pointerId); pointers.set(ev.pointerId, local(ev));
+  cv.classList.add("dragging"); $("gtip").style.display = "none";
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), m: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] };
+  }
+});
+cv.addEventListener("pointermove", ev => {
+  const [mx, my] = local(ev);
+  if (!pointers.has(ev.pointerId)) { hover(mx, my); return; }
+  const [px, py] = pointers.get(ev.pointerId);
+  pointers.set(ev.pointerId, [mx, my]);
+  if (pointers.size === 1) { view.ox += mx - px; view.oy += my - py; clampView(); render(); }
+  else if (pointers.size === 2 && pinch) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    view.ox += m[0] - pinch.m[0]; view.oy += m[1] - pinch.m[1];
+    zoomAt(m[0], m[1], d / Math.max(1, pinch.d));
+    pinch = { d, m };
+  }
+});
+const up = ev => { pointers.delete(ev.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) cv.classList.remove("dragging"); };
+cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+$("zin").addEventListener("click", () => zoomAt(size / 2, size / 2, 1.6));
+$("zout").addEventListener("click", () => zoomAt(size / 2, size / 2, 1 / 1.6));
+$("zfit").addEventListener("click", fit);
+$("zauthor").addEventListener("click", () => centreOn(A.b, 6));
+
+// ---------- the side panel ----------
+const meanOf = xs => xs && xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : NaN;
+const gdMean = A0 => meanOf(A0.graph_distance), btMean = A0 => meanOf(A0.best_tree);
+function tile(k, v, d) { return `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d || "&nbsp;"}</div></div>`; }
+function panel(st) {
+  const mode = $("then").value;
+  $("phase").textContent = missing || `${CONTRACT[mode]} · item ${S.items}`;
+  $("pos").value = S.pos;
+  $("posv").textContent = `act ${S.pos.toLocaleString()} / ${timeline.length.toLocaleString()}`;
+  $("rampv").textContent = `1 … ${dmax}`;
+  const tail = `item ${S.items}; ${st.down.toLocaleString()} machines down` + (st.cut ? `; <b>${st.cut.toLocaleString()} cut off</b>` : "");
+  $("tiles").innerHTML =
+    tile("Deciders following", st.fol.toLocaleString(), `of ${A.k.toLocaleString()}; ${st.wait.toLocaleString()} waiting`) +
+    tile("Mean path length", fmt(st.mean), `max ${st.max}; best tree ${fmt(btMean(A))}; graph distance ${fmt(gdMean(A))}`) +
+    tile("Pointing to the author", st.fanin.toLocaleString(), `${A.friends.length} of them friends at the start`) +
+    (mode === "ps"
+      ? tile("Shortenings", S.shortens.toLocaleString(), `introductions ${S.intros.toLocaleString()}, refused ${S.refusals.toLocaleString()}; ${tail}`)
+      : usesP(mode)
+      ? tile("Shortenings", S.shortens.toLocaleString(), `redundant pointers ${S.redundant.toLocaleString()}; introductions ${S.intros.toLocaleString()}, refused ${S.refusals.toLocaleString()}; ${tail}`)
+      : tile("Redundant pointers", S.redundant.toLocaleString(), tail));
+  $("log").innerHTML = S.recent.map(t => `<li>${t}</li>`).join("");
+  chartCursor();
+}
+
+// ---------- the chart: mean path length over the acts ----------
+const svg = $("chart"), NS = "http://www.w3.org/2000/svg";
+let cw, ch, xs, ys, cursorEl;
+const M = { l: 32, r: 8, t: 8, b: 20 };
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+function drawChart() {
+  if (!series) return;
+  const r = svg.getBoundingClientRect(); cw = r.width; ch = r.height;
+  svg.setAttribute("viewBox", `0 0 ${cw} ${ch}`); svg.innerHTML = "";
+  const vals = series.map(s => s[1]).filter(v => !isNaN(v)).concat([gdMean(A), btMean(A)]).filter(v => !isNaN(v));
+  const top = Math.max(1, ...vals) * 1.08;
+  xs = x => M.l + x / Math.max(1, timeline.length) * (cw - M.l - M.r);
+  ys = y => ch - M.b - y / top * (ch - M.t - M.b);
+  const ticks = [0, top / 2, top].map(v => Math.round(v));
+  for (const t of ticks) {
+    el("line", { x1: M.l, x2: cw - M.r, y1: ys(t), y2: ys(t), stroke: "var(--grid)", "stroke-width": 1 });
+    const tx = el("text", { x: M.l - 6, y: ys(t) + 4, "text-anchor": "end", fill: "var(--muted)", "font-size": 11 }); tx.textContent = t;
+  }
+  el("line", { x1: M.l, x2: cw - M.r, y1: ys(0), y2: ys(0), stroke: "var(--axis)", "stroke-width": 1 });
+  const g = gdMean(A);
+  if (!isNaN(g)) {
+    el("line", { x1: M.l, x2: cw - M.r, y1: ys(g), y2: ys(g), stroke: "var(--muted)", "stroke-dasharray": "2 4", "stroke-width": 1 });
+    const tx = el("text", { x: cw - M.r, y: ys(g) - 4, "text-anchor": "end", fill: "var(--muted)", "font-size": 11 }); tx.textContent = "graph distance";
+  }
+  const bt = btMean(A);
+  if (!isNaN(bt) && Math.abs(ys(bt) - ys(g)) > 12) {
+    el("line", { x1: M.l, x2: cw - M.r, y1: ys(bt), y2: ys(bt), stroke: "var(--muted)", "stroke-dasharray": "6 3", "stroke-width": 1 });
+    const tx = el("text", { x: cw - M.r, y: ys(bt) - 4, "text-anchor": "end", fill: "var(--muted)", "font-size": 11 }); tx.textContent = "best tree through followers";
+  }
+  const pts = series.filter(s => !isNaN(s[1])).map(s => `${xs(s[0]).toFixed(1)},${ys(s[1]).toFixed(1)}`);
+  if (pts.length) el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--line)", "stroke-width": 2, "stroke-linejoin": "round" });
+  const t0 = el("text", { x: M.l, y: ch - 4, fill: "var(--muted)", "font-size": 11 }); t0.textContent = "acts";
+  cursorEl = el("line", { y1: M.t, y2: ch - M.b, stroke: "var(--ink)", "stroke-width": 1 });
+  chartCursor();
+}
+function chartCursor() { if (cursorEl) { const x = xs(S.pos); cursorEl.setAttribute("x1", x); cursorEl.setAttribute("x2", x); } }
+function chartAt(ev) {
+  const r = svg.getBoundingClientRect();
+  const t = Math.round((ev.clientX - r.left - M.l) / (cw - M.l - M.r) * timeline.length);
+  return Math.max(0, Math.min(timeline.length, t));
+}
+svg.addEventListener("mousemove", ev => {
+  const t = chartAt(ev); let best = series[0];
+  for (const s of series) if (Math.abs(s[0] - t) < Math.abs(best[0] - t)) best = s;
+  const tip = $("ctip"); tip.style.display = "block";
+  tip.innerHTML = `act ${best[0].toLocaleString()}<br>mean path <b>${fmt(best[1])}</b>`;
+  const r = svg.getBoundingClientRect();
+  tip.style.left = Math.min(r.width - 150, Math.max(0, ev.clientX - r.left + 10)) + "px"; tip.style.top = "0px";
+});
+svg.addEventListener("mouseleave", () => $("ctip").style.display = "none");
+svg.addEventListener("click", ev => { setPlaying(false); seek(chartAt(ev)); });
+
+// ---------- hovering a person ----------
+function hover(mx, my) {
+  const U = unit(), j = Math.floor((mx - view.ox) / U), i = Math.floor((my - view.oy) / U);
+  const tip = $("gtip");
+  if (i < 0 || j < 0 || i >= n || j >= n) { tip.style.display = "none"; return; }
+  const x = i * n + j, p = S.parent[x];
+  S.tick++;
+  const role = x === A.b ? "the author" : p >= 0 ? (S.decider[x] ? "decider, follows" : "friend of the author, follows")
+    : S.waiting[x] ? "decider, waiting" : S.decider[x] ? "decider, not yet decided" : "not involved";
+  let html = `<b>${pos2(x)}</b> ${role}${S.down[x] ? " · <b>machine down</b>" : ""}`;
+  if (p >= 0) {
+    const d = S.depthOf(x);
+    html += `<br>${d < 0 ? "cut off: no pointer path to the author" : "path length " + d}<br>points to ${S.who(p)}${S.intro[x] ? " (introduced)" : " (a friend)"}`;
+    if (S.extra[x]) html += `<br>also points to ${S.extra[x].map(y => S.who(y)).join(", ")}`;
+  }
+  tip.innerHTML = html; tip.style.display = "block";
+  tip.style.left = Math.min(size - 170, mx + 26) + "px";
+  tip.style.top = (my + 26) + "px";
+}
+cv.addEventListener("mouseleave", () => $("gtip").style.display = "none");
+
+// ---------- playing ----------
+function setPlaying(v) {
+  playing = v && S.pos < timeline.length; $("play").textContent = playing ? "Pause" : "Play"; last = null;
+}
+let last = null;
+function frame(now) {
+  if (playing) {
+    if (last != null) {
+      acc += eps * Math.min(0.1, (now - last) / 1000);
+      let k = Math.floor(acc); acc -= k;
+      if (k > 0) {
+        const end = Math.min(timeline.length, S.pos + k);
+        while (S.pos < end) S.apply(timeline[S.pos], end - S.pos <= 40);
+        if (S.pos >= timeline.length) setPlaying(false);
+        render();
+      }
+    }
+    last = now;
+  }
+  requestAnimationFrame(frame);
+}
+function speedLabel() { $("speedv").textContent = `${eps < 10 ? fmt(eps) : Math.round(eps).toLocaleString()} acts/s`; }
+$("speed").addEventListener("input", () => { eps = Math.pow(10, $("speed").value / 100 * 4.7); speedLabel(); });
+$("play").addEventListener("click", () => { if (!playing && S.pos >= timeline.length) seek(0); setPlaying(!playing); });
+$("fwd").addEventListener("click", () => { setPlaying(false); seek(S.pos + 1); });
+$("back").addEventListener("click", () => { setPlaying(false); seek(S.pos - 1); });
+$("reset").addEventListener("click", () => { setPlaying(false); seek(0); });
+$("pos").addEventListener("input", () => { setPlaying(false); seek(+$("pos").value); });
+for (const id of ["author", "strategy", "p", "then", "jitter", "dsel", "down"]) $(id).addEventListener("change", () => { select(); speedLabel(); });
+document.addEventListener("keydown", ev => {
+  if (ev.target.tagName === "SELECT" || ev.target.tagName === "INPUT") return;
+  if (ev.key === " ") { ev.preventDefault(); $("play").click(); }
+  else if (ev.key === "ArrowRight") $("fwd").click();
+  else if (ev.key === "ArrowLeft") $("back").click();
+  else if (ev.key === "+" || ev.key === "=") $("zin").click();
+  else if (ev.key === "-") $("zout").click();
+  else if (ev.key === "0") fit();
+  else if (ev.key === "a") $("zauthor").click();
+});
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readTheme(); resize(); drawChart(); });
+new ResizeObserver(() => { resize(); drawChart(); }).observe(cv);
+
+readTheme();
+useData(D);
+const Q = new URLSearchParams(location.search);
+if (Q.has("author")) $("author").value = Q.get("author");
+if (Q.has("strategy")) $("strategy").value = Q.get("strategy");
+if (Q.has("p")) $("p").value = String(+Q.get("p"));
+if (Q.has("then") && Q.get("then") in CONTRACT) $("then").value = Q.get("then");
+if (Q.has("d")) $("dsel").value = String(+Q.get("d"));
+if (Q.has("down")) $("down").value = String(+Q.get("down"));
+if (Q.has("jitter")) $("jitter").value = String(+Q.get("jitter"));
+select(); speedLabel(); resize();
+if (Q.has("t")) seek(+Q.get("t"));
+if (Q.get("play") === "1") setPlaying(true);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
