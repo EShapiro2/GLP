@@ -106,7 +106,7 @@ Future<Map<String, Object?>> post(Map body) async {
   final token = _hex(24);
   final id = _hex(3);
   final link = '$_site/api/feedback/verify?t=$token';
-  final sent = await _mail(email, 'Confirm your feedback to the Grassroots Project',
+  final sent = await _mail(email, 'Confirm your feedback to the Grassroots Sphere',
       'You, or someone who gave this address, wrote feedback on $_site:\n\n'
       '${_excerpt(text)}\n\n'
       'To post it, open this link within two days:\n\n$link\n\n'
@@ -191,7 +191,7 @@ Future<bool> _mail(String to, String subject, String body) async {
       allowInsecure: _env['SMTP_INSECURE'] == 'true',
       ignoreBadCertificate: false);
   final msg = m.Message()
-    ..from = m.Address(_from, 'The Grassroots Project')
+    ..from = m.Address(_from, 'The Grassroots Sphere')
     ..recipients.add(to)
     ..subject = subject
     ..text = body;
@@ -222,7 +222,7 @@ Future<bool> _mail(String to, String subject, String body) async {
 String _esc(String s) => s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
 String _page(String said, String? pr) => '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
-    '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Feedback · The Grassroots Project</title>'
+    '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Feedback · The Grassroots Sphere</title>'
     '<style>body{margin:0;background:#f5f5f7;color:#1d1d1f;font:18px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'
     'main{max-width:640px;margin:0 auto;padding:60px 20px}a{color:#0a7aff;overflow-wrap:anywhere}</style></head><body><main>'
     '<h1>${_esc(said)}</h1>'

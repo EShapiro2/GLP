@@ -1,5 +1,5 @@
 // The picture a link to the site shows in a chat or a feed, web/og.jpg, 1200
-// by 630: the site's mark, its name, The Grassroots Project, and its one line
+// by 630: the site's mark, its name, The Grassroots Sphere, and its one line
 // on the left, and on the right the globe of the contracts as the live site
 // draws it, whole, its keys left out.
 // Usage, with node and Playwright: node tools/og.js <a directory for the
@@ -36,7 +36,7 @@ const fs = require('fs');
 h1{font-size:62px;line-height:1.08;letter-spacing:-.025em;font-weight:800;margin:26px 0 22px}
 p{font-size:25px;line-height:1.4;color:#5f6b78;margin:0;max-width:520px}
 img{position:absolute;right:-70px;top:50%;transform:translateY(-50%);height:760px}</style></head>
-<body><div class="l"><div class="mark"></div><h1>${process.env.OG_TITLE || 'The Grassroots Project'}</h1><p>${process.env.OG_LINE || 'Social contracts that run: apps owned and run by the people who use them, on their own phones.'}</p></div>
+<body><div class="l"><div class="mark"></div><h1>${process.env.OG_TITLE || 'The Grassroots Sphere'}</h1><p>${process.env.OG_LINE || 'Social contracts that run: apps owned and run by the people who use them, on their own phones.'}</p></div>
 <img src="data:image/png;base64,${img}"></body></html>`, { waitUntil: 'load' });
   await q.waitForTimeout(1200);
   await q.screenshot({ path: out + '/og.jpg', type: 'jpeg', quality: 88 });
