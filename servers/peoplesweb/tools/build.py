@@ -755,12 +755,12 @@ if VILLAGERS:
     LINE = 'A grassroots contract for village digital life: the Villagers contract and every contract it extends.'
     t = read(os.path.join(WWW, 'index.html'))
     for old, new in [('<meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta name="description" content="{LINE}">'),
-                     ('<meta property="og:title" content="The Grassroots Project">', '<meta property="og:title" content="Villagers: A Grassroots Contract for Village Digital Life">'),
+                     ('<meta property="og:title" content="The Grassroots Sphere">', '<meta property="og:title" content="Villagers: A Grassroots Contract for Village Digital Life">'),
                      ('<meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta property="og:description" content="{LINE}">'),
                      ('<meta property="og:url" content="https://peoplesweb.org/">', '<meta property="og:url" content="https://peoplesweb.org/villagers/">'),
                      ('<meta property="og:image" content="https://peoplesweb.org/og.jpg">', '<meta property="og:image" content="https://peoplesweb.org/villagers/og.jpg">'),
-                     ('<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it extends on a globe, Villagers at the south pole">'),
-                     ('<title>The Grassroots Project</title>', '<title>Villagers · The Grassroots Project</title>')]:
+                     ('<meta property="og:image:alt" content="The grassroots contracts on a sphere, beside the name of the Grassroots Sphere">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it extends on a sphere, Villagers at the south pole">'),
+                     ('<title>The Grassroots Sphere</title>', '<title>Villagers · The Grassroots Sphere</title>')]:
         if old not in t:
             raise SystemExit('villagers: index.html has no ' + old)
         t = t.replace(old, new)
